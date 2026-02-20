@@ -1,0 +1,25 @@
+---
+name: slfg
+description: Manual macro for shipping via /xlfg (swarm / agent-team mode).
+disable-model-invocation: true
+---
+
+# /slfg
+
+Swarm LFG.
+
+Use this when parallelism pays off:
+
+- Multi-layer changes (frontend + backend + tests)
+- Debugging with competing hypotheses
+- Big refactors with many independent files
+- Security/performance/test reviews in parallel
+
+## Recommended sequence
+
+1. **(Once per repo)** `/xlfg:init`
+2. `/xlfg <what you want built>`
+
+## Suggested prompt to pass to /xlfg
+
+> Prefer **swarm mode**: spawn an agent team if available. Keep teammates file-conflict-free (each owns separate files). Use file-based handoffs in `docs/xlfg/runs/<run-id>/`.
