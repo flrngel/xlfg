@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Time to ship.
 
-Use this when you want **one lead agent** plus a few focused subagents (plan/review/testing), without spawning a full agent team.
+Use this when you want **one lead agent** plus focused subagents, without a full implementation swarm.
 
 ## Recommended sequence
 
@@ -17,4 +17,4 @@ Use this when you want **one lead agent** plus a few focused subagents (plan/rev
 
 ## Suggested prompt to pass to /xlfg
 
-> Stay in **sequential mode**: one lead agent does implementation. Use subagents only for repo mapping, test planning, and review. Avoid parallel code edits.
+> Stay in **sequential mode**: one lead agent owns implementation. Run context-expansion and planning/review subagents as file-based handoffs. Use pair implementer/checker only for medium/high-risk tasks.

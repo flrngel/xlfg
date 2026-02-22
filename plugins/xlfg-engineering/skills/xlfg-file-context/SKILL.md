@@ -32,11 +32,19 @@ docs/xlfg/
   runs/
     <run-id>/
       context.md
+      context/
+        adjacent.md
+        constraints.md
+        unknowns.md
       repo-map.md
       spec.md
       plan.md
       test-plan.md
       risk.md
+      tasks/
+        <task-id>/
+          implementer-report.md
+          checker-report.md
       verification.md
       reviews/
       run-summary.md
@@ -49,7 +57,14 @@ docs/xlfg/
       traces/
 ```
 
-## Map → Reduce pattern (how to avoid chaos)
+## Expand → Map → Reduce pattern (how to avoid chaos)
+
+### Expand context
+
+- Spawn investigation subagents with isolated contexts.
+- Each investigator reads canonical `context.md` and writes exactly one file under `context/`.
+- Lead agent merges findings back into canonical `context.md`.
+- Any scope expansion beyond the original request needs explicit user approval.
 
 ### Map
 
@@ -65,6 +80,13 @@ docs/xlfg/
 - A lead agent reads all subagent outputs.
 - The lead agent writes the canonical `plan.md` and updates progress checkboxes.
 
+### Pair loop for medium/high-risk tasks
+
+- Implementer writes code + tests and a task handoff file.
+- Checker reads task contract + diffs and writes `checker-report.md`.
+- Lead agent arbitrates and updates `plan.md`.
+- Keep the loop bounded (max 3 checker rounds per task).
+
 ## File ownership rule
 
 To avoid conflicts:
@@ -72,6 +94,7 @@ To avoid conflicts:
 - Subagents **never** edit shared canonical files (like `plan.md`).
 - Subagents write to their own output file only.
 - The lead agent merges.
+- Checker agents are read-only on production code by default.
 
 ## “Map, not manual”
 

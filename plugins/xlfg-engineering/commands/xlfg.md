@@ -29,10 +29,30 @@ If `docs/xlfg/index.md` does not exist, run `/xlfg:init` first, then resume.
 2. Create:
    - `DOCS_RUN_DIR=docs/xlfg/runs/<RUN_ID>/`
    - `DX_RUN_DIR=.xlfg/runs/<RUN_ID>/`
+   - `DOCS_RUN_DIR/context/`
+   - `DOCS_RUN_DIR/tasks/`
 3. In `DOCS_RUN_DIR/context.md`, record:
    - The raw user request
    - Assumptions
    - Constraints (env, OS, perf, security, UX)
+
+## Phase 1.5 — Expand context (parallel investigation subagents)
+
+Before planning, proactively surface adjacent requirements and hidden constraints.
+
+Run these **independent** investigation tasks in parallel (file handoffs only):
+
+- Task `xlfg-context-adjacent-investigator` → write `DOCS_RUN_DIR/context/adjacent.md`
+- Task `xlfg-context-constraints-investigator` → write `DOCS_RUN_DIR/context/constraints.md`
+- Task `xlfg-context-unknowns-investigator` → write `DOCS_RUN_DIR/context/unknowns.md`
+
+Lead reduce step:
+
+- Merge findings into canonical `DOCS_RUN_DIR/context.md`.
+- Add two explicit sections:
+  - `Candidate scope expansions`
+  - `Out-of-scope backlog`
+- Any expansion beyond the raw request must be explicitly approved by the user before implementation.
 
 ## Phase 2 — Map (parallel planning subagents)
 
@@ -66,22 +86,47 @@ Run these in parallel with Task tool:
 3. Ask the user **only the minimum clarifying questions** required to avoid building the wrong thing.
 4. Get explicit approval to proceed.
 
-## Phase 4 — Implement (single-lead by default)
+## Phase 4 — Implement (lead-orchestrated, adaptive pair mode)
 
-Default mode: **one lead implementer** does all code edits.
+Lead agent owns implementation orchestration and completion.
 
-Parallelism is allowed for:
+Use adaptive execution:
 
-- Research (docs, codebase search)
-- Test planning
-- Reviews
+- Low-risk tasks: lead-only implementation is acceptable.
+- Medium/high-risk tasks: use paired implementation agents.
 
-If the user requested swarm mode, use an agent team but keep work conflict-free:
+Risk signals for pair mode include:
 
-- Each teammate owns separate files/components
-- All handoffs happen through `DOCS_RUN_DIR/`
+- Auth/authz changes
+- Data migrations/backfills
+- Payments/billing logic
+- Cross-layer or high-blast-radius refactors
+- Security-sensitive paths
 
-Implementation loop:
+Pair mode loop (per task in `plan.md`):
+
+1. Spawn Task `xlfg-task-implementer` with:
+   - `DOCS_RUN_DIR`
+   - task id + acceptance criteria
+   - allowed file scope
+   - implementer output path: `DOCS_RUN_DIR/tasks/<task-id>/implementer-report.md`
+2. Spawn Task `xlfg-task-checker` with:
+   - the same task contract
+   - checker output path: `DOCS_RUN_DIR/tasks/<task-id>/checker-report.md`
+3. Checker validates against `spec.md`, `test-plan.md`, `risk.md`, and changed files.
+4. Lead decides:
+   - If accepted: mark task done in `plan.md`
+   - If changes required: run another implementer pass
+5. Hard cap: max 3 checker loops per task, then lead resolves manually.
+
+Conflict-control rules:
+
+- Implementer and checker do not coordinate via chat.
+- Checker writes findings to file; by default checker does not edit production code.
+- Keep ownership conflict-free by constraining task scope.
+- All handoffs happen through `DOCS_RUN_DIR/`.
+
+General implementation rules still apply:
 
 - Follow existing repo conventions and patterns.
 - Prefer small, reviewable increments.

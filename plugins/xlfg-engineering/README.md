@@ -13,7 +13,7 @@ It is designed for:
 
 | Command | Purpose |
 |---|---|
-| `/xlfg` | End-to-end SDLC workflow (spec → plan → implement → verify → review → ship) |
+| `/xlfg` | End-to-end SDLC workflow (context expansion → spec/plan → adaptive pair implementation → verify → review → ship) |
 | `/lfg` | Sequential wrapper for `/xlfg` |
 | `/slfg` | Swarm wrapper for `/xlfg` |
 | `/xlfg:init` | Create `docs/xlfg/` + `.xlfg/` scaffolding in the target repo |
@@ -23,11 +23,20 @@ It is designed for:
 
 ## Agents
 
+Context expansion:
+- `xlfg-context-adjacent-investigator`
+- `xlfg-context-constraints-investigator`
+- `xlfg-context-unknowns-investigator`
+
 Planning:
 - `xlfg-repo-mapper`
 - `xlfg-spec-author`
 - `xlfg-test-strategist`
 - `xlfg-risk-assessor`
+
+Implementation:
+- `xlfg-task-implementer`
+- `xlfg-task-checker`
 
 Review:
 - `xlfg-security-reviewer`
@@ -36,7 +45,7 @@ Review:
 - `xlfg-architecture-reviewer`
 
 Subagent model:
-- Planning and review subagents use `sonnet`.
+- `/xlfg` subagents use `sonnet`.
 
 ## Skills
 

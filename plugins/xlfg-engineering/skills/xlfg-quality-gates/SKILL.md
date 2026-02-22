@@ -17,6 +17,7 @@ A run is only “done” when all apply:
 - Acceptance criteria are testable and satisfied
 - Non-goals are explicit
 - No unapproved scope creep
+- Context expansion outputs were triaged and approved before implementation
 
 ### Tests & verification
 
@@ -25,6 +26,7 @@ A run is only “done” when all apply:
 - At least one integration-style test exists for cross-layer behavior
 - Lint/typecheck/build pass when applicable
 - Evidence is written to `verification.md` and raw logs exist under `.xlfg/`
+- For pair-mode tasks, checker verdicts are captured under `tasks/<task-id>/checker-report.md`
 
 ### UX
 
