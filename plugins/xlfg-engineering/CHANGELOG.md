@@ -5,6 +5,18 @@ All notable changes to this plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-02-22
+
+### Added
+- New verify subagents:
+  - `xlfg-verify-runner`
+  - `xlfg-verify-reducer`
+
+### Changed
+- Refactored `/xlfg:verify` into a map/reduce verification pipeline driven by subagent handoffs.
+- Added canonical `verify-fix-plan.md` output for red verification runs.
+- Updated README agent inventory to include verify agents.
+
 ## [0.4.0] - 2026-02-22
 
 ### Changed

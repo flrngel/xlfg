@@ -39,19 +39,24 @@ Prefer repo-native commands in this order:
 
 If unclear, ask the user **once** for the canonical commands (copy from README/CONTRIBUTING).
 
-## 3) Execute and log (evidence-first)
+## 3) Map phase: execute via verify runner subagent
 
-Create a timestamped log dir:
+Run Task `xlfg-verify-runner` with:
 
-- `DX_RUN_DIR/verify/<YYYYMMDD-HHMMSS>/`
+- `DOCS_RUN_DIR`
+- `DX_RUN_DIR`
+- Ordered verification commands (exact strings)
 
-For each command:
+Runner responsibilities:
 
-- Run it
-- Pipe full output to a log file via `tee`
-- Record the exit code
+- Create `DX_RUN_DIR/verify/<YYYYMMDD-HHMMSS>/`
+- Execute commands with `set -o pipefail` + `tee`
+- Write per-command logs and exitcodes
+- Write aggregate artifacts:
+  - `DX_RUN_DIR/verify/<ts>/results.json`
+  - `DX_RUN_DIR/verify/<ts>/summary.md`
 
-Example pattern:
+Runner execution pattern:
 
 ```bash
 set -o pipefail
@@ -59,19 +64,28 @@ set -o pipefail
 echo $? > "$DX_RUN_DIR/verify/<ts>/<name>.exitcode"
 ```
 
-## 4) Write `verification.md`
+## 4) Reduce phase: write canonical verification artifacts
 
-In `DOCS_RUN_DIR/verification.md`, record:
+Run Task `xlfg-verify-reducer` with:
 
-- The commands run (exact)
-- Exit codes
-- Where logs live
-- If failures occurred: the **first actionable failure** (not a flood of cascaded errors)
+- `DOCS_RUN_DIR`
+- `DX_RUN_DIR`
+- Runner timestamp or results path
+
+Reducer responsibilities:
+
+- Read `results.json` + summary + referenced logs as needed
+- Write `DOCS_RUN_DIR/verification.md`
+- If RED, also write `DOCS_RUN_DIR/verify-fix-plan.md` with the first actionable failure and minimum fix steps
+
+Lead-agent rule:
+
+- Do not parse full raw logs unless reducer output is insufficient.
 
 ## 5) If failing, iterate until green
 
 - Treat red verification as a hard stop.
-- Create a short fix plan in the run folder.
+- Use `DOCS_RUN_DIR/verify-fix-plan.md` as the default fix plan.
 - Implement the minimum fixes.
 - Re-run verification.
 

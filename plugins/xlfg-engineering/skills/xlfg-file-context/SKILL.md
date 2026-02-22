@@ -46,6 +46,7 @@ docs/xlfg/
           implementer-report.md
           checker-report.md
       verification.md
+      verify-fix-plan.md
       reviews/
       run-summary.md
 
@@ -53,6 +54,9 @@ docs/xlfg/
   runs/
     <run-id>/
       verify/
+        <ts>/
+          results.json
+          summary.md
       screenshots/
       traces/
 ```

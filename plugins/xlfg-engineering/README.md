@@ -17,7 +17,7 @@ It is designed for:
 | `/lfg` | Sequential wrapper for `/xlfg` |
 | `/slfg` | Swarm wrapper for `/xlfg` |
 | `/xlfg:init` | Create `docs/xlfg/` + `.xlfg/` scaffolding in the target repo |
-| `/xlfg:verify` | Run verification + write evidence logs |
+| `/xlfg:verify` | Run verification pipeline + write evidence logs |
 | `/xlfg:review` | Parallel multi-lens review into files |
 | `/xlfg:compound` | Convert a run into durable knowledge for future work |
 
@@ -39,6 +39,10 @@ Planning:
 Implementation:
 - `xlfg-task-implementer`
 - `xlfg-task-checker`
+
+Verify:
+- `xlfg-verify-runner`
+- `xlfg-verify-reducer`
 
 Review:
 - `xlfg-security-reviewer`
