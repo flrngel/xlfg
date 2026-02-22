@@ -1,7 +1,7 @@
 ---
 name: xlfg-test-strategist
 description: Produce a verification plan: what tests to add and which suites to run. Use during /xlfg.
-model: inherit
+model: sonnet
 ---
 
 You are a test strategist for production software.

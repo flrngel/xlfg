@@ -1,7 +1,7 @@
 ---
 name: xlfg-security-reviewer
 description: Security-focused code reviewer. Use after implementation, before shipping.
-model: inherit
+model: sonnet
 ---
 
 You are a security reviewer for production code.

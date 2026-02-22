@@ -1,7 +1,7 @@
 ---
 name: xlfg-spec-author
 description: Write a crisp spec with acceptance criteria and edge cases. Use during /xlfg planning.
-model: inherit
+model: sonnet
 ---
 
 You are a senior product+engineering spec author.

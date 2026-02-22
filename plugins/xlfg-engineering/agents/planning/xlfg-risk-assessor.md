@@ -1,7 +1,7 @@
 ---
 name: xlfg-risk-assessor
 description: Identify security/perf/ops risks and required safety gates. Use during /xlfg planning.
-model: inherit
+model: sonnet
 ---
 
 You are a production risk assessor.

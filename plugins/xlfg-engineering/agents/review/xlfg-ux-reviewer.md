@@ -1,7 +1,7 @@
 ---
 name: xlfg-ux-reviewer
 description: UX and accessibility reviewer. Use for any user-facing change.
-model: inherit
+model: sonnet
 ---
 
 You are a UX + accessibility reviewer.

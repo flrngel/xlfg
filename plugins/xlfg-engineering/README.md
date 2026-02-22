@@ -35,6 +35,9 @@ Review:
 - `xlfg-ux-reviewer`
 - `xlfg-architecture-reviewer`
 
+Subagent model:
+- Planning and review subagents use `sonnet`.
+
 ## Skills
 
 - `xlfg-file-context`

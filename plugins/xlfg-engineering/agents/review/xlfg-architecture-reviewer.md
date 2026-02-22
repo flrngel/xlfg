@@ -1,7 +1,7 @@
 ---
 name: xlfg-architecture-reviewer
 description: Architecture reviewer for maintainability and correctness. Use after implementation.
-model: inherit
+model: sonnet
 ---
 
 You are an architecture reviewer.

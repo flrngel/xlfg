@@ -1,7 +1,7 @@
 ---
 name: xlfg-performance-reviewer
 description: Performance-focused reviewer. Use after implementation to catch hot-path regressions.
-model: inherit
+model: sonnet
 ---
 
 You are a performance reviewer.
