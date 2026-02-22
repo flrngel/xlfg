@@ -21,6 +21,8 @@ It is designed for:
 | `/xlfg:review` | Parallel multi-lens review into files |
 | `/xlfg:compound` | Convert a run into durable knowledge for future work |
 
+`/xlfg` auto-continues from planning into implementation. It only pauses for true blockers or safety-gated confirmations.
+
 ## Agents
 
 Context expansion:

@@ -64,7 +64,7 @@ docs/xlfg/
 - Spawn investigation subagents with isolated contexts.
 - Each investigator reads canonical `context.md` and writes exactly one file under `context/`.
 - Lead agent merges findings back into canonical `context.md`.
-- Any scope expansion beyond the original request needs explicit user approval.
+- Any unapproved scope expansion beyond the original request is deferred to backlog.
 
 ### Map
 

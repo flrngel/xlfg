@@ -52,7 +52,8 @@ Lead reduce step:
 - Add two explicit sections:
   - `Candidate scope expansions`
   - `Out-of-scope backlog`
-- Any expansion beyond the raw request must be explicitly approved by the user before implementation.
+- Default behavior: do not implement `Candidate scope expansions` unless already requested by the user.
+- Move unapproved expansions to `Out-of-scope backlog` and continue.
 
 ## Phase 3 — Map (parallel planning subagents)
 
@@ -72,7 +73,7 @@ Run these in parallel with Task tool:
 
 (If UI is involved, also run Task `xlfg-ux-reviewer` early to propose UX acceptance criteria.)
 
-## Phase 4 — Reduce (spec + plan + user checkpoint)
+## Phase 4 — Reduce (spec + plan + auto-continue)
 
 1. Read all map outputs.
 2. Produce `DOCS_RUN_DIR/plan.md` with:
@@ -83,8 +84,11 @@ Run these in parallel with Task tool:
    - Verification commands to run (from repo-map + test-plan)
    - Rollback/mitigation notes for risky changes
 
-3. Ask the user **only the minimum clarifying questions** required to avoid building the wrong thing.
-4. Get explicit approval to proceed.
+3. Resolve non-blocking unknowns by writing explicit assumptions into `context.md` and `spec.md`.
+4. Continue directly to implementation without waiting for plan approval.
+5. Ask the user only when both are true:
+   - A decision is truly blocking correctness or safety
+   - No safe default assumption exists
 
 ## Phase 5 — Implement (lead-orchestrated, mandatory pair mode)
 
@@ -120,6 +124,8 @@ General implementation rules still apply:
 - Write tests alongside changes.
 - Update `plan.md` checkboxes as tasks complete.
 - Record notable decisions in `docs/xlfg/knowledge/decision-log.md` (or link from the run).
+- Do not pause for implementation permission after Phase 4.
+- If a safety-gated high-risk change is required, request explicit confirmation once right before execution.
 
 ## Phase 6 — Verify (hard gate)
 

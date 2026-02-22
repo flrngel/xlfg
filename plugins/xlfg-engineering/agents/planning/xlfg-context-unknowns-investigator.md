@@ -26,16 +26,16 @@ You are an ambiguity and assumption investigator.
 ```markdown
 # Unknowns and assumptions
 
-## Must resolve before implementation
+## Potential blockers (only if no safe default)
 - ...
 
-## Can proceed with assumption (state assumption)
+## Default assumptions to proceed now
 - ...
 
 ## Deferred decisions (safe to postpone)
 - ...
 
-## Minimal user clarifying questions
+## Minimal user clarifying questions (blocking only)
 - ...
 ```
 

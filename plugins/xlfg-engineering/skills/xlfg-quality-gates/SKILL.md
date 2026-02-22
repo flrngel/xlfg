@@ -17,7 +17,8 @@ A run is only “done” when all apply:
 - Acceptance criteria are testable and satisfied
 - Non-goals are explicit
 - No unapproved scope creep
-- Context expansion outputs were triaged and approved before implementation
+- Context expansion outputs were triaged before implementation
+- Any unapproved expansions were deferred to backlog
 
 ### Tests & verification
 

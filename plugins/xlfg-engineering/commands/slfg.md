@@ -22,4 +22,4 @@ Use this when parallelism pays off:
 
 ## Suggested prompt to pass to /xlfg
 
-> Prefer **swarm mode**: run context-expansion + planning/review agents in parallel, then execute implementation as mandatory scoped implementer/checker pairs for every plan task, managed by one lead. Keep ownership conflict-free and hand off only through `docs/xlfg/runs/<run-id>/`.
+> Prefer **swarm mode**: run context-expansion + planning/review agents in parallel, then execute implementation as mandatory scoped implementer/checker pairs for every plan task, managed by one lead. Keep ownership conflict-free and hand off only through `docs/xlfg/runs/<run-id>/`. Auto-continue from plan to implementation; only pause for true blockers or safety-gated confirmations.
