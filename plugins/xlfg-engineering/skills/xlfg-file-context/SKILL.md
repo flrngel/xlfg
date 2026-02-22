@@ -80,7 +80,7 @@ docs/xlfg/
 - A lead agent reads all subagent outputs.
 - The lead agent writes the canonical `plan.md` and updates progress checkboxes.
 
-### Pair loop for medium/high-risk tasks
+### Mandatory pair loop for every task
 
 - Implementer writes code + tests and a task handoff file.
 - Checker reads task contract + diffs and writes `checker-report.md`.

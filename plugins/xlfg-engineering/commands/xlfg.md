@@ -36,7 +36,7 @@ If `docs/xlfg/index.md` does not exist, run `/xlfg:init` first, then resume.
    - Assumptions
    - Constraints (env, OS, perf, security, UX)
 
-## Phase 1.5 — Expand context (parallel investigation subagents)
+## Phase 2 — Expand context (parallel investigation subagents)
 
 Before planning, proactively surface adjacent requirements and hidden constraints.
 
@@ -54,7 +54,7 @@ Lead reduce step:
   - `Out-of-scope backlog`
 - Any expansion beyond the raw request must be explicitly approved by the user before implementation.
 
-## Phase 2 — Map (parallel planning subagents)
+## Phase 3 — Map (parallel planning subagents)
 
 Launch **independent** planning subagents in parallel. Each agent must:
 
@@ -72,7 +72,7 @@ Run these in parallel with Task tool:
 
 (If UI is involved, also run Task `xlfg-ux-reviewer` early to propose UX acceptance criteria.)
 
-## Phase 3 — Reduce (spec + plan + user checkpoint)
+## Phase 4 — Reduce (spec + plan + user checkpoint)
 
 1. Read all map outputs.
 2. Produce `DOCS_RUN_DIR/plan.md` with:
@@ -86,24 +86,11 @@ Run these in parallel with Task tool:
 3. Ask the user **only the minimum clarifying questions** required to avoid building the wrong thing.
 4. Get explicit approval to proceed.
 
-## Phase 4 — Implement (lead-orchestrated, adaptive pair mode)
+## Phase 5 — Implement (lead-orchestrated, mandatory pair mode)
 
 Lead agent owns implementation orchestration and completion.
 
-Use adaptive execution:
-
-- Low-risk tasks: lead-only implementation is acceptable.
-- Medium/high-risk tasks: use paired implementation agents.
-
-Risk signals for pair mode include:
-
-- Auth/authz changes
-- Data migrations/backfills
-- Payments/billing logic
-- Cross-layer or high-blast-radius refactors
-- Security-sensitive paths
-
-Pair mode loop (per task in `plan.md`):
+Mandatory pair loop (per task in `plan.md`):
 
 1. Spawn Task `xlfg-task-implementer` with:
    - `DOCS_RUN_DIR`
@@ -134,7 +121,7 @@ General implementation rules still apply:
 - Update `plan.md` checkboxes as tasks complete.
 - Record notable decisions in `docs/xlfg/knowledge/decision-log.md` (or link from the run).
 
-## Phase 5 — Verify (hard gate)
+## Phase 6 — Verify (hard gate)
 
 Run `/xlfg:verify <RUN_ID>`.
 
@@ -144,7 +131,7 @@ If verification fails:
 - Re-run `/xlfg:verify`
 - Repeat until green
 
-## Phase 6 — Review (hard gate)
+## Phase 7 — Review (hard gate)
 
 Run `/xlfg:review <RUN_ID>`.
 
@@ -154,7 +141,7 @@ If any P0 blockers exist:
 - Re-run `/xlfg:verify`
 - Re-run `/xlfg:review`
 
-## Phase 7 — Ship
+## Phase 8 — Ship
 
 1. Ensure `DOCS_RUN_DIR/run-summary.md` exists with:
    - What changed
@@ -164,7 +151,7 @@ If any P0 blockers exist:
 
 2. Create the final commit(s) and PR (if applicable).
 
-## Phase 8 — Compound
+## Phase 9 — Compound
 
 After shipping, run `/xlfg:compound <RUN_ID>` to convert learnings into durable knowledge.
 
@@ -174,6 +161,9 @@ Only declare success when:
 
 - `DOCS_RUN_DIR/spec.md` exists and matches what was built
 - `DOCS_RUN_DIR/plan.md` checkboxes are complete
+- Every task in `plan.md` has:
+  - `DOCS_RUN_DIR/tasks/<task-id>/implementer-report.md`
+  - `DOCS_RUN_DIR/tasks/<task-id>/checker-report.md` with `Verdict: ACCEPT`
 - `/xlfg:verify` is green with logs saved
 - `/xlfg:review` has no P0 issues
 - `DOCS_RUN_DIR/run-summary.md` exists

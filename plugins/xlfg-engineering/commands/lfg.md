@@ -17,4 +17,4 @@ Use this when you want **one lead agent** plus focused subagents, without a full
 
 ## Suggested prompt to pass to /xlfg
 
-> Stay in **sequential mode**: one lead agent owns implementation. Run context-expansion and planning/review subagents as file-based handoffs. Use pair implementer/checker only for medium/high-risk tasks.
+> Stay in **sequential mode**: one lead agent owns orchestration. Run context-expansion and planning/review subagents as file-based handoffs. For implementation, use implementer/checker pairs for every plan task.

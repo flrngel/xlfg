@@ -26,7 +26,9 @@ A run is only “done” when all apply:
 - At least one integration-style test exists for cross-layer behavior
 - Lint/typecheck/build pass when applicable
 - Evidence is written to `verification.md` and raw logs exist under `.xlfg/`
-- For pair-mode tasks, checker verdicts are captured under `tasks/<task-id>/checker-report.md`
+- Every plan task has:
+  - `tasks/<task-id>/implementer-report.md`
+  - `tasks/<task-id>/checker-report.md` with `Verdict: ACCEPT`
 
 ### UX
 
@@ -77,6 +79,7 @@ Require explicit user confirmation for:
 ## Final pre-ship checklist
 
 - [ ] `plan.md` checkboxes complete
+- [ ] Every plan task has implementer + checker reports with `ACCEPT` verdict
 - [ ] `/xlfg:verify` green
 - [ ] `/xlfg:review` has no P0 findings
 - [ ] `run-summary.md` exists with smoke steps
