@@ -155,13 +155,15 @@ If any P0 blockers exist:
    - Verification commands run + log paths
    - Post-deploy monitoring & rollback notes
 
-## Phase 9 — Compound (hard gate)
+## Phase 9 — Ship
+
+Create the final implementation commit(s) and PR (if applicable).
+
+## Phase 10 — Compound (hard gate, last phase)
 
 Run `/xlfg:compound <RUN_ID>` and ensure `DOCS_RUN_DIR/compound-summary.md` is written.
 
-## Phase 10 — Ship
-
-Create the final commit(s) and PR (if applicable), including compounding updates.
+If compounding adds tracked updates, include them in a follow-up commit/PR update before declaring completion.
 
 ## Completion criteria
 
