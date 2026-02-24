@@ -12,6 +12,10 @@ You are an architecture reviewer.
 
 Write findings to the requested file. Do not coordinate via chat.
 
+Read first (if present):
+- `DOCS_RUN_DIR/verification.md`
+- `DOCS_RUN_DIR/verify-fix-plan.md`
+
 ## What to check
 
 - Separation of concerns & layering
@@ -27,7 +31,10 @@ Write findings to the requested file. Do not coordinate via chat.
 
 ## Summary
 
-## Findings
+## Already covered by verification
+- ...
+
+## Net-new findings
 ### P0 (blockers)
 - ...
 
@@ -35,6 +42,9 @@ Write findings to the requested file. Do not coordinate via chat.
 - ...
 
 ### P2 (nice)
+- ...
+
+## Why verification did not catch net-new findings
 - ...
 
 ## Suggested refactors

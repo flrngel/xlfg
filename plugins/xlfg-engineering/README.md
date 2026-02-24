@@ -13,7 +13,7 @@ It is designed for:
 
 | Command | Purpose |
 |---|---|
-| `/xlfg` | End-to-end SDLC workflow (context expansion → spec/plan → mandatory pair implementation → verify → review → ship) |
+| `/xlfg` | End-to-end SDLC workflow (context expansion → spec/plan → mandatory pair implementation → verify → review → compound → ship) |
 | `/lfg` | Sequential wrapper for `/xlfg` |
 | `/slfg` | Swarm wrapper for `/xlfg` |
 | `/xlfg:init` | Create `docs/xlfg/` + `.xlfg/` scaffolding in the target repo |
@@ -22,6 +22,7 @@ It is designed for:
 | `/xlfg:compound` | Convert a run into durable knowledge for future work |
 
 `/xlfg` auto-continues from planning into implementation. It only pauses for true blockers or safety-gated confirmations.
+`/xlfg:review` is verification-aware and prioritizes net-new findings over verification overlap.
 
 ## Agents
 

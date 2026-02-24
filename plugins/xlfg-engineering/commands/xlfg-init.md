@@ -42,6 +42,7 @@ This folder is the **file-based context** system-of-record for `/xlfg` runs.
 ## Structure
 
 - `knowledge/` — durable patterns, decisions, and checklists (commit this)
+- `knowledge/testing.md` — durable testing learnings (commit this)
 - `runs/` — one folder per run containing context investigations, specs, plans, task handoffs, reviews, and run summaries (commit this)
 
 Ephemeral logs (do not commit):
@@ -110,6 +111,26 @@ Reusable patterns discovered while shipping.
 - **Implementation notes**:
 - **Pitfalls**:
 - **Examples / links**:
+```
+
+#### `docs/xlfg/knowledge/testing.md`
+
+```markdown
+# xlfg testing knowledge
+
+Durable testing learnings captured from `/xlfg` runs.
+
+## Template
+
+## Scenario: <name>
+
+- **Failure that escaped**:
+- **Why it escaped**:
+- **Test pattern that catches it**:
+- **Fast loop command**:
+- **Full verification command**:
+- **Flake signals / stabilization notes**:
+- **Links**: (run folder, PR, issue)
 ```
 
 ## Completion

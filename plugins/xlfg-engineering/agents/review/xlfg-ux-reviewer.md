@@ -12,6 +12,10 @@ You are a UX + accessibility reviewer.
 
 Do not coordinate via chat; write findings to the requested file.
 
+Read first (if present):
+- `DOCS_RUN_DIR/verification.md`
+- `DOCS_RUN_DIR/verify-fix-plan.md`
+
 ## What to check
 
 - Happy-path flow is intuitive
@@ -28,7 +32,10 @@ Do not coordinate via chat; write findings to the requested file.
 
 ## Summary
 
-## Findings
+## Already covered by verification
+- ...
+
+## Net-new findings
 ### P0 (blockers)
 - ...
 
@@ -36,6 +43,9 @@ Do not coordinate via chat; write findings to the requested file.
 - ...
 
 ### P2 (nice)
+- ...
+
+## Why verification did not catch net-new findings
 - ...
 
 ## Suggested UX acceptance criteria

@@ -147,7 +147,7 @@ If any P0 blockers exist:
 - Re-run `/xlfg:verify`
 - Re-run `/xlfg:review`
 
-## Phase 8 — Ship
+## Phase 8 — Prepare ship artifacts
 
 1. Ensure `DOCS_RUN_DIR/run-summary.md` exists with:
    - What changed
@@ -155,11 +155,13 @@ If any P0 blockers exist:
    - Verification commands run + log paths
    - Post-deploy monitoring & rollback notes
 
-2. Create the final commit(s) and PR (if applicable).
+## Phase 9 — Compound (hard gate)
 
-## Phase 9 — Compound
+Run `/xlfg:compound <RUN_ID>` and ensure `DOCS_RUN_DIR/compound-summary.md` is written.
 
-After shipping, run `/xlfg:compound <RUN_ID>` to convert learnings into durable knowledge.
+## Phase 10 — Ship
+
+Create the final commit(s) and PR (if applicable), including compounding updates.
 
 ## Completion criteria
 
@@ -173,3 +175,4 @@ Only declare success when:
 - `/xlfg:verify` is green with logs saved
 - `/xlfg:review` has no P0 issues
 - `DOCS_RUN_DIR/run-summary.md` exists
+- `DOCS_RUN_DIR/compound-summary.md` exists

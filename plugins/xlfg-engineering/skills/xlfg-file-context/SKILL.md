@@ -29,6 +29,7 @@ docs/xlfg/
     quality-bar.md
     decision-log.md
     patterns.md
+    testing.md
   runs/
     <run-id>/
       context.md
@@ -49,6 +50,7 @@ docs/xlfg/
       verify-fix-plan.md
       reviews/
       run-summary.md
+      compound-summary.md
 
 .xlfg/
   runs/

@@ -5,6 +5,17 @@ All notable changes to this plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-02-22
+
+### Changed
+- Made `/xlfg:review` verification-aware: reviewers now read verification artifacts, report net-new issues, and explain why verification missed them.
+- Added selective review fan-out in `/xlfg:review` to skip non-relevant performance/UX reviewers.
+- Added reducer deduplication guidance in `/xlfg:review` by `(file, line/area, issue class)`.
+- Made compounding a hard gate in `/xlfg` before final ship completion.
+- Updated `/xlfg:compound` to capture durable testing knowledge and write `compound-summary.md`.
+- Updated `/xlfg:init` scaffolding with `docs/xlfg/knowledge/testing.md`.
+- Updated `xlfg-test-strategist` to reuse `docs/xlfg/knowledge/testing.md`.
+
 ## [0.5.0] - 2026-02-22
 
 ### Added

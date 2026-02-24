@@ -30,6 +30,7 @@ A run is only “done” when all apply:
 - Every plan task has:
   - `tasks/<task-id>/implementer-report.md`
   - `tasks/<task-id>/checker-report.md` with `Verdict: ACCEPT`
+- Review findings focus on net-new issues not already covered by verification
 
 ### UX
 
@@ -84,4 +85,4 @@ Require explicit user confirmation for:
 - [ ] `/xlfg:verify` green
 - [ ] `/xlfg:review` has no P0 findings
 - [ ] `run-summary.md` exists with smoke steps
-- [ ] Knowledge compounded (optional but recommended): `/xlfg:compound`
+- [ ] `/xlfg:compound` executed and `compound-summary.md` exists

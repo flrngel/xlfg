@@ -1,6 +1,6 @@
 {
   "name": "xlfg-engineering",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Extreme LFG: a multi-agent, file-based SDLC workflow that ships production-ready code with evidence-backed verification.",
   "author": {
     "name": "xlfg",
