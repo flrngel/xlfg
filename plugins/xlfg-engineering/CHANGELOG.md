@@ -5,6 +5,20 @@ All notable changes to this plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-02-25
+
+### Changed
+- Added **must-spawn agents per tier** table — defines non-negotiable minimum agent spawns for each tier (S/M/L), replacing advisory-only skip guidance.
+- **Checker agent is now explicitly mandatory at all tiers.** Added CRITICAL callout in Phase 5: the lead must NEVER write checker reports itself.
+- **Phase 2 (context expansion):** Now skipped for both Tier S and M (only L spawns investigators). Lead assesses context directly for normal features.
+- **Phase 3 (planning):** Tier M now spawns only `xlfg-spec-author` (independent spec). Lead writes plan directly. Skip repo-mapper, test-strategist, risk-assessor.
+- **Phase 5 (implementation):** Tier S/M lead may implement directly and write implementer reports, but must always spawn the checker agent.
+- **Phase 6 (verification):** Tier S lead may run commands inline. Tier M/L must spawn verify-runner + verify-reducer.
+- **Phase 7 (review):** Tier S may skip review agents. Tier M must spawn security + architecture reviewers. Tier L spawns all four.
+
+### Fixed
+- Addressed "tier rationalization" anti-pattern where the lead downgrades tier classification to skip all agents. The must-spawn table makes minimum requirements unambiguous.
+
 ## [0.7.1] - 2026-02-25
 
 ### Changed

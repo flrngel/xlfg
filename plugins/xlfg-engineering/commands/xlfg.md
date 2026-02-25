@@ -21,13 +21,42 @@ To avoid wasting time, **pick a run tier** up front based on the request complex
   - Skip the full multi-agent planning map; write a compact `spec.md` + `plan.md` directly.
   - Implementation can be a single scoped task (still requires verification).
 - **Tier M (medium):** 3–10 files, normal feature/bugfix.
-  - Run Phase 2 + Phase 3 as written.
+  - Skip Phase 2. Run Phase 3 partially (spec-author only).
+  - Lead implements directly but MUST spawn checker, verify, and review agents.
   - Keep plan tasks **coarse** (aim <= 5 tasks) to avoid implementer/checker explosion.
 - **Tier L (large):** >10 files, cross-cutting refactor, risky domains.
   - Full workflow as written.
   - Expect multiple verify/review iterations.
 
 Default to **Tier M** if uncertain.
+
+### Must-spawn agents per tier (non-negotiable)
+
+Every tier has a **minimum set of agents that MUST be spawned via the Task tool**. The lead agent must NOT substitute itself for these — independent perspective is the point.
+
+| Phase | Agent | Tier S | Tier M | Tier L |
+|-------|-------|--------|--------|--------|
+| P2 | `xlfg-context-*` investigators (×3) | skip | skip | **spawn** |
+| P3 | `xlfg-repo-mapper` | skip | skip | **spawn** |
+| P3 | `xlfg-spec-author` | skip | **spawn** | **spawn** |
+| P3 | `xlfg-test-strategist` | skip | skip | **spawn** |
+| P3 | `xlfg-risk-assessor` | skip | skip | **spawn** |
+| P5 | `xlfg-task-implementer` | lead may implement directly | lead may implement directly | **spawn** |
+| P5 | `xlfg-task-checker` | **spawn** | **spawn** | **spawn** |
+| P6 | `xlfg-verify-runner` | lead may run inline | **spawn** | **spawn** |
+| P6 | `xlfg-verify-reducer` | lead may write inline | **spawn** | **spawn** |
+| P7 | `xlfg-security-reviewer` | skip | **spawn** | **spawn** |
+| P7 | `xlfg-architecture-reviewer` | skip | **spawn** | **spawn** |
+| P7 | `xlfg-performance-reviewer` | skip | conditional | conditional |
+| P7 | `xlfg-ux-reviewer` | skip | conditional | conditional |
+
+**Key rules:**
+- **The checker agent is ALWAYS spawned.** The lead must NEVER write checker reports itself — self-review defeats the purpose of independent verification.
+- "Lead may implement directly" means the lead can write code and the implementer report itself, but must still spawn the checker.
+- "Lead may run/write inline" means the lead can run verification commands and write `verification.md` directly for trivial changes.
+- "Conditional" means spawn only if the change touches the relevant area (performance-sensitive code, user-facing UI).
+
+**Minimum Task agent spawns:** Tier S = 1 per task (checker), Tier M = 5–6 total, Tier L = 13+.
 
 ## Important limitation (why "compound" feels broken)
 
@@ -85,7 +114,8 @@ Before planning, proactively surface adjacent requirements and hidden constraint
 Tier rule:
 
 - **Tier S:** skip this phase unless requirements/constraints are unclear.
-- **Tier M/L:** run as written.
+- **Tier M:** skip this phase. The lead assesses context directly for normal features/bugfixes.
+- **Tier L:** run as written (spawn all three investigators in parallel).
 
 Run these **independent** investigation tasks in parallel (file handoffs only):
 
@@ -107,7 +137,8 @@ Lead reduce step:
 Tier rule:
 
 - **Tier S:** skip the full map. Write a compact `spec.md` + `plan.md` directly from repo inspection.
-- **Tier M/L:** run as written.
+- **Tier M:** spawn `xlfg-spec-author` only (independent spec ensures requirements are crisp). Lead writes `plan.md` directly from spec + repo inspection. Skip repo-mapper, test-strategist, risk-assessor.
+- **Tier L:** run as written (spawn all four planning agents in parallel).
 
 Launch **independent** planning subagents in parallel. Each agent must:
 
@@ -146,9 +177,17 @@ Run these in parallel with Task tool:
 
 Lead agent owns implementation orchestration and completion.
 
+**CRITICAL: The lead must NEVER write `checker-report.md` files itself.** Checker reports must always come from a spawned `xlfg-task-checker` agent. Writing your own checker report is self-review, not independent verification — it defeats the core value of the pair loop. If you catch yourself about to write a checker report, stop and spawn the agent instead.
+
+Tier rules for implementation:
+
+- **Tier S/M:** The lead MAY implement code directly and write the `implementer-report.md` itself (skip `xlfg-task-implementer`). This is acceptable because the implementer is just doing the work — the independent value comes from the checker.
+- **Tier L:** Spawn `xlfg-task-implementer` for each task to keep the lead focused on orchestration.
+- **All tiers:** MUST spawn `xlfg-task-checker` for every task. No exceptions.
+
 Mandatory pair loop (per task in `plan.md`):
 
-1. Spawn Task `xlfg-task-implementer` with:
+1. Implement the task (lead directly for Tier S/M, or spawn Task `xlfg-task-implementer` for Tier L):
    - `DOCS_RUN_DIR`
    - task id + acceptance criteria
    - allowed file scope
@@ -183,6 +222,13 @@ General implementation rules still apply:
 
 Perform verification **inline** (equivalent to `/xlfg:verify <RUN_ID>`):
 
+Tier rules:
+
+- **Tier S:** The lead MAY run verification commands directly (via Bash) and write `DOCS_RUN_DIR/verification.md` itself. Still must record commands run, exit codes, and GREEN/RED status.
+- **Tier M/L:** MUST spawn `xlfg-verify-runner` then `xlfg-verify-reducer`. Structured logs in `.xlfg/` are required.
+
+For Tier M/L:
+
 1. Decide canonical commands (prefer repo-native `make`, `package.json` scripts, or README/CONTRIBUTING).
 2. Run Task `xlfg-verify-runner` to execute commands and write logs to `.xlfg/runs/<RUN_ID>/verify/<ts>/...`.
    - Prefer **non-interactive** modes (avoid watchers): set `CI=1` when running Node-based tests.
@@ -198,6 +244,14 @@ If verification fails:
 ## Phase 7 — Review (hard gate)
 
 Perform review **inline** (equivalent to `/xlfg:review <RUN_ID>`):
+
+Tier rules:
+
+- **Tier S:** The lead MAY skip review agents and write a brief `DOCS_RUN_DIR/review-summary.md` directly (acceptable for trivial, low-risk changes to 1–2 files).
+- **Tier M:** MUST spawn `xlfg-security-reviewer` + `xlfg-architecture-reviewer`. Spawn `xlfg-performance-reviewer` and `xlfg-ux-reviewer` conditionally (if relevant areas changed).
+- **Tier L:** MUST spawn all four review agents.
+
+For Tier M/L:
 
 - Ensure `DOCS_RUN_DIR/reviews/` exists.
 - Run the review agents (security + architecture always; perf/ux conditionally) writing into `DOCS_RUN_DIR/reviews/`.
