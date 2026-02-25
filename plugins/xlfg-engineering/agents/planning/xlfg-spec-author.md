@@ -14,6 +14,15 @@ You are a senior product+engineering spec author.
 - Write a Markdown spec to `DOCS_RUN_DIR/spec.md`.
 - Treat the spec as the contract for the implementation.
 
+## Before writing: query past knowledge
+
+Read these files if they exist (they contain lessons from prior runs):
+- `docs/xlfg/knowledge/patterns.md` — reusable patterns and anti-patterns
+- `docs/xlfg/knowledge/decision-log.md` — past architectural/product decisions
+- `docs/xlfg/knowledge/testing.md` — escaped defects and test insights
+
+If any entry is relevant to the current request, reference it in the spec (e.g., "Per pattern X, use approach Y"). This closes the knowledge flywheel — compound writes, spec reads.
+
 ## Spec requirements
 
 - Must include acceptance criteria (testable)

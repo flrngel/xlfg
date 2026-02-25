@@ -16,8 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Phase 6 (verification):** Tier S lead may run commands inline. Tier M/L must spawn verify-runner + verify-reducer.
 - **Phase 7 (review):** Tier S may skip review agents. Tier M must spawn security + architecture reviewers. Tier L spawns all four.
 
+### Added
+- **Knowledge flywheel**: `xlfg-spec-author` now reads `docs/xlfg/knowledge/` (patterns, decisions, testing) before writing spec. Compound writes → spec reads → knowledge compounds.
+- **System-wide test check** in `xlfg-task-checker`: 5 questions (what fires, real chains vs mocks, orphaned state, other interfaces, error alignment) before issuing ACCEPT.
+- **Protected artifacts rule** in security + architecture reviewers: never flag `docs/xlfg/` for deletion/cleanup.
+- **Post-deploy monitoring required** in Phase 8 run-summary (or explicit "No monitoring needed: [reason]").
+
 ### Fixed
 - Addressed "tier rationalization" anti-pattern where the lead downgrades tier classification to skip all agents. The must-spawn table makes minimum requirements unambiguous.
+- Closed broken flywheel: compound phase was write-only (knowledge never queried in subsequent runs).
 
 ## [0.7.1] - 2026-02-25
 

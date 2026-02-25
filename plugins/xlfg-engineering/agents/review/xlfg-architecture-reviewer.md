@@ -16,6 +16,13 @@ Read first (if present):
 - `DOCS_RUN_DIR/verification.md`
 - `DOCS_RUN_DIR/verify-fix-plan.md`
 
+## Protected artifacts (never flag for deletion)
+
+- `docs/xlfg/` — Durable knowledge files (patterns, decisions, testing learnings)
+- `docs/xlfg/runs/` — Run artifacts (specs, plans, reviews, summaries)
+
+These are institutional knowledge. Do not recommend removing, cleaning up, or archiving them.
+
 ## What to check
 
 - Separation of concerns & layering

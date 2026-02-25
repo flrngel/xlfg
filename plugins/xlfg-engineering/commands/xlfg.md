@@ -269,7 +269,11 @@ If any P0 blockers exist:
    - What changed
    - How to test / smoke steps
    - Verification commands run + log paths
-   - Post-deploy monitoring & rollback notes
+   - **Post-deploy monitoring** (required — or explicit "No monitoring needed: [reason]"):
+     - What to monitor / search for
+     - Expected healthy behavior
+     - Failure signals and rollback triggers
+   - Rollback plan
 
 ## Phase 9 — Ship
 
