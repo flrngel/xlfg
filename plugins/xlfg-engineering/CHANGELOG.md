@@ -5,6 +5,21 @@ All notable changes to this plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-02-25
+
+### Added
+- **Phase 1.5 — Brainstorm** (conditional): When the request is ambiguous, spawns `xlfg-brainstorm` agent to explore WHAT to build (2–3 approaches with tradeoffs) before planning HOW. Triggers on exploratory language or missing acceptance criteria. Skips automatically for clear bugfixes/features.
+- **`xlfg-brainstorm` agent**: Inspects codebase + knowledge files, proposes concrete approaches with effort estimates, recommends one with rationale. Designed for < 2 minute exploration.
+- **`xlfg-researcher` agent**: External research via WebSearch + Context7 MCP (framework docs). Focuses on common pitfalls, security patterns, migration gotchas, and performance traps specific to the current task.
+- **Research decision gate in Phase 3**: Intelligent decision about when to spawn researcher — always for security/payments/external APIs, skip for simple bugfixes, conditional for uncertain domains.
+
+### Changed
+- Phase 3 Tier M now spawns `xlfg-researcher` conditionally (high-risk/unfamiliar domains).
+- Phase 3 Tier L now always spawns `xlfg-researcher` alongside other planning agents.
+- Phase 4 (Reduce) now reads `brainstorm.md` and `research.md` if present.
+- Must-spawn table updated with `xlfg-brainstorm` (if ambiguous) and `xlfg-researcher` (conditional/spawn).
+- Minimum agent counts updated: Tier M = 6–7, Tier L = 15+.
+
 ## [0.8.0] - 2026-02-25
 
 ### Changed

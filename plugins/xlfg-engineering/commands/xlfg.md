@@ -36,9 +36,11 @@ Every tier has a **minimum set of agents that MUST be spawned via the Task tool*
 
 | Phase | Agent | Tier S | Tier M | Tier L |
 |-------|-------|--------|--------|--------|
+| P1.5 | `xlfg-brainstorm` | if ambiguous | if ambiguous | if ambiguous |
 | P2 | `xlfg-context-*` investigators (×3) | skip | skip | **spawn** |
 | P3 | `xlfg-repo-mapper` | skip | skip | **spawn** |
 | P3 | `xlfg-spec-author` | skip | **spawn** | **spawn** |
+| P3 | `xlfg-researcher` | skip | if high-risk/unfamiliar | **spawn** |
 | P3 | `xlfg-test-strategist` | skip | skip | **spawn** |
 | P3 | `xlfg-risk-assessor` | skip | skip | **spawn** |
 | P5 | `xlfg-task-implementer` | lead may implement directly | lead may implement directly | **spawn** |
@@ -54,9 +56,11 @@ Every tier has a **minimum set of agents that MUST be spawned via the Task tool*
 - **The checker agent is ALWAYS spawned.** The lead must NEVER write checker reports itself — self-review defeats the purpose of independent verification.
 - "Lead may implement directly" means the lead can write code and the implementer report itself, but must still spawn the checker.
 - "Lead may run/write inline" means the lead can run verification commands and write `verification.md` directly for trivial changes.
+- "If ambiguous" means the request lacks clear acceptance criteria or has multiple valid interpretations (e.g., "improve the search UX", "make it faster", "refactor the auth flow").
+- "If high-risk/unfamiliar" means the domain involves security, payments, external APIs, compliance, or technology the codebase hasn't used before.
 - "Conditional" means spawn only if the change touches the relevant area (performance-sensitive code, user-facing UI).
 
-**Minimum Task agent spawns:** Tier S = 1 per task (checker), Tier M = 5–6 total, Tier L = 13+.
+**Minimum Task agent spawns:** Tier S = 1 per task (checker), Tier M = 6–7 total, Tier L = 15+.
 
 ## Important limitation (why "compound" feels broken)
 
@@ -107,6 +111,22 @@ If `docs/xlfg/index.md` does not exist, **bootstrap scaffolding inline** (equiva
    - Assumptions
    - Constraints (env, OS, perf, security, UX)
 
+## Phase 1.5 — Brainstorm (conditional: ambiguous requests only)
+
+Before planning HOW, ensure WHAT is clear.
+
+**Trigger condition:** The request lacks clear acceptance criteria, has exploratory language ("maybe", "could we", "improve", "explore"), or has multiple valid interpretations. If the request is a clear bugfix, well-defined feature, or has explicit acceptance criteria, **skip this phase**.
+
+When triggered:
+
+1. Spawn Task `xlfg-brainstorm` → writes `DOCS_RUN_DIR/brainstorm.md` with 2–3 concrete approaches, tradeoffs, and a recommendation.
+2. Lead reads the brainstorm output and decides:
+   - If the recommendation is clear and non-controversial: adopt it, update `context.md` with the chosen approach, and continue.
+   - If the choice is genuinely blocking (e.g., "build new vs extend existing" with irreversible consequences): ask the user once, then continue.
+3. Update `DOCS_RUN_DIR/context.md` with the resolved approach before proceeding.
+
+This phase should take < 2 minutes. It's a quick exploration, not a deep dive.
+
 ## Phase 2 — Expand context (parallel investigation subagents)
 
 Before planning, proactively surface adjacent requirements and hidden constraints.
@@ -137,12 +157,24 @@ Lead reduce step:
 Tier rule:
 
 - **Tier S:** skip the full map. Write a compact `spec.md` + `plan.md` directly from repo inspection.
-- **Tier M:** spawn `xlfg-spec-author` only (independent spec ensures requirements are crisp). Lead writes `plan.md` directly from spec + repo inspection. Skip repo-mapper, test-strategist, risk-assessor.
-- **Tier L:** run as written (spawn all four planning agents in parallel).
+- **Tier M:** spawn `xlfg-spec-author` (independent spec). Spawn `xlfg-researcher` if the domain is high-risk or unfamiliar. Lead writes `plan.md` directly from spec + research + repo inspection.
+- **Tier L:** run as written (spawn all planning agents in parallel, always including `xlfg-researcher`).
+
+### Research decision gate (Tier M)
+
+Before spawning planning agents, the lead evaluates whether external research is needed:
+
+- **Always research:** Security patterns, payment flows, external API integrations, compliance/legal, database migrations with data loss risk.
+- **Skip research:** Simple bugfix with clear root cause, UI-only change using established patterns, refactor within well-understood codebase.
+- **Research if uncertain:** New library/framework, unfamiliar domain, no prior patterns in `docs/xlfg/knowledge/`, user explicitly asked to "find the best way."
+
+When research is triggered, spawn `xlfg-researcher` in parallel with other planning agents.
+
+### Planning agents
 
 Launch **independent** planning subagents in parallel. Each agent must:
 
-- Read `DOCS_RUN_DIR/context.md`
+- Read `DOCS_RUN_DIR/context.md` (and `brainstorm.md` if present)
 - Inspect the repository as needed
 - Write output to the specified file
 - Keep output structured and actionable
@@ -151,6 +183,7 @@ Run these in parallel with Task tool:
 
 - Task `xlfg-repo-mapper` → write `DOCS_RUN_DIR/repo-map.md`
 - Task `xlfg-spec-author` → write `DOCS_RUN_DIR/spec.md`
+- Task `xlfg-researcher` → write `DOCS_RUN_DIR/research.md` (conditional — see gate above)
 - Task `xlfg-test-strategist` → write `DOCS_RUN_DIR/test-plan.md`
 - Task `xlfg-risk-assessor` → write `DOCS_RUN_DIR/risk.md`
 
@@ -158,7 +191,7 @@ Run these in parallel with Task tool:
 
 ## Phase 4 — Reduce (spec + plan + auto-continue)
 
-1. Read all map outputs.
+1. Read all map outputs (including `brainstorm.md` and `research.md` if present).
 2. Produce `DOCS_RUN_DIR/plan.md` with:
 
    - A short summary
