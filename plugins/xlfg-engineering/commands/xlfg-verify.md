@@ -1,7 +1,7 @@
 ---
 name: xlfg:verify
 description: Run tests/lint/build and write evidence to docs/xlfg + .xlfg.
-argument-hint: "[run-id | latest]"
+argument-hint: "[run-id | latest] [fast|full]"
 ---
 
 # /xlfg:verify
@@ -12,6 +12,15 @@ Run verification commands (tests / lint / typecheck / build) and save evidence.
 
 
 <input>#$ARGUMENTS</input>
+
+## 0) Parse arguments
+
+Treat arguments as:
+
+- First token: `run-id` (or `latest`)
+- Optional second token: `fast` or `full`
+
+Default mode: `full`.
 
 ## 1) Select run
 
@@ -27,6 +36,19 @@ Ensure these exist.
 
 ## 2) Decide verification commands
 
+### Non-interactive / anti-hang rules (important)
+
+Some test runners default to **watch mode** or wait forever for user input. This is the most common reason `/xlfg` runs exceed 30 minutes.
+
+When running Node-based verification, prefer setting `CI=1` (disables watch mode in many frameworks). If a command still hangs, switch to an explicit non-watch flag if supported (e.g., `--watch=false`, `--watchAll=false`).
+
+If your environment supports it, wrap long-running commands with a timeout (example: `timeout 20m <cmd>`).
+
+### Fast vs full
+
+- **fast:** lint/format/typecheck only (tight iteration loop)
+- **full:** fast + unit/integration tests + build
+
 Prefer repo-native commands in this order:
 
 1. `Makefile` targets (`make test`, `make lint`, `make ci`)
@@ -38,6 +60,8 @@ Prefer repo-native commands in this order:
    - Ruby: `bundle exec rspec` or `bin/rails test`
 
 If unclear, ask the user **once** for the canonical commands (copy from README/CONTRIBUTING).
+
+If you discover the canonical commands, consider recording them in `docs/xlfg/knowledge/commands.json` so future runs are deterministic.
 
 ## 3) Map phase: execute via verify runner subagent
 

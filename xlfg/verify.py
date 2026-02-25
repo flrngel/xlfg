@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as _dt
+import os
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple
@@ -10,23 +11,44 @@ from .runs import latest_run_id
 from .util import ensure_dir
 
 
-def _run_cmd(command: str, log_path: Path) -> int:
+def _should_set_ci_env(command: str) -> bool:
+    c = command.strip()
+    # Common Node entrypoints that often default to watch/interactive behavior.
+    return c.startswith(("npm ", "pnpm ", "yarn ", "bun ", "npx ", "node "))
+
+
+def _run_cmd(command: str, log_path: Path, *, timeout_sec: Optional[int] = None) -> int:
     ensure_dir(log_path.parent)
+    env = os.environ.copy()
+
+    # Avoid the most common "hang forever" failure mode: JS test runners in watch mode.
+    # Setting CI=1 disables watch mode for many frameworks (CRA/Jest, etc.).
+    if _should_set_ci_env(command) and "CI" not in env:
+        env["CI"] = "1"
+
     with log_path.open("w", encoding="utf-8") as f:
-        f.write(f"$ {command}\n\n")
-        p = subprocess.Popen(
-            command,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            universal_newlines=True,
-        )
-        assert p.stdout is not None
-        for line in p.stdout:
-            f.write(line)
-        return p.wait()
+        f.write(f"$ {command}\n")
+        if timeout_sec:
+            f.write(f"# timeout: {timeout_sec}s\n")
+        if env.get("CI") == "1":
+            f.write("# env: CI=1\n")
+        f.write("\n")
+        f.flush()
+
+        try:
+            completed = subprocess.run(
+                command,
+                shell=True,
+                stdout=f,
+                stderr=subprocess.STDOUT,
+                text=True,
+                env=env,
+                timeout=timeout_sec,
+            )
+            return int(completed.returncode)
+        except subprocess.TimeoutExpired:
+            f.write("\n[XLFG] TIMEOUT\n")
+            return 124
 
 
 def _tail(path: Path, max_lines: int = 80) -> str:
@@ -71,10 +93,25 @@ def verify(
     steps: List[Dict[str, Any]] = []
     ok = True
 
+    # Default timeouts are conservative and can be overridden.
+    # - XLFG_VERIFY_TIMEOUT_SECS=0 disables timeouts.
+    # - XLFG_VERIFY_TIMEOUT_SECS=<int> sets a fixed timeout for every command.
+    # - Otherwise: fast=10m, full=30m.
+    timeout_env = os.environ.get("XLFG_VERIFY_TIMEOUT_SECS")
+    timeout_sec: Optional[int]
+    if timeout_env is not None:
+        try:
+            t = int(timeout_env)
+            timeout_sec = None if t <= 0 else t
+        except Exception:
+            timeout_sec = None
+    else:
+        timeout_sec = 600 if mode == "fast" else 1800
+
     for i, cmd in enumerate(cmds, start=1):
         name = f"{i:02d}"
         log_file = log_dir / f"{name}.log"
-        code = _run_cmd(cmd, log_file)
+        code = _run_cmd(cmd, log_file, timeout_sec=timeout_sec)
         steps.append({"command": cmd, "exit_code": code, "log_file": str(log_file)})
         (log_dir / f"{name}.exitcode").write_text(str(code), encoding="utf-8")
         if code != 0:

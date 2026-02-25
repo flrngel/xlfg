@@ -10,6 +10,36 @@ Run an **end-to-end software development lifecycle** (SDLC) workflow that produc
 
 <input_request>#$ARGUMENTS</input_request>
 
+## Reality check (how to keep this from taking 30+ minutes)
+
+This workflow can be expensive because it intentionally uses multiple independent subagents plus verification.
+
+To avoid wasting time, **pick a run tier** up front based on the request complexity:
+
+- **Tier S (small):** 1–2 files, no new user-facing flows, low risk.
+  - Skip Phase 2 (context expansion) unless unclear.
+  - Skip the full multi-agent planning map; write a compact `spec.md` + `plan.md` directly.
+  - Implementation can be a single scoped task (still requires verification).
+- **Tier M (medium):** 3–10 files, normal feature/bugfix.
+  - Run Phase 2 + Phase 3 as written.
+  - Keep plan tasks **coarse** (aim <= 5 tasks) to avoid implementer/checker explosion.
+- **Tier L (large):** >10 files, cross-cutting refactor, risky domains.
+  - Full workflow as written.
+  - Expect multiple verify/review iterations.
+
+Default to **Tier M** if uncertain.
+
+## Important limitation (why "compound" feels broken)
+
+Claude Code slash commands are **not composable**: one command cannot truly "run" another command.
+
+So when this workflow references `/xlfg:init`, `/xlfg:verify`, `/xlfg:review`, or `/xlfg:compound`, you must:
+
+- either **perform the steps inline** in this same run, or
+- explicitly tell the user to invoke the subcommand.
+
+This command is written to be **self-contained**: perform the referenced steps inline by default.
+
 ## Core invariants (do not violate)
 
 1. **File-based context is the system of record.** Plans/specs/decisions live in `docs/xlfg/`.
@@ -20,7 +50,19 @@ Run an **end-to-end software development lifecycle** (SDLC) workflow that produc
 
 ## Phase 0 — Ensure scaffolding exists
 
-If `docs/xlfg/index.md` does not exist, run `/xlfg:init` first, then resume.
+If `docs/xlfg/index.md` does not exist, **bootstrap scaffolding inline** (equivalent to `/xlfg:init`) and continue:
+
+- Create directories:
+  - `docs/xlfg/knowledge/`
+  - `docs/xlfg/runs/`
+  - `.xlfg/runs/`
+- Ensure `.xlfg/` is in the repo root `.gitignore` (append if missing).
+- Create missing durable knowledge files (do not overwrite existing):
+  - `docs/xlfg/index.md`
+  - `docs/xlfg/knowledge/quality-bar.md`
+  - `docs/xlfg/knowledge/decision-log.md`
+  - `docs/xlfg/knowledge/patterns.md`
+  - `docs/xlfg/knowledge/testing.md`
 
 ## Phase 1 — Create a run folder
 
@@ -40,6 +82,11 @@ If `docs/xlfg/index.md` does not exist, run `/xlfg:init` first, then resume.
 
 Before planning, proactively surface adjacent requirements and hidden constraints.
 
+Tier rule:
+
+- **Tier S:** skip this phase unless requirements/constraints are unclear.
+- **Tier M/L:** run as written.
+
 Run these **independent** investigation tasks in parallel (file handoffs only):
 
 - Task `xlfg-context-adjacent-investigator` → write `DOCS_RUN_DIR/context/adjacent.md`
@@ -56,6 +103,11 @@ Lead reduce step:
 - Move unapproved expansions to `Out-of-scope backlog` and continue.
 
 ## Phase 3 — Map (parallel planning subagents)
+
+Tier rule:
+
+- **Tier S:** skip the full map. Write a compact `spec.md` + `plan.md` directly from repo inspection.
+- **Tier M/L:** run as written.
 
 Launch **independent** planning subagents in parallel. Each agent must:
 
@@ -129,23 +181,33 @@ General implementation rules still apply:
 
 ## Phase 6 — Verify (hard gate)
 
-Run `/xlfg:verify <RUN_ID>`.
+Perform verification **inline** (equivalent to `/xlfg:verify <RUN_ID>`):
+
+1. Decide canonical commands (prefer repo-native `make`, `package.json` scripts, or README/CONTRIBUTING).
+2. Run Task `xlfg-verify-runner` to execute commands and write logs to `.xlfg/runs/<RUN_ID>/verify/<ts>/...`.
+   - Prefer **non-interactive** modes (avoid watchers): set `CI=1` when running Node-based tests.
+   - If a command appears to hang, add a timeout wrapper if available (e.g., `timeout 20m <cmd>`).
+3. Run Task `xlfg-verify-reducer` to write `DOCS_RUN_DIR/verification.md` (and `verify-fix-plan.md` if RED).
 
 If verification fails:
 
 - Fix the *first* actionable failure
-- Re-run `/xlfg:verify`
+- Repeat this verification phase (or ask the user to run `/xlfg:verify <run-id>`)
 - Repeat until green
 
 ## Phase 7 — Review (hard gate)
 
-Run `/xlfg:review <RUN_ID>`.
+Perform review **inline** (equivalent to `/xlfg:review <RUN_ID>`):
+
+- Ensure `DOCS_RUN_DIR/reviews/` exists.
+- Run the review agents (security + architecture always; perf/ux conditionally) writing into `DOCS_RUN_DIR/reviews/`.
+- Reduce into `DOCS_RUN_DIR/review-summary.md` and block on net-new P0 issues.
 
 If any P0 blockers exist:
 
 - Fix them
-- Re-run `/xlfg:verify`
-- Re-run `/xlfg:review`
+- Repeat verification (or ask the user to run `/xlfg:verify <run-id>`)
+- Repeat review (or ask the user to run `/xlfg:review <run-id>`)
 
 ## Phase 8 — Prepare ship artifacts
 
@@ -161,7 +223,21 @@ Create the final implementation commit(s) and PR (if applicable).
 
 ## Phase 10 — Compound (hard gate, last phase)
 
-Run `/xlfg:compound <RUN_ID>` and ensure `DOCS_RUN_DIR/compound-summary.md` is written.
+Perform compounding **inline** (equivalent to `/xlfg:compound <RUN_ID>`):
+
+1. Ensure `KB_DIR=docs/xlfg/knowledge/` exists.
+2. Read run artifacts (if present): `spec.md`, `plan.md`, `test-plan.md`, `risk.md`, `verification.md`, `review-summary.md`, `run-summary.md`.
+3. Write `DOCS_RUN_DIR/compound-summary.md` with:
+   - What was learned (especially from verify + review overlap)
+   - What should be reused next time
+   - What to avoid
+4. If there are clear durable lessons, append **small, specific** entries to:
+   - `KB_DIR/patterns.md`
+   - `KB_DIR/decision-log.md`
+   - `KB_DIR/testing.md`
+   - `KB_DIR/quality-bar.md`
+   Keep this tight—do not rewrite the entire files.
+5. If `DOCS_RUN_DIR/run-summary.md` is missing, create it.
 
 If compounding adds tracked updates, include them in a follow-up commit/PR update before declaring completion.
 

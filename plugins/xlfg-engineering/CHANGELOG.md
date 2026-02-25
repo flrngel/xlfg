@@ -5,6 +5,13 @@ All notable changes to this plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-02-25
+
+### Changed
+- Made `/xlfg` explicitly self-contained: it now performs init/verify/review/compound steps inline instead of requiring subcommand chaining.
+- Added run-tier guidance (S/M/L) to reduce unnecessary parallelism and keep plans coarse.
+- Hardened verification guidance against common hang modes (watch/interactive runners) and added `CI=1` recommendation.
+
 ## [0.7.0] - 2026-02-22
 
 ### Changed

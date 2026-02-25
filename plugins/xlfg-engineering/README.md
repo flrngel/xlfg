@@ -22,6 +22,10 @@ It is designed for:
 | `/xlfg:compound` | Convert a run into durable knowledge for future work |
 
 `/xlfg` auto-continues from planning into implementation. It only pauses for true blockers or safety-gated confirmations.
+
+`/xlfg` is intentionally **self-contained**: it performs init/verify/review/compound steps inline so you don't get stuck on subcommand chaining.
+
+To keep runtime reasonable, `/xlfg` includes guidance for **run tiers** (S/M/L) so small changes can skip unnecessary fan-out.
 `/xlfg:review` is verification-aware and prioritizes net-new findings over verification overlap.
 
 ## Agents

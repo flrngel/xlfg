@@ -28,6 +28,10 @@ You run verification commands and capture evidence artifacts.
 - Use `set -o pipefail`.
 - Capture full output with `tee`.
 - Record exact command strings and exit codes.
+- Prefer non-interactive execution:
+  - For Node-based commands (`npm`, `pnpm`, `yarn`, `bun`, `npx`), set `CI=1` unless already set.
+  - Avoid watch modes that never terminate.
+- If a command appears to hang and `timeout` is available, wrap it (e.g., `timeout 20m <cmd>`).
 - Keep names stable and filesystem-safe (e.g., `test`, `lint`, `typecheck`, `build`).
 - Never skip a command unless it is explicitly marked optional.
 

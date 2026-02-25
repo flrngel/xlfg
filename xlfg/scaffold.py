@@ -68,6 +68,23 @@ Reusable patterns discovered while shipping.
 - **Examples / links**:
 """
 
+TESTING_MD = """# xlfg testing knowledge
+
+Durable testing learnings captured from `/xlfg` runs.
+
+## Template
+
+## Scenario: <name>
+
+- **Failure that escaped**:
+- **Why it escaped**:
+- **Test pattern that catches it**:
+- **Fast loop command**:
+- **Full verification command**:
+- **Flake signals / stabilization notes**:
+- **Links**: (run folder, PR, issue)
+"""
+
 COMMANDS_JSON = """{
   "install": null,
   "verify_fast": [],
@@ -108,6 +125,9 @@ def init_scaffold(root: Path) -> Dict[str, List[str]]:
 
     if safe_write(root / "docs" / "xlfg" / "knowledge" / "patterns.md", PATTERNS_MD):
         created.append("docs/xlfg/knowledge/patterns.md")
+
+    if safe_write(root / "docs" / "xlfg" / "knowledge" / "testing.md", TESTING_MD):
+        created.append("docs/xlfg/knowledge/testing.md")
 
     if safe_write(root / "docs" / "xlfg" / "knowledge" / "commands.json", COMMANDS_JSON):
         created.append("docs/xlfg/knowledge/commands.json")
