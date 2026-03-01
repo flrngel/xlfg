@@ -3,10 +3,11 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from . import __version__
 from .detect import detect_commands
+from .doctor import cleanup_dev_server, ensure_dev_server
 from .runs import create_run
 from .scaffold import init_scaffold
 from .util import repo_root
@@ -18,7 +19,10 @@ def _print_json(obj: Any) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="xlfg", description="Extreme LFG: file-based SDLC harness")
+    parser = argparse.ArgumentParser(
+        prog="xlfg",
+        description="Extreme LFG: behavior-contract-first SDLC harness",
+    )
     parser.add_argument("--version", action="store_true", help="Print version and exit")
 
     subparsers = parser.add_subparsers(dest="command")
@@ -34,7 +38,11 @@ def main(argv: list[str] | None = None) -> int:
     p_detect = subparsers.add_parser("detect", help="Detect verification commands")
     p_detect.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
 
-    p_verify = subparsers.add_parser("verify", help="Run verification and write evidence")
+    p_doctor = subparsers.add_parser("doctor", help="Check or start the configured dev server")
+    p_doctor.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
+    p_doctor.add_argument("--run", dest="run_id", default=None, help="Run id (default: latest)")
+
+    p_verify = subparsers.add_parser("verify", help="Run layered verification and write evidence")
     p_verify.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
     p_verify.add_argument("--run", dest="run_id", default=None, help="Run id (default: latest)")
     p_verify.add_argument("--mode", choices=["fast", "full"], default="full")
@@ -66,6 +74,19 @@ def main(argv: list[str] | None = None) -> int:
         detected = detect_commands(root)
         _print_json({"root": str(root), **detected})
         return 0
+
+    if args.command == "doctor":
+        init_scaffold(root)
+        from .runs import latest_run_id
+
+        rid = args.run_id or latest_run_id(root)
+        if rid is None:
+            raise RuntimeError("No run found. Run `xlfg start ...` first.")
+        detected = detect_commands(root)
+        report, handle = ensure_dev_server(root, rid, detected.get("dev"))
+        cleanup = cleanup_dev_server(handle) if handle is not None else None
+        _print_json({"root": str(root), "run_id": rid, "report": report, "cleanup": cleanup})
+        return 0 if report.get("status") in {"reused", "started", "no-config"} else 2
 
     if args.command == "verify":
         init_scaffold(root)

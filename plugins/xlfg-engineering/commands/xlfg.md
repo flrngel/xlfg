@@ -1,347 +1,274 @@
 ---
 name: xlfg
-description: Ship production-ready code via file-based multi-agent SDLC + verification.
+description: Ship production-ready code via contracts, layered verification, and compounding.
 argument-hint: "[feature/bugfix request]"
 ---
 
 # /xlfg
 
-Run an **end-to-end software development lifecycle** (SDLC) workflow that produces **production-ready output** with **evidence**.
+Run an end-to-end software development workflow that produces **real, verifiable output**.
 
 <input_request>#$ARGUMENTS</input_request>
 
-## Reality check (how to keep this from taking 30+ minutes)
+## Core shift in this version
 
-This workflow can be expensive because it intentionally uses multiple independent subagents plus verification.
+This workflow is **not**:
 
-To avoid wasting time, **pick a run tier** up front based on the request complexity:
+> define loosely → implement → ask late if it works
 
-- **Tier S (small):** 1–2 files, no new user-facing flows, low risk.
-  - Skip Phase 2 (context expansion) unless unclear.
-  - Skip the full multi-agent planning map; write a compact `spec.md` + `plan.md` directly.
-  - Implementation can be a single scoped task (still requires verification).
-- **Tier M (medium):** 3–10 files, normal feature/bugfix.
-  - Skip Phase 2. Run Phase 3 partially (spec-author only).
-  - Lead implements directly but MUST spawn checker, verify, and review agents.
-  - Keep plan tasks **coarse** (aim <= 5 tasks) to avoid implementer/checker explosion.
-- **Tier L (large):** >10 files, cross-cutting refactor, risky domains.
-  - Full workflow as written.
-  - Expect multiple verify/review iterations.
+This workflow **is**:
 
-Default to **Tier M** if uncertain.
+> define the user flow → define the shared test contract → define the environment contract → implement against that contract → verify in layers → compound real failures
 
-### Must-spawn agents per tier (non-negotiable)
+## Core invariants
 
-Every tier has a **minimum set of agents that MUST be spawned via the Task tool**. The lead agent must NOT substitute itself for these — independent perspective is the point.
+1. **Do not code until `flow-spec.md`, `test-contract.md`, and `env-plan.md` exist.**
+2. **Implementation and verification share the same contract.**
+3. **Evidence-first:** never claim done without green verification and logs.
+4. **Environment discipline:** do not blindly start duplicate dev servers.
+5. **Compounding must be concrete and verified.**
 
-| Phase | Agent | Tier S | Tier M | Tier L |
-|-------|-------|--------|--------|--------|
-| P1.5 | `xlfg-brainstorm` | if ambiguous | if ambiguous | if ambiguous |
-| P2 | `xlfg-context-*` investigators (×3) | skip | skip | **spawn** |
-| P3 | `xlfg-repo-mapper` | skip | skip | **spawn** |
-| P3 | `xlfg-spec-author` | skip | **spawn** | **spawn** |
-| P3 | `xlfg-researcher` | skip | if high-risk/unfamiliar | **spawn** |
-| P3 | `xlfg-test-strategist` | skip | skip | **spawn** |
-| P3 | `xlfg-risk-assessor` | skip | skip | **spawn** |
-| P5 | `xlfg-task-implementer` | lead may implement directly | lead may implement directly | **spawn** |
-| P5 | `xlfg-task-checker` | **spawn** | **spawn** | **spawn** |
-| P6 | `xlfg-verify-runner` | lead may run inline | **spawn** | **spawn** |
-| P6 | `xlfg-verify-reducer` | lead may write inline | **spawn** | **spawn** |
-| P7 | `xlfg-security-reviewer` | skip | **spawn** | **spawn** |
-| P7 | `xlfg-architecture-reviewer` | skip | **spawn** | **spawn** |
-| P7 | `xlfg-performance-reviewer` | skip | conditional | conditional |
-| P7 | `xlfg-ux-reviewer` | skip | conditional | conditional |
+## Runtime discipline (so this does not waste hackathon time)
 
-**Key rules:**
-- **The checker agent is ALWAYS spawned.** The lead must NEVER write checker reports itself — self-review defeats the purpose of independent verification.
-- "Lead may implement directly" means the lead can write code and the implementer report itself, but must still spawn the checker.
-- "Lead may run/write inline" means the lead can run verification commands and write `verification.md` directly for trivial changes.
-- "If ambiguous" means the request lacks clear acceptance criteria or has multiple valid interpretations (e.g., "improve the search UX", "make it faster", "refactor the auth flow").
-- "If high-risk/unfamiliar" means the domain involves security, payments, external APIs, compliance, or technology the codebase hasn't used before.
-- "Conditional" means spawn only if the change touches the relevant area (performance-sensitive code, user-facing UI).
+Choose a tier up front:
 
-**Minimum Task agent spawns:** Tier S = 1 per task (checker), Tier M = 6–7 total, Tier L = 15+.
+- **Tier S** — 1–2 files, low risk, no meaningful new user flow
+- **Tier M** — normal feature / bugfix, a few files, at least one changed scenario
+- **Tier L** — cross-cutting, risky, multiple surfaces, or major UX flow change
 
-## Important limitation (why "compound" feels broken)
+Default to **Tier M**.
 
-Claude Code slash commands are **not composable**: one command cannot truly "run" another command.
+### Minimum fan-out by tier
 
-So when this workflow references `/xlfg:init`, `/xlfg:verify`, `/xlfg:review`, or `/xlfg:compound`, you must:
+| Phase | Tier S | Tier M | Tier L |
+|---|---:|---:|---:|
+| Flow contract | lead may write directly | spawn `xlfg-spec-author` | spawn `xlfg-spec-author` |
+| Test contract | lead may write directly | spawn `xlfg-test-strategist` | spawn `xlfg-test-strategist` |
+| Env plan | lead may write directly | spawn `xlfg-env-doctor` | spawn `xlfg-env-doctor` |
+| Risk | optional | spawn if risky | spawn `xlfg-risk-assessor` |
+| Implementation checker | **always spawn** | **always spawn** | **always spawn** |
+| Verify | lead may run inline | spawn verify runner + reducer | spawn verify runner + reducer |
+| Review | optional | security + architecture | full set |
 
-- either **perform the steps inline** in this same run, or
-- explicitly tell the user to invoke the subcommand.
+## Important limitation
 
-This command is written to be **self-contained**: perform the referenced steps inline by default.
-
-## Core invariants (do not violate)
-
-1. **File-based context is the system of record.** Plans/specs/decisions live in `docs/xlfg/`.
-2. **Independent subagents, file-based handoffs.** Subagents write to files; they do not coordinate via chat.
-3. **Evidence-first.** Never say “done” unless `/xlfg:verify` is green and logs exist.
-4. **No silent scope creep.** Any new requirement must be written into the spec and re-approved.
-5. **Safety gates.** High-risk changes (migrations, auth, payments, deletions) require explicit user confirmation + rollback notes.
+Claude Code slash commands are not truly composable. This command is therefore written to be **self-contained**: perform init / verify / review / compound steps inline unless you explicitly want to invoke subcommands yourself.
 
 ## Phase 0 — Ensure scaffolding exists
 
-If `docs/xlfg/index.md` does not exist, **bootstrap scaffolding inline** (equivalent to `/xlfg:init`) and continue:
-
-- Create directories:
-  - `docs/xlfg/knowledge/`
-  - `docs/xlfg/runs/`
-  - `.xlfg/runs/`
-- Ensure `.xlfg/` is in the repo root `.gitignore` (append if missing).
-- Create missing durable knowledge files (do not overwrite existing):
-  - `docs/xlfg/index.md`
-  - `docs/xlfg/knowledge/quality-bar.md`
-  - `docs/xlfg/knowledge/decision-log.md`
-  - `docs/xlfg/knowledge/patterns.md`
-  - `docs/xlfg/knowledge/testing.md`
+If `docs/xlfg/index.md` does not exist, bootstrap scaffolding inline (equivalent to `/xlfg:init`) and continue.
 
 ## Phase 1 — Create a run folder
 
-1. Generate a `RUN_ID`:
-   - Format: `<YYYYMMDD-HHMMSS>-<short-slug>`
+1. Generate `RUN_ID=<YYYYMMDD-HHMMSS>-<slug>`
 2. Create:
    - `DOCS_RUN_DIR=docs/xlfg/runs/<RUN_ID>/`
    - `DX_RUN_DIR=.xlfg/runs/<RUN_ID>/`
-   - `DOCS_RUN_DIR/context/`
-   - `DOCS_RUN_DIR/tasks/`
-3. In `DOCS_RUN_DIR/context.md`, record:
-   - The raw user request
-   - Assumptions
-   - Constraints (env, OS, perf, security, UX)
+3. Ensure the run contains at least:
+   - `context.md`
+   - `flow-spec.md`
+   - `spec.md`
+   - `plan.md`
+   - `test-contract.md`
+   - `env-plan.md`
+   - `scorecard.md`
+   - `tasks/`
 
-## Phase 1.5 — Brainstorm (conditional: ambiguous requests only)
+Record the raw user request and known constraints in `context.md`.
 
-Before planning HOW, ensure WHAT is clear.
+## Phase 2 — Define **what to build**
 
-**Trigger condition:** The request lacks clear acceptance criteria, has exploratory language ("maybe", "could we", "improve", "explore"), or has multiple valid interpretations. If the request is a clear bugfix, well-defined feature, or has explicit acceptance criteria, **skip this phase**.
+Before planning HOW, define the shared behavior contract.
 
-When triggered:
+### Required output
 
-1. Spawn Task `xlfg-brainstorm` → writes `DOCS_RUN_DIR/brainstorm.md` with 2–3 concrete approaches, tradeoffs, and a recommendation.
-2. Lead reads the brainstorm output and decides:
-   - If the recommendation is clear and non-controversial: adopt it, update `context.md` with the chosen approach, and continue.
-   - If the choice is genuinely blocking (e.g., "build new vs extend existing" with irreversible consequences): ask the user once, then continue.
-3. Update `DOCS_RUN_DIR/context.md` with the resolved approach before proceeding.
+Create or update `DOCS_RUN_DIR/flow-spec.md` with explicit scenarios.
 
-This phase should take < 2 minutes. It's a quick exploration, not a deep dive.
+For every meaningful user-facing or system-facing behavior, include:
 
-## Phase 2 — Expand context (parallel investigation subagents)
+- scenario ID (`P0-1`, `P1-2`, etc.)
+- actor / preconditions
+- exact steps
+- alternate steps when relevant
+- failure / empty / loading states
+- assertions
+- keyboard / accessibility notes when UI is involved
+- telemetry / observability notes if relevant
 
-Before planning, proactively surface adjacent requirements and hidden constraints.
+Example shape:
 
-Tier rule:
+- user focuses input by click
+- user focuses input by keyboard / tab
+- user submits by Enter
+- user submits by button click
+- error state is shown when invalid
+- same flow remains keyboard-usable
 
-- **Tier S:** skip this phase unless requirements/constraints are unclear.
-- **Tier M:** skip this phase. The lead assesses context directly for normal features/bugfixes.
-- **Tier L:** run as written (spawn all three investigators in parallel).
+### How to generate it
 
-Run these **independent** investigation tasks in parallel (file handoffs only):
+- **Tier S:** lead may write the contract directly
+- **Tier M/L:** spawn `xlfg-spec-author` to write `flow-spec.md`
+- If the request is ambiguous, optionally run `xlfg-brainstorm` first
 
-- Task `xlfg-context-adjacent-investigator` → write `DOCS_RUN_DIR/context/adjacent.md`
-- Task `xlfg-context-constraints-investigator` → write `DOCS_RUN_DIR/context/constraints.md`
-- Task `xlfg-context-unknowns-investigator` → write `DOCS_RUN_DIR/context/unknowns.md`
+Also update `spec.md` with a short summary + acceptance criteria + non-goals.
 
-Lead reduce step:
+## Phase 3 — Define **what to test** and **how the environment must behave**
 
-- Merge findings into canonical `DOCS_RUN_DIR/context.md`.
-- Add two explicit sections:
-  - `Candidate scope expansions`
-  - `Out-of-scope backlog`
-- Default behavior: do not implement `Candidate scope expansions` unless already requested by the user.
-- Move unapproved expansions to `Out-of-scope backlog` and continue.
+### 3A) Test contract
 
-## Phase 3 — Map (parallel planning subagents)
+Create `DOCS_RUN_DIR/test-contract.md`.
 
-Tier rule:
+This file must map the flow contract to verification:
 
-- **Tier S:** skip the full map. Write a compact `spec.md` + `plan.md` directly from repo inspection.
-- **Tier M:** spawn `xlfg-spec-author` (independent spec). Spawn `xlfg-researcher` if the domain is high-risk or unfamiliar. Lead writes `plan.md` directly from spec + research + repo inspection.
-- **Tier L:** run as written (spawn all planning agents in parallel, always including `xlfg-researcher`).
+- **F2P** — new / changed behavior to prove
+- **P2P** — existing behavior to preserve
+- fastest relevant check for each scenario
+- required smoke / e2e checks
+- broader regression suites
+- manual smoke checklist if needed
 
-### Research decision gate (Tier M)
+Rules:
 
-Before spawning planning agents, the lead evaluates whether external research is needed:
+- do not say only "run the full test suite"
+- do not treat all flows as e2e-worthy
+- prefer the fastest targeted check that proves the scenario
 
-- **Always research:** Security patterns, payment flows, external API integrations, compliance/legal, database migrations with data loss risk.
-- **Skip research:** Simple bugfix with clear root cause, UI-only change using established patterns, refactor within well-understood codebase.
-- **Research if uncertain:** New library/framework, unfamiliar domain, no prior patterns in `docs/xlfg/knowledge/`, user explicitly asked to "find the best way."
+### 3B) Environment plan
 
-When research is triggered, spawn `xlfg-researcher` in parallel with other planning agents.
+Create `DOCS_RUN_DIR/env-plan.md`.
 
-### Planning agents
+This file must define:
 
-Launch **independent** planning subagents in parallel. Each agent must:
+- install command(s)
+- dev server command
+- port / healthcheck
+- reuse-if-healthy policy
+- startup timeout
+- cleanup rule
+- anti-hang rule (watch mode off, `CI=1`, etc.)
+- known environment traps from prior runs
 
-- Read `DOCS_RUN_DIR/context.md` (and `brainstorm.md` if present)
-- Inspect the repository as needed
-- Write output to the specified file
-- Keep output structured and actionable
+### 3C) Risk
 
-Run these in parallel with Task tool:
+If risky, write `DOCS_RUN_DIR/risk.md`.
 
-- Task `xlfg-repo-mapper` → write `DOCS_RUN_DIR/repo-map.md`
-- Task `xlfg-spec-author` → write `DOCS_RUN_DIR/spec.md`
-- Task `xlfg-researcher` → write `DOCS_RUN_DIR/research.md` (conditional — see gate above)
-- Task `xlfg-test-strategist` → write `DOCS_RUN_DIR/test-plan.md`
-- Task `xlfg-risk-assessor` → write `DOCS_RUN_DIR/risk.md`
+### How to generate these
 
-(If UI is involved, also run Task `xlfg-ux-reviewer` early to propose UX acceptance criteria.)
+- **Tier S:** lead may write directly
+- **Tier M/L:** spawn `xlfg-test-strategist` and `xlfg-env-doctor`
+- spawn `xlfg-risk-assessor` when the domain is risky or unfamiliar
 
-## Phase 4 — Reduce (spec + plan + auto-continue)
+## Phase 4 — Reduce into the implementation plan
 
-1. Read all map outputs (including `brainstorm.md` and `research.md` if present).
-2. Produce `DOCS_RUN_DIR/plan.md` with:
+Write `DOCS_RUN_DIR/plan.md`.
 
-   - A short summary
-   - **Ordered checklist** of tasks (checkboxes)
-   - Explicit “definition of done” for this run
-   - Verification commands to run (from repo-map + test-plan)
-   - Rollback/mitigation notes for risky changes
+Rules for the plan:
 
-3. Resolve non-blocking unknowns by writing explicit assumptions into `context.md` and `spec.md`.
-4. Continue directly to implementation without waiting for plan approval.
-5. Ask the user only when both are true:
-   - A decision is truly blocking correctness or safety
-   - No safe default assumption exists
+- tasks must align to scenario IDs from `flow-spec.md`
+- keep tasks coarse enough to avoid subagent thrash
+- include the targeted check to run after each task
+- define the ship gate clearly
 
-## Phase 5 — Implement (lead-orchestrated, mandatory pair mode)
+Update `scorecard.md` with the scenarios that must eventually be GREEN.
 
-Lead agent owns implementation orchestration and completion.
+## Phase 5 — Implement against the contract
 
-**CRITICAL: The lead must NEVER write `checker-report.md` files itself.** Checker reports must always come from a spawned `xlfg-task-checker` agent. Writing your own checker report is self-review, not independent verification — it defeats the core value of the pair loop. If you catch yourself about to write a checker report, stop and spawn the agent instead.
+For every plan task:
 
-Tier rules for implementation:
+1. Scope the task to files + scenario IDs
+2. Implement the code and required tests
+3. Write `tasks/<task-id>/implementer-report.md`
+4. Spawn `xlfg-task-checker`
+5. Checker writes `tasks/<task-id>/checker-report.md`
+6. Only mark the task done when checker verdict is `ACCEPT`
 
-- **Tier S/M:** The lead MAY implement code directly and write the `implementer-report.md` itself (skip `xlfg-task-implementer`). This is acceptable because the implementer is just doing the work — the independent value comes from the checker.
-- **Tier L:** Spawn `xlfg-task-implementer` for each task to keep the lead focused on orchestration.
-- **All tiers:** MUST spawn `xlfg-task-checker` for every task. No exceptions.
+### Crucial rule
 
-Mandatory pair loop (per task in `plan.md`):
+After each task, run the **fastest targeted check from `test-contract.md`**.
 
-1. Implement the task (lead directly for Tier S/M, or spawn Task `xlfg-task-implementer` for Tier L):
-   - `DOCS_RUN_DIR`
-   - task id + acceptance criteria
-   - allowed file scope
-   - implementer output path: `DOCS_RUN_DIR/tasks/<task-id>/implementer-report.md`
-2. Spawn Task `xlfg-task-checker` with:
-   - the same task contract
-   - checker output path: `DOCS_RUN_DIR/tasks/<task-id>/checker-report.md`
-3. Checker validates against `spec.md`, `test-plan.md`, `risk.md`, and changed files.
-4. Lead decides:
-   - If accepted: mark task done in `plan.md`
-   - If changes required: run another implementer pass
-5. Hard cap: max 3 checker loops per task, then lead resolves manually.
+Do **not** jump to full e2e after every small change unless the contract says that task cannot be trusted without it.
 
-Conflict-control rules:
+### Anti-loop rule
 
-- Implementer and checker do not coordinate via chat.
-- Checker writes findings to file; by default checker does not edit production code.
-- Keep ownership conflict-free by constraining task scope.
-- All handoffs happen through `DOCS_RUN_DIR/`.
+If the same command or same failure repeats twice without a new hypothesis:
 
-General implementation rules still apply:
-
-- Follow existing repo conventions and patterns.
-- Prefer small, reviewable increments.
-- Write tests alongside changes.
-- Update `plan.md` checkboxes as tasks complete.
-- Record notable decisions in `docs/xlfg/knowledge/decision-log.md` (or link from the run).
-- Do not pause for implementation permission after Phase 4.
-- If a safety-gated high-risk change is required, request explicit confirmation once right before execution.
+- stop the blind rerun loop
+- write the blocker into the run
+- treat it as a harness / environment / diagnosis problem
 
 ## Phase 6 — Verify (hard gate)
 
-Perform verification **inline** (equivalent to `/xlfg:verify <RUN_ID>`):
+Perform verification inline (equivalent to `/xlfg:verify <RUN_ID>`).
 
-Tier rules:
+Required order:
 
-- **Tier S:** The lead MAY run verification commands directly (via Bash) and write `DOCS_RUN_DIR/verification.md` itself. Still must record commands run, exit codes, and GREEN/RED status.
-- **Tier M/L:** MUST spawn `xlfg-verify-runner` then `xlfg-verify-reducer`. Structured logs in `.xlfg/` are required.
+1. fast checks
+2. scenario-targeted smoke
+3. required e2e / real-flow checks
+4. broader regression suites and build
 
-For Tier M/L:
+Before smoke or e2e, run the environment doctor.
 
-1. Decide canonical commands (prefer repo-native `make`, `package.json` scripts, or README/CONTRIBUTING).
-2. Run Task `xlfg-verify-runner` to execute commands and write logs to `.xlfg/runs/<RUN_ID>/verify/<ts>/...`.
-   - Prefer **non-interactive** modes (avoid watchers): set `CI=1` when running Node-based tests.
-   - If a command appears to hang, add a timeout wrapper if available (e.g., `timeout 20m <cmd>`).
-3. Run Task `xlfg-verify-reducer` to write `DOCS_RUN_DIR/verification.md` (and `verify-fix-plan.md` if RED).
+Outputs required:
+
+- `.xlfg/runs/<RUN_ID>/verify/<ts>/...`
+- `verification.md`
+- `scorecard.md`
+- `verify-fix-plan.md` if RED
 
 If verification fails:
 
-- Fix the *first* actionable failure
-- Repeat this verification phase (or ask the user to run `/xlfg:verify <run-id>`)
-- Repeat until green
+- fix the first actionable failure
+- re-run verification
+- do not continue shipping while RED
 
 ## Phase 7 — Review (hard gate)
 
-Perform review **inline** (equivalent to `/xlfg:review <RUN_ID>`):
+Perform review inline (equivalent to `/xlfg:review <RUN_ID>`).
 
-Tier rules:
+- Tier S: brief lead review is acceptable only for trivial low-risk changes
+- Tier M: security + architecture reviewers required; UX/perf when relevant
+- Tier L: all review lenses required
 
-- **Tier S:** The lead MAY skip review agents and write a brief `DOCS_RUN_DIR/review-summary.md` directly (acceptable for trivial, low-risk changes to 1–2 files).
-- **Tier M:** MUST spawn `xlfg-security-reviewer` + `xlfg-architecture-reviewer`. Spawn `xlfg-performance-reviewer` and `xlfg-ux-reviewer` conditionally (if relevant areas changed).
-- **Tier L:** MUST spawn all four review agents.
+Reviewers must use the flow / test / environment contract when evaluating coverage gaps.
 
-For Tier M/L:
+## Phase 8 — Ship artifacts
 
-- Ensure `DOCS_RUN_DIR/reviews/` exists.
-- Run the review agents (security + architecture always; perf/ux conditionally) writing into `DOCS_RUN_DIR/reviews/`.
-- Reduce into `DOCS_RUN_DIR/review-summary.md` and block on net-new P0 issues.
+Ensure `run-summary.md` exists with:
 
-If any P0 blockers exist:
+- what changed
+- how to test manually
+- verification commands and log paths
+- post-deploy monitoring or explicit reason none is needed
+- rollback plan
 
-- Fix them
-- Repeat verification (or ask the user to run `/xlfg:verify <run-id>`)
-- Repeat review (or ask the user to run `/xlfg:review <run-id>`)
+## Phase 9 — Compound and evolve
 
-## Phase 8 — Prepare ship artifacts
+Perform compounding inline (equivalent to `/xlfg:compound <RUN_ID>`).
 
-1. Ensure `DOCS_RUN_DIR/run-summary.md` exists with:
-   - What changed
-   - How to test / smoke steps
-   - Verification commands run + log paths
-   - **Post-deploy monitoring** (required — or explicit "No monitoring needed: [reason]"):
-     - What to monitor / search for
-     - Expected healthy behavior
-     - Failure signals and rollback triggers
-   - Rollback plan
+Update durable knowledge when the run teaches something concrete:
 
-## Phase 9 — Ship
+- `testing.md`
+- `ux-flows.md`
+- `failure-memory.md`
+- `harness-rules.md`
+- `patterns.md`
+- `decision-log.md`
+- `quality-bar.md`
 
-Create the final implementation commit(s) and PR (if applicable).
-
-## Phase 10 — Compound (hard gate, last phase)
-
-Perform compounding **inline** (equivalent to `/xlfg:compound <RUN_ID>`):
-
-1. Ensure `KB_DIR=docs/xlfg/knowledge/` exists.
-2. Read run artifacts (if present): `spec.md`, `plan.md`, `test-plan.md`, `risk.md`, `verification.md`, `review-summary.md`, `run-summary.md`.
-3. Write `DOCS_RUN_DIR/compound-summary.md` with:
-   - What was learned (especially from verify + review overlap)
-   - What should be reused next time
-   - What to avoid
-4. If there are clear durable lessons, append **small, specific** entries to:
-   - `KB_DIR/patterns.md`
-   - `KB_DIR/decision-log.md`
-   - `KB_DIR/testing.md`
-   - `KB_DIR/quality-bar.md`
-   Keep this tight—do not rewrite the entire files.
-5. If `DOCS_RUN_DIR/run-summary.md` is missing, create it.
-
-If compounding adds tracked updates, include them in a follow-up commit/PR update before declaring completion.
+Only compound lessons that are real, specific, and reusable.
 
 ## Completion criteria
 
 Only declare success when:
 
-- `DOCS_RUN_DIR/spec.md` exists and matches what was built
-- `DOCS_RUN_DIR/plan.md` checkboxes are complete
-- Every task in `plan.md` has:
-  - `DOCS_RUN_DIR/tasks/<task-id>/implementer-report.md`
-  - `DOCS_RUN_DIR/tasks/<task-id>/checker-report.md` with `Verdict: ACCEPT`
-- `/xlfg:verify` is green with logs saved
-- `/xlfg:review` has no P0 issues
-- `DOCS_RUN_DIR/run-summary.md` exists
-- `DOCS_RUN_DIR/compound-summary.md` exists
+- `flow-spec.md` exists and matches what was built
+- `test-contract.md` exists and matches what was verified
+- `env-plan.md` exists and explains the harness used
+- `plan.md` checkboxes are complete
+- every task has implementer + checker reports, and checker says `ACCEPT`
+- verification is green and logs exist
+- review has no P0 blockers
+- `scorecard.md` reflects green required scenarios
+- `run-summary.md` exists
+- `compound-summary.md` exists

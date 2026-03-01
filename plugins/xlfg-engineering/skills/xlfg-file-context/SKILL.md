@@ -1,6 +1,6 @@
 ---
 name: xlfg-file-context
-description: Use docs/xlfg + .xlfg as file-based context for independent subagents. Use for long SDLC workflows.
+description: Use docs/xlfg + .xlfg as the file-based context system for long SDLC runs.
 ---
 
 # xlfg-file-context
@@ -11,18 +11,18 @@ Use file-based context to keep long-horizon work reliable and legible.
 
 - Any `/xlfg` run
 - Long tasks that exceed chat memory
-- Multi-agent work where coordination needs to be deterministic
+- Multi-agent work where coordination must be deterministic
 
 ## Core idea
 
 Treat files as the system of record:
 
-- **Durable (commit):** `docs/xlfg/` — specs, plans, reviews, run summaries, lessons
-- **Ephemeral (gitignore):** `.xlfg/` — raw logs, screenshots, traces
+- **Durable (commit):** `docs/xlfg/` — contracts, plans, reviews, scorecards, lessons
+- **Ephemeral (gitignore):** `.xlfg/` — raw logs, screenshots, traces, doctor reports
 
 ## Standard structure
 
-```
+```text
 docs/xlfg/
   index.md
   knowledge/
@@ -30,17 +30,19 @@ docs/xlfg/
     decision-log.md
     patterns.md
     testing.md
+    ux-flows.md
+    failure-memory.md
+    harness-rules.md
+    commands.json
   runs/
     <run-id>/
       context.md
-      context/
-        adjacent.md
-        constraints.md
-        unknowns.md
-      repo-map.md
+      flow-spec.md
       spec.md
       plan.md
-      test-plan.md
+      test-contract.md
+      env-plan.md
+      scorecard.md
       risk.md
       tasks/
         <task-id>/
@@ -55,53 +57,59 @@ docs/xlfg/
 .xlfg/
   runs/
     <run-id>/
+      doctor/
+        <ts>/
       verify/
         <ts>/
-          results.json
-          summary.md
-      screenshots/
-      traces/
 ```
 
-## Expand → Map → Reduce pattern (how to avoid chaos)
+## Core workflow
 
-### Expand context
+### 1) Contract first
 
-- Spawn investigation subagents with isolated contexts.
-- Each investigator reads canonical `context.md` and writes exactly one file under `context/`.
-- Lead agent merges findings back into canonical `context.md`.
-- Any unapproved scope expansion beyond the original request is deferred to backlog.
+Before implementation, make sure the run has:
 
-### Map
+- `flow-spec.md`
+- `test-contract.md`
+- `env-plan.md`
 
-- Spawn subagents with **isolated contexts**.
-- Give each one:
-  - `DOCS_RUN_DIR/context.md`
-  - a single output path
-  - a single responsibility
-- Subagents write their findings to files (no chat coordination).
+### 2) Map
 
-### Reduce
+- Spawn subagents with isolated contexts.
+- Give each a single responsibility and a single output path.
+- Avoid chat coordination.
 
-- A lead agent reads all subagent outputs.
-- The lead agent writes the canonical `plan.md` and updates progress checkboxes.
+### 3) Reduce
 
-### Mandatory pair loop for every task
+- The lead merges results into canonical files.
+- The plan must align tasks to scenario IDs.
 
-- Implementer writes code + tests and a task handoff file.
-- Checker reads task contract + diffs and writes `checker-report.md`.
-- Lead agent arbitrates and updates `plan.md`.
-- Keep the loop bounded (max 3 checker rounds per task).
+### 4) Implement with bounded pair loops
+
+- Implementer writes code + tests + implementer report.
+- Checker reviews and writes checker report.
+- Lead updates the plan.
+- Do not exceed 3 checker loops per task without a fresh diagnosis.
 
 ## File ownership rule
 
 To avoid conflicts:
 
-- Subagents **never** edit shared canonical files (like `plan.md`).
-- Subagents write to their own output file only.
-- The lead agent merges.
-- Checker agents are read-only on production code by default.
+- Subagents do **not** edit shared canonical files unless explicitly assigned as reducers.
+- Subagents write to their owned output file.
+- The lead merges.
 
-## “Map, not manual”
+## What belongs in durable memory vs ephemeral logs
 
-Prefer a small index (like `docs/xlfg/index.md`) with links to deeper sources, rather than duplicating guidance in prompts.
+### Durable
+- flow contracts
+- test contracts
+- scorecards
+- patterns and decisions
+- failure memory and harness rules
+
+### Ephemeral
+- raw command output
+- dev-server logs
+- screenshots / traces
+- temporary local diagnostics

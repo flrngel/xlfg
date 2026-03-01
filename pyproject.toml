@@ -4,19 +4,21 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xlfg"
-version = "0.1.0"
-description = "Extreme LFG: file-based SDLC harness for agentic software engineering"
+version = "1.0.0"
+description = "Behavior-contract-first SDLC harness for agentic software engineering"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
 authors = [
   { name = "xlfg" }
 ]
-keywords = ["agentic", "software-engineering", "workflow", "verification", "cli"]
+keywords = ["agentic", "software-engineering", "workflow", "verification", "cli", "compound"]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
 ]
 
 [project.scripts]
 xlfg = "xlfg.cli:main"
+
+[tool.setuptools]
+packages = ["xlfg"]

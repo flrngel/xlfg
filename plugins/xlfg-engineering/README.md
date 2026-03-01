@@ -1,45 +1,49 @@
 # xlfg-engineering (Claude Code plugin)
 
-`/xlfg` is a **production-grade SDLC workflow** for Claude Code.
+`/xlfg` is a **behavior-contract-first SDLC workflow** for Claude Code.
 
 It is designed for:
 
-- Long-horizon tasks
-- Multi-file changes
-- High correctness + UX standards
-- Evidence-backed verification (tests/lint/build) and multi-lens review
+- long-horizon tasks
+- multi-file changes
+- user-flow-sensitive product work
+- evidence-backed verification and review
+- compounding from real failures instead of vague summaries
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
-| `/xlfg` | End-to-end SDLC workflow (context expansion → spec/plan → mandatory pair implementation → verify → review → ship → compound) |
+| `/xlfg` | End-to-end workflow (contract → plan → implement → targeted verify → gate verify → review → compound) |
 | `/lfg` | Sequential wrapper for `/xlfg` |
 | `/slfg` | Swarm wrapper for `/xlfg` |
 | `/xlfg:init` | Create `docs/xlfg/` + `.xlfg/` scaffolding in the target repo |
-| `/xlfg:verify` | Run verification pipeline + write evidence logs |
+| `/xlfg:verify` | Run layered verification + write evidence |
 | `/xlfg:review` | Parallel multi-lens review into files |
 | `/xlfg:compound` | Convert a run into durable knowledge for future work |
 
-`/xlfg` auto-continues from planning into implementation. It only pauses for true blockers or safety-gated confirmations.
+`/xlfg` is intentionally **self-contained**: it performs init / verify / review / compound steps inline so the workflow does not get stuck on subcommand chaining.
 
-`/xlfg` is intentionally **self-contained**: it performs init/verify/review/compound steps inline so you don't get stuck on subcommand chaining.
+## Key artifact model
 
-To keep runtime reasonable, `/xlfg` includes guidance for **run tiers** (S/M/L) so small changes can skip unnecessary fan-out.
-`/xlfg:review` is verification-aware and prioritizes net-new findings over verification overlap.
+Before coding, every serious run should produce:
+
+- `flow-spec.md`
+- `test-contract.md`
+- `env-plan.md`
+- `scorecard.md`
+
+These are the shared contracts for implementation, verification, and review.
 
 ## Agents
 
-Context expansion:
-- `xlfg-context-adjacent-investigator`
-- `xlfg-context-constraints-investigator`
-- `xlfg-context-unknowns-investigator`
-
-Planning:
-- `xlfg-repo-mapper`
+Planning / contracts:
 - `xlfg-spec-author`
 - `xlfg-test-strategist`
+- `xlfg-env-doctor`
 - `xlfg-risk-assessor`
+- `xlfg-brainstorm`
+- context investigators / repo mapper / researcher (when needed)
 
 Implementation:
 - `xlfg-task-implementer`

@@ -6,14 +6,7 @@ disable-model-invocation: true
 
 # /slfg
 
-Swarm LFG.
-
-Use this when parallelism pays off:
-
-- Multi-layer changes (frontend + backend + tests)
-- Debugging with competing hypotheses
-- Big refactors with many independent files
-- Security/performance/test reviews in parallel
+Use this when the request has multiple independent surfaces (frontend + backend + tests + infra) and parallel planning or review will help.
 
 ## Recommended sequence
 
@@ -22,4 +15,4 @@ Use this when parallelism pays off:
 
 ## Suggested prompt to pass to /xlfg
 
-> Prefer **swarm mode**: run context-expansion + planning/review agents in parallel, then execute implementation as mandatory scoped implementer/checker pairs for every plan task, managed by one lead. Keep ownership conflict-free and hand off only through `docs/xlfg/runs/<run-id>/`. Auto-continue from plan to implementation; only pause for true blockers or safety-gated confirmations.
+> Prefer **swarm mode** for planning and review, but keep implementation ownership conflict-free. All agents must coordinate through `docs/xlfg/runs/<run-id>/`. Do not start coding until `flow-spec.md`, `test-contract.md`, and `env-plan.md` are written.

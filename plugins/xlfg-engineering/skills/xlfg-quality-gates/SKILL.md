@@ -1,88 +1,80 @@
 ---
 name: xlfg-quality-gates
-description: Apply production readiness gates (tests, UX, security, ops). Use before shipping /xlfg work.
+description: Apply production readiness gates (contracts, verification, UX, security, ops) before shipping /xlfg work.
 ---
 
 # xlfg-quality-gates
 
-Use these gates to make `/xlfg` output **indisputably production-ready**.
+Use these gates to make `/xlfg` output actually production-ready.
 
 ## Definition of done
 
-A run is only “done” when all apply:
+A run is only “done” when all apply.
 
-### Spec & scope
+### Contract & scope
 
-- `spec.md` exists and matches shipped behavior
-- Acceptance criteria are testable and satisfied
-- Non-goals are explicit
-- No unapproved scope creep
-- Context expansion outputs were triaged before implementation
-- Any unapproved expansions were deferred to backlog
+- `flow-spec.md` exists and matches shipped behavior
+- `test-contract.md` exists and the run followed it honestly
+- `env-plan.md` explains how the harness was controlled
+- non-goals are explicit
+- no unapproved scope creep
 
 ### Tests & verification
 
-- New behavior has tests (Fail→Pass)
-- Regression suite passes (Pass→Pass)
-- At least one integration-style test exists for cross-layer behavior
-- Lint/typecheck/build pass when applicable
-- Evidence is written to `verification.md` and raw logs exist under `.xlfg/`
-- Every plan task has:
-  - `tasks/<task-id>/implementer-report.md`
-  - `tasks/<task-id>/checker-report.md` with `Verdict: ACCEPT`
-- Review findings focus on net-new issues not already covered by verification
+- new behavior has F2P proof
+- existing behavior has P2P protection
+- at least one real interaction / integration check exists when the flow crosses boundaries
+- lint / typecheck / build pass when applicable
+- evidence is written to `verification.md`
+- raw logs exist under `.xlfg/`
+- `scorecard.md` reflects the required scenario status
+- every plan task has implementer + checker reports with `Verdict: ACCEPT`
 
 ### UX
 
-- Happy path is obvious
-- Failure path is humane and actionable
-- Empty/loading states are reasonable
-- Accessibility is checked (keyboard flow, labels) when UI is involved
-- Screenshots exist for UI changes (store in `.xlfg/runs/<run-id>/screenshots/`)
+- happy path is obvious
+- alternate interaction paths are checked when relevant
+- failure path is humane and actionable
+- empty / loading states are reasonable
+- keyboard / accessibility is checked for UI work
 
 ### Security & privacy
 
-- No secrets in code or logs
-- Input validation at boundaries
-- Authn/authz checked for user-facing endpoints
-- Sensitive data not logged
+- no secrets in code or logs
+- input validation at boundaries
+- authn / authz checked for user-facing or privileged flows
+- sensitive data not logged
 
 ### Operations
 
-- Monitoring/validation plan exists (what to watch, for how long, rollback triggers)
-- Rollback plan exists for risky changes (migrations, data transforms)
+- monitoring / validation plan exists
+- rollback plan exists for risky changes
+- repeated harness failures are compounded into `failure-memory.md` or `harness-rules.md`
 
-## System-wide test sanity check (run before calling a task “done”)
+## Sanity check before calling a task “done”
 
 Ask:
 
-1. **What fires when this runs?** callbacks, middleware, event handlers (trace 2 levels)
-2. **Do tests exercise the real chain?** avoid 100% mocks for integration boundaries
-3. **Can failure leave orphaned state?** verify idempotency/cleanup on retries
-4. **What other interfaces expose this?** duplicate entrypoints need parity
-5. **Do error strategies align across layers?** retries + fallbacks + framework handlers
+1. What really fires when the flow runs?
+2. Do tests exercise the real chain or only mocks?
+3. Can failure leave stale or orphaned state?
+4. What other interfaces expose the same behavior?
+5. Can the harness produce a fake green result?
 
 ## Evidence capture
 
-- Prefer `tee` logs into `.xlfg/`.
-- Record exit codes.
-- Summarize first actionable failure (avoid cascades).
-
-## Risk gates
-
-Require explicit user confirmation for:
-
-- DB migrations / backfills
-- Auth / permissions changes
-- Payment / billing logic
-- Destructive actions (delete, purge, irreversible transforms)
-- Security-sensitive areas (tokens, crypto, secrets)
+- prefer captured logs
+- record exit codes
+- summarize the first actionable failure
+- do not bury environment problems under code churn
 
 ## Final pre-ship checklist
 
-- [ ] `plan.md` checkboxes complete
-- [ ] Every plan task has implementer + checker reports with `ACCEPT` verdict
-- [ ] `/xlfg:verify` green
-- [ ] `/xlfg:review` has no P0 findings
-- [ ] `run-summary.md` exists with smoke steps
-- [ ] `/xlfg:compound` executed and `compound-summary.md` exists
+- [ ] contracts written first
+- [ ] plan complete
+- [ ] every task has ACCEPTed checker report
+- [ ] verification green
+- [ ] review has no P0 findings
+- [ ] scorecard green for required scenarios
+- [ ] run summary exists
+- [ ] compound summary exists

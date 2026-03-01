@@ -2,8 +2,8 @@
 
 xlfg is designed to be **tool-agnostic**:
 
-- The *Claude Code plugin* gives you `/xlfg` as a command + subagents.
-- The *file structure* (`docs/xlfg/` + `.xlfg/`) and the *CLI* (`xlfg init/start/verify`) can be used by other agents (Codex, Cursor agents, CI bots, etc.).
+- the *Claude Code plugin* gives you `/xlfg` as a command + subagents
+- the *file structure* (`docs/xlfg/` + `.xlfg/`) and the *CLI* (`xlfg init/start/doctor/verify`) can be used by other agents (Codex, Cursor agents, CI bots, etc.)
 
 ## Minimal workflow (agent-agnostic)
 
@@ -21,11 +21,20 @@ xlfg start "your request"
 
 3. Have the agent work using the run folder as its system of record:
 
-- Write spec to `docs/xlfg/runs/<run-id>/spec.md`
-- Write plan to `docs/xlfg/runs/<run-id>/plan.md`
-- Capture verification output via `xlfg verify`
+- write `flow-spec.md` first
+- write `test-contract.md` next
+- write `env-plan.md` next
+- then write `plan.md`
+- capture verification output via `xlfg verify`
 
-4. Verify and iterate:
+4. Inspect the repo’s execution contract:
+
+```bash
+xlfg detect
+xlfg doctor
+```
+
+5. Verify and iterate:
 
 ```bash
 xlfg verify --mode full
@@ -34,5 +43,6 @@ xlfg verify --mode full
 ## Tips
 
 - Prefer many small, isolated outputs over one giant document.
-- Don’t mark work done until verification is green and recorded.
+- Do not mark work done until the contracts are written and verification is green.
 - Commit durable artifacts (`docs/xlfg/...`). Ignore raw logs (`.xlfg/...`).
+- Put canonical commands, dev ports, and healthchecks in `docs/xlfg/knowledge/commands.json`.

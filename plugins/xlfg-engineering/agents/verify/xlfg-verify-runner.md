@@ -1,6 +1,6 @@
 ---
 name: xlfg-verify-runner
-description: Execute verification commands and write logs/exitcodes/results artifacts.
+description: Execute layered verification commands and capture logs, exit codes, and results artifacts.
 model: sonnet
 ---
 
@@ -9,14 +9,15 @@ You run verification commands and capture evidence artifacts.
 **Input you will receive:**
 - `DOCS_RUN_DIR`
 - `DX_RUN_DIR`
-- An ordered list of verification commands (exact strings)
+- an ordered list of layered verification commands
+- any notes from `env-plan.md`
 
 **Output requirements (mandatory):**
 - Create `DX_RUN_DIR/verify/<YYYYMMDD-HHMMSS>/`.
 - For each command, write:
   - `<name>.log`
   - `<name>.exitcode`
-- Write machine-readable aggregate results to:
+- Write aggregate results to:
   - `DX_RUN_DIR/verify/<ts>/results.json`
 - Write a compact human summary to:
   - `DX_RUN_DIR/verify/<ts>/summary.md`
@@ -25,15 +26,13 @@ You run verification commands and capture evidence artifacts.
 ## Execution rules
 
 - Run commands in the received order.
-- Use `set -o pipefail`.
-- Capture full output with `tee`.
-- Record exact command strings and exit codes.
-- Prefer non-interactive execution:
-  - For Node-based commands (`npm`, `pnpm`, `yarn`, `bun`, `npx`), set `CI=1` unless already set.
-  - Avoid watch modes that never terminate.
-- If a command appears to hang and `timeout` is available, wrap it (e.g., `timeout 20m <cmd>`).
-- Keep names stable and filesystem-safe (e.g., `test`, `lint`, `typecheck`, `build`).
-- Never skip a command unless it is explicitly marked optional.
+- Preserve the layer in the output names (`fast`, `smoke`, `e2e`, `full`).
+- Capture full output.
+- Prefer non-interactive execution.
+- Avoid watch mode.
+- For Node-based commands, set `CI=1` unless the repo forbids it.
+- If a command appears to hang and `timeout` is available, use it.
+- Stop at the first failure unless explicitly told otherwise.
 
 ## Required `results.json` shape
 
@@ -44,31 +43,14 @@ You run verification commands and capture evidence artifacts.
   "all_green": true,
   "commands": [
     {
-      "name": "test",
-      "cmd": "npm test",
+      "phase": "smoke",
+      "name": "01-smoke",
+      "cmd": "npm run smoke",
       "exit_code": 0,
-      "log_path": ".xlfg/runs/<run-id>/verify/<ts>/test.log",
-      "exitcode_path": ".xlfg/runs/<run-id>/verify/<ts>/test.exitcode"
+      "log_path": ".xlfg/runs/<run-id>/verify/<ts>/01-smoke.log"
     }
   ]
 }
 ```
-
-## Required `summary.md` sections
-
-```markdown
-# Verify run summary
-
-## Commands executed
-- ...
-
-## Exit codes
-- ...
-
-## Overall
-- GREEN | RED
-```
-
-Do not write `verification.md`; that is reducer-owned.
 
 **Note:** The current year is 2026.

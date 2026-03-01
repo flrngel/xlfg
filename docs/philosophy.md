@@ -1,24 +1,47 @@
 # Philosophy
 
-xlfg is built around a few non-negotiable ideas:
+xlfg is built around a few non-negotiable ideas.
 
-## The repo is the system of record
+## 1) Define the behavior before the code
+
+The fastest way to waste time is to implement first and decide the real user flow later.
+
+xlfg requires a shared `flow-spec.md` before implementation starts. For user-facing work, this means explicit steps, alternates, failure states, and accessibility expectations.
+
+## 2) Define the test contract before the test runner
+
+"Run the tests" is not a strategy.
+
+xlfg requires a `test-contract.md` that says:
+
+- which scenarios are **new behavior** (Fail → Pass)
+- which suites preserve **existing behavior** (Pass → Pass)
+- which checks are the **fastest relevant loop**
+- which flows truly deserve real e2e coverage
+
+## 3) Environment failures are productively learnable
+
+Repeated `yarn dev`, stale servers, watch-mode hangs, and port conflicts are not just noise.
+
+They are operational failure modes that should be compounded into `failure-memory.md` and `harness-rules.md` so the next run gets better.
+
+## 4) The repo is the system of record
 
 Long-horizon agentic work fails when knowledge lives only in chat history.
-xlfg writes specs, plans, risks, and verification evidence into the repository so future work can start with a map.
 
-## Map-reduce > monolithic prompts
+xlfg writes contracts, plans, reviews, logs, and learnings into the repository so future runs start from a map instead of from scratch.
 
-We use independent subagents to produce structured artifacts (repo map, spec, test plan, risks, reviews). The lead agent reduces those into a plan and implements with verification gates.
+## 5) Compounding must be verified
 
-## Evidence-first shipping
+Not every observation deserves to become durable knowledge.
 
-A change is only "done" when tests/lint/build are green and the evidence is written down. No silent claims.
+xlfg only compounds lessons that are concrete, provenance-backed, and connected to real verification or review outcomes.
 
-## Parallelism only where safe
+## 6) Big verify loops should be rare
 
-We parallelize research, review, and test planning. We avoid parallel edits to the same files unless the toolchain provides explicit isolation (e.g., git worktrees).
+The right default is:
 
-## Quality gates
+- targeted checks during implementation
+- full gate verification before shipping
 
-Risky work requires explicit approval, rollback planning, and extra verification.
+This reduces wasted hackathon-style cycles where the agent spends 15–20 extra minutes fighting a brittle harness instead of moving the product forward.

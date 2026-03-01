@@ -1,7 +1,7 @@
 # Claude Code hooks (optional)
 
 Claude Code supports **hooks** that run when a teammate becomes idle or completes a task.
-These can be used as quality gates (e.g., block task completion if tests are failing).
+These can be used as quality gates.
 
 xlfg intentionally treats hooks as opt-in because they can be repo- and org-specific.
 
@@ -9,14 +9,17 @@ xlfg intentionally treats hooks as opt-in because they can be repo- and org-spec
 
 ### Task completion hook
 
-Run verification and reject completion if it fails.
+Run fast verification and reject completion if it fails.
 
-- Run: `xlfg verify --mode fast`
-- If exit code is non-zero, exit 2 (Claude Code will ask the teammate to keep working)
+Recommended sequence:
+
+1. ensure the teammate updated `flow-spec.md` / `test-contract.md` / `env-plan.md` if the task changed scope
+2. run fast verification
+3. reject completion if it fails
 
 ### Idle hook
 
-When a teammate goes idle, ensure they wrote their findings to the run folder and updated the plan.
+When a teammate goes idle, ensure they wrote findings to the run folder and updated the plan.
 
 ## Minimal example
 

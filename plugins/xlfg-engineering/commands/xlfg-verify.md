@@ -1,15 +1,12 @@
 ---
 name: xlfg:verify
-description: Run tests/lint/build and write evidence to docs/xlfg + .xlfg.
+description: Run layered verification (fast, smoke, e2e, regression) and write evidence.
 argument-hint: "[run-id | latest] [fast|full]"
 ---
 
 # /xlfg:verify
 
-Run verification commands (tests / lint / typecheck / build) and save evidence.
-
-> Tip: If you have the `xlfg` CLI installed, `xlfg verify --mode full` writes logs and updates `docs/xlfg/runs/<run-id>/verification.md` automatically.
-
+Run verification commands and save evidence.
 
 <input>#$ARGUMENTS</input>
 
@@ -24,93 +21,104 @@ Default mode: `full`.
 
 ## 1) Select run
 
-- If argument is `latest` or empty: pick the newest folder under `docs/xlfg/runs/`.
-- Otherwise, treat argument as the run-id folder name.
+- If argument is `latest` or empty: newest folder under `docs/xlfg/runs/`
+- Otherwise: treat argument as the run id
 
 Define:
 
 - `DOCS_RUN_DIR=docs/xlfg/runs/<run-id>`
 - `DX_RUN_DIR=.xlfg/runs/<run-id>`
 
-Ensure these exist.
+Read first (if present):
 
-## 2) Decide verification commands
+- `flow-spec.md`
+- `test-contract.md`
+- `env-plan.md`
+- `scorecard.md`
+- `docs/xlfg/knowledge/commands.json`
+- `docs/xlfg/knowledge/failure-memory.md`
+- `docs/xlfg/knowledge/harness-rules.md`
 
-### Non-interactive / anti-hang rules (important)
+## 2) Decide the layered verify plan
 
-Some test runners default to **watch mode** or wait forever for user input. This is the most common reason `/xlfg` runs exceed 30 minutes.
+### `fast`
 
-When running Node-based verification, prefer setting `CI=1` (disables watch mode in many frameworks). If a command still hangs, switch to an explicit non-watch flag if supported (e.g., `--watch=false`, `--watchAll=false`).
+Only the fastest feedback loop:
 
-If your environment supports it, wrap long-running commands with a timeout (example: `timeout 20m <cmd>`).
+- lint / format / typecheck / static checks
 
-### Fast vs full
+### `full`
 
-- **fast:** lint/format/typecheck only (tight iteration loop)
-- **full:** fast + unit/integration tests + build
+Run layers in this order:
 
-Prefer repo-native commands in this order:
+1. Fast checks
+2. Scenario-targeted smoke checks from `test-contract.md`
+3. Required e2e / real-flow checks
+4. Broader regression suites and build/package checks
 
-1. `Makefile` targets (`make test`, `make lint`, `make ci`)
-2. `package.json` scripts (`test`, `lint`, `typecheck`, `build`)
-3. Language defaults (only if the repo clearly matches):
-   - Python: `pytest`, `ruff`, `mypy`
-   - Go: `go test ./...`, `go vet ./...`
-   - Rust: `cargo test`, `cargo clippy`
-   - Ruby: `bundle exec rspec` or `bin/rails test`
+The important rule is:
 
-If unclear, ask the user **once** for the canonical commands (copy from README/CONTRIBUTING).
+> **Do not jump straight to giant e2e by default.**
 
-If you discover the canonical commands, consider recording them in `docs/xlfg/knowledge/commands.json` so future runs are deterministic.
+Use `test-contract.md` to decide which P0/P1 flows truly deserve smoke or e2e.
 
-## 3) Map phase: execute via verify runner subagent
+## 3) Environment doctor (before smoke / e2e)
+
+If smoke or e2e requires a local app/server:
+
+- Reuse an already healthy server if safe
+- Do **not** start another `yarn dev` / `npm run dev` on top of it
+- Check port + health first
+- Write a doctor report under `.xlfg/runs/<run-id>/doctor/<ts>/`
+
+If the port is already in use but the configured healthcheck is unhealthy, stop and surface that as the first actionable failure.
+
+## 4) Execute via verify runner
 
 Run Task `xlfg-verify-runner` with:
 
 - `DOCS_RUN_DIR`
 - `DX_RUN_DIR`
-- Ordered verification commands (exact strings)
+- ordered layered commands
+- any relevant notes from `env-plan.md`
 
 Runner responsibilities:
 
-- Create `DX_RUN_DIR/verify/<YYYYMMDD-HHMMSS>/`
-- Execute commands with `set -o pipefail` + `tee`
-- Write per-command logs and exitcodes
-- Write aggregate artifacts:
-  - `DX_RUN_DIR/verify/<ts>/results.json`
-  - `DX_RUN_DIR/verify/<ts>/summary.md`
+- create `DX_RUN_DIR/verify/<ts>/`
+- write per-command logs + exit codes
+- write `results.json`
+- write `summary.md`
 
-Runner execution pattern:
+### Anti-hang rules
 
-```bash
-set -o pipefail
-<cmd> 2>&1 | tee "$DX_RUN_DIR/verify/<ts>/<name>.log"
-echo $? > "$DX_RUN_DIR/verify/<ts>/<name>.exitcode"
-```
+- prefer non-interactive execution
+- for Node-based commands, set `CI=1` unless the repo forbids it
+- do not run watch mode
+- if a command appears to hang and `timeout` exists, use it
 
-## 4) Reduce phase: write canonical verification artifacts
+## 5) Reduce via verify reducer
 
 Run Task `xlfg-verify-reducer` with:
 
 - `DOCS_RUN_DIR`
 - `DX_RUN_DIR`
-- Runner timestamp or results path
+- the verify timestamp or results path
 
 Reducer responsibilities:
 
-- Read `results.json` + summary + referenced logs as needed
-- Write `DOCS_RUN_DIR/verification.md`
-- If RED, also write `DOCS_RUN_DIR/verify-fix-plan.md` with the first actionable failure and minimum fix steps
+- write `verification.md`
+- update `scorecard.md`
+- if RED, write `verify-fix-plan.md`
+- identify the **first actionable failure only**
 
-Lead-agent rule:
+## 6) If failing, iterate correctly
 
-- Do not parse full raw logs unless reducer output is insufficient.
+If verification is RED:
 
-## 5) If failing, iterate until green
+- fix the first actionable failure
+- update the plan if the failure changes scope
+- re-run `/xlfg:verify`
 
-- Treat red verification as a hard stop.
-- Use `DOCS_RUN_DIR/verify-fix-plan.md` as the default fix plan.
-- Implement the minimum fixes.
-- Re-run verification.
+If the **same failure repeats twice without a new hypothesis**, stop and record it in the run as an environment / harness problem rather than mindlessly rerunning the same command.
 
-Only declare success when the full verification set is green.
+Only declare success when the required layers are green.

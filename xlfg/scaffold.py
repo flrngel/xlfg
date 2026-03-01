@@ -11,37 +11,50 @@ This folder is the **file-based context** system-of-record for `/xlfg` runs.
 
 ## Structure
 
-- `knowledge/` — durable patterns, decisions, and checklists (commit this)
-- `runs/` — one folder per run containing specs, plans, reviews, and run summaries (commit this)
+- `knowledge/` — durable patterns, decisions, flow contracts, and harness learnings (commit this)
+- `runs/` — one folder per run containing contracts, plans, reviews, scorecards, and run summaries (commit this)
 
 Ephemeral logs (do not commit):
 
-- `.xlfg/runs/` — raw command outputs, traces, screenshots
+- `.xlfg/runs/` — raw command outputs, screenshots, traces, doctor reports
+
+## The core rule
+
+Define **what to build** and **what to test** *before* implementation:
+
+1. `flow-spec.md` — UX / behavior contract
+2. `test-contract.md` — F2P + P2P test mapping
+3. `env-plan.md` — exact harness and dev-server plan
+4. `scorecard.md` — step-level status for requirements and regressions
 
 ## How to use
 
 - Run `xlfg start "your request"` (or `/xlfg` in Claude Code) to begin a new run.
 - Each run writes artifacts to `docs/xlfg/runs/<run-id>/`.
 - Verification logs land in `.xlfg/runs/<run-id>/`.
+- Canonical repo commands and dev-server settings live in `docs/xlfg/knowledge/commands.json`.
 """
 
 QUALITY_BAR_MD = """# xlfg quality bar
 
-Nothing is "done" unless:
+Nothing is \"done\" unless:
 
-- **Behavior is specified** (acceptance criteria)
-- **Tests exist** for new behavior
-- **Regression suite passes** (no breakages)
-- **Lint / typecheck / build** pass (when applicable)
-- **UX is validated** (screenshots, a11y, happy-path + failure-path)
+- **Behavior is contracted first** (`flow-spec.md` exists)
+- **Test intent is shared** (`test-contract.md` exists and maps scenarios to checks)
+- **Environment is controlled** (`env-plan.md` explains ports, healthchecks, and cleanup)
+- **New behavior is proven** (Fail → Pass)
+- **Existing behavior is preserved** (Pass → Pass)
+- **Lint / typecheck / build** pass when applicable
+- **User-facing flows are validated** (happy path, alternates, failure path, a11y)
+- **Unexpected failures are compounded** into failure memory / harness rules
 - **Operational plan exists** (monitoring + rollback notes)
 
-Evidence should be recorded in each run's `verification.md`.
+Evidence should be recorded in each run's `verification.md` and `scorecard.md`.
 """
 
 DECISION_LOG_MD = """# xlfg decision log
 
-Record durable architectural/product decisions made during `/xlfg` runs.
+Record durable architectural and product decisions made during `/xlfg` runs.
 
 ## Template
 
@@ -74,22 +87,84 @@ Durable testing learnings captured from `/xlfg` runs.
 
 ## Template
 
-## Scenario: <name>
+## Scenario: <id> <name>
 
+- **Requirement kind**: F2P | P2P
 - **Failure that escaped**:
 - **Why it escaped**:
-- **Test pattern that catches it**:
-- **Fast loop command**:
-- **Full verification command**:
-- **Flake signals / stabilization notes**:
+- **Fastest check that catches it**:
+- **Real-flow / integration check**:
+- **Regression suite that must stay green**:
+- **Stabilization notes**:
 - **Links**: (run folder, PR, issue)
+"""
+
+UX_FLOWS_MD = """# xlfg ux flows
+
+Durable user-flow contracts that repeatedly matter across runs.
+
+## Template
+
+## Flow: <name>
+
+- **Actor**:
+- **Preconditions**:
+- **Primary steps**:
+- **Alternate steps**:
+- **Failure path**:
+- **Assertions**:
+- **Accessibility / keyboard notes**:
+- **Links**:
+"""
+
+FAILURE_MEMORY_MD = """# xlfg failure memory
+
+Recurring unexpected failures and proven responses.
+
+## Template
+
+## Failure signature: <short name>
+
+- **Observed symptom**:
+- **Detection signal**:
+- **Likely root cause**:
+- **Immediate fix**:
+- **Prevention rule**:
+- **Verification after fix**:
+- **Links**:
+"""
+
+HARNESS_RULES_MD = """# xlfg harness rules
+
+Rules for running reliable local verification.
+
+## Template
+
+## Rule: <name>
+
+- **Applies to**:
+- **Why**:
+- **Required command / flag**:
+- **Healthcheck / readiness rule**:
+- **Cleanup rule**:
+- **Links**:
 """
 
 COMMANDS_JSON = """{
   "install": null,
   "verify_fast": [],
+  "smoke": [],
+  "e2e": [],
   "verify_full": [],
-  "notes": "Fill in canonical project commands. xlfg will auto-detect if this file is empty."
+  "dev": {
+    "command": null,
+    "cwd": ".",
+    "port": null,
+    "healthcheck": null,
+    "startup_timeout_sec": 120,
+    "reuse_if_healthy": true
+  },
+  "notes": "Fill in canonical commands and the dev-server contract. xlfg will auto-detect best-effort defaults if this file stays empty."
 }
 """
 
@@ -113,23 +188,20 @@ def init_scaffold(root: Path) -> Dict[str, List[str]]:
     if append_unique_line(gitignore_path, ".xlfg/"):
         updated.append(str(gitignore_path))
 
-    # files
-    if safe_write(root / "docs" / "xlfg" / "index.md", INDEX_MD):
-        created.append("docs/xlfg/index.md")
+    files = {
+        "docs/xlfg/index.md": INDEX_MD,
+        "docs/xlfg/knowledge/quality-bar.md": QUALITY_BAR_MD,
+        "docs/xlfg/knowledge/decision-log.md": DECISION_LOG_MD,
+        "docs/xlfg/knowledge/patterns.md": PATTERNS_MD,
+        "docs/xlfg/knowledge/testing.md": TESTING_MD,
+        "docs/xlfg/knowledge/ux-flows.md": UX_FLOWS_MD,
+        "docs/xlfg/knowledge/failure-memory.md": FAILURE_MEMORY_MD,
+        "docs/xlfg/knowledge/harness-rules.md": HARNESS_RULES_MD,
+        "docs/xlfg/knowledge/commands.json": COMMANDS_JSON,
+    }
 
-    if safe_write(root / "docs" / "xlfg" / "knowledge" / "quality-bar.md", QUALITY_BAR_MD):
-        created.append("docs/xlfg/knowledge/quality-bar.md")
-
-    if safe_write(root / "docs" / "xlfg" / "knowledge" / "decision-log.md", DECISION_LOG_MD):
-        created.append("docs/xlfg/knowledge/decision-log.md")
-
-    if safe_write(root / "docs" / "xlfg" / "knowledge" / "patterns.md", PATTERNS_MD):
-        created.append("docs/xlfg/knowledge/patterns.md")
-
-    if safe_write(root / "docs" / "xlfg" / "knowledge" / "testing.md", TESTING_MD):
-        created.append("docs/xlfg/knowledge/testing.md")
-
-    if safe_write(root / "docs" / "xlfg" / "knowledge" / "commands.json", COMMANDS_JSON):
-        created.append("docs/xlfg/knowledge/commands.json")
+    for rel_path, content in files.items():
+        if safe_write(root / rel_path, content):
+            created.append(rel_path)
 
     return {"created": created, "updated": updated}
