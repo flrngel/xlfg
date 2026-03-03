@@ -1,6 +1,6 @@
 ---
 name: xlfg:compound
-description: Convert an xlfg run into durable knowledge (tests, failures, harness rules, patterns).
+description: Convert an xlfg run into durable knowledge (tests, failures, harness rules, patterns, and root-solution learnings).
 argument-hint: "[run-id | latest]"
 ---
 
@@ -26,6 +26,8 @@ Ensure `KB_DIR` exists.
 
 Read (if present):
 
+- `diagnosis.md`
+- `solution-decision.md`
 - `flow-spec.md`
 - `spec.md`
 - `plan.md`
@@ -43,7 +45,7 @@ Read (if present):
 Append small, specific entries to the right knowledge files:
 
 - `patterns.md` — durable implementation or design patterns
-- `decision-log.md` — durable decisions
+- `decision-log.md` — durable decisions and rejected shortcuts worth remembering
 - `testing.md` — scenario-level testing lessons
 - `ux-flows.md` — durable UX / keyboard / failure-path expectations
 - `failure-memory.md` — repeated unexpected failures and proven fixes
@@ -56,7 +58,7 @@ Do **not** compound vague summaries.
 
 Only write entries that are:
 
-- tied to a concrete symptom or decision
+- tied to a concrete symptom, decision, or contract gap
 - backed by verification, review, or a repeated real failure
 - likely to help the next run directly
 
@@ -66,6 +68,7 @@ Write `DOCS_RUN_DIR/compound-summary.md` with:
 
 - what was learned
 - what was added to each knowledge file
+- what shortcuts were rejected and why
 - what was intentionally not added and why
 - what the next similar run should do first
 

@@ -1,31 +1,19 @@
-# Agent Instructions
+# xlfg repo guide
 
-This repo is a **Claude Code plugin** implementing `/xlfg`: a behavior-contract-first SDLC workflow that coordinates independent subagents via file-based context.
+This repository builds the `xlfg` workflow.
 
-## Start here
+## Core principles
 
-- Plugin root: `plugins/xlfg-engineering`
-- Commands: `plugins/xlfg-engineering/commands/`
-- Agents: `plugins/xlfg-engineering/agents/`
-- Skills: `plugins/xlfg-engineering/skills/`
-- CLI: `xlfg/`
+- `/xlfg` is a macro that chains explicit subcommands.
+- Planning is diagnosis-first.
+- Implementation must use explicit agents and targeted proof.
+- Review confirms quality; it does not create quality.
+- The repo is the system of record for long-running agent work.
 
-## Working agreement
+## Important paths
 
-- Keep all `description:` fields short to avoid context-budget waste.
-- Prefer **file-based context** over long prompts.
-- The pre-implementation contracts are the core of the system:
-  - `flow-spec.md`
-  - `test-contract.md`
-  - `env-plan.md`
-- Update all three when changing plugin behavior:
-  - `plugins/xlfg-engineering/.claude-plugin/plugin.json`
-  - `plugins/xlfg-engineering/CHANGELOG.md`
-  - `plugins/xlfg-engineering/README.md`
-
-## Quality bar
-
-- `/xlfg:init` must stay idempotent.
-- `/xlfg` must never claim success unless verification evidence exists.
-- Compounding should only admit concrete, verified lessons.
-- Favor "map not manual": put durable guidance in docs and owned run files, not in monolithic chat history.
+- `plugins/xlfg-engineering/commands/` — Claude Code commands
+- `plugins/xlfg-engineering/agents/` — subagent prompts
+- `plugins/xlfg-engineering/skills/` — shared plugin skills
+- `xlfg/` — dependency-free CLI
+- `tests/` — basic regression tests for the CLI scaffold / doctor / verify flow

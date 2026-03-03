@@ -1,6 +1,6 @@
 ---
 name: xlfg:init
-description: Initialize xlfg scaffolding (contracts, knowledge, and .xlfg logs) in this repo.
+description: Initialize xlfg scaffolding (diagnosis, contracts, knowledge, and .xlfg logs) in this repo.
 ---
 
 # /xlfg:init
@@ -43,8 +43,10 @@ Create these if missing:
 
 ### Important default in this version
 
-The knowledge base must support three pre-implementation contracts:
+The knowledge base must support five pre-implementation artifacts:
 
+- `diagnosis.md` — what the real problem is
+- `solution-decision.md` — why this is the root solution and what shortcuts were rejected
 - `flow-spec.md` — what the user flow must do
 - `test-contract.md` — what verification must prove
 - `env-plan.md` — how the harness and dev server must behave

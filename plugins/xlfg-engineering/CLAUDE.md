@@ -5,13 +5,17 @@
 Every behavior change MUST update:
 
 1. `.claude-plugin/plugin.json` (semver bump)
-2. `CHANGELOG.md`
-3. `README.md`
+2. `.cursor-plugin/plugin.json` (semver bump)
+3. `CHANGELOG.md`
+4. `README.md`
+5. `xlfg/__init__.py`
 
 ## Command and agent naming
 
-- Top-level workflows: `/xlfg`, `/lfg`, `/slfg`
-- Subcommands use `xlfg:` prefix: `/xlfg:init`, `/xlfg:verify`, ...
+- Top-level workflow: `/xlfg`
+- Subcommands use `xlfg:` prefix: `/xlfg:init`, `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, ...
+- Planning agents should write contracts or analysis files.
+- Implementation agents should write task-scoped artifacts under `tasks/<task-id>/`.
 
 ## Context-budget discipline
 
@@ -25,6 +29,8 @@ Put examples and long guidance in the body (loads on invocation).
 ## Safety
 
 - `/xlfg:init` must be idempotent.
+- `/xlfg` is a macro; keep the actual workflow in the subcommands.
+- `/xlfg:plan` must finish before `/xlfg:implement` starts.
 - `/xlfg` must never claim success unless verification evidence exists.
 
 ## Docs

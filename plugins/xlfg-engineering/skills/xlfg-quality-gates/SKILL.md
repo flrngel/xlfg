@@ -1,6 +1,6 @@
 ---
 name: xlfg-quality-gates
-description: Apply production readiness gates (contracts, verification, UX, security, ops) before shipping /xlfg work.
+description: Apply production readiness gates (diagnosis, contracts, verification, UX, security, ops) before shipping /xlfg work.
 ---
 
 # xlfg-quality-gates
@@ -11,13 +11,22 @@ Use these gates to make `/xlfg` output actually production-ready.
 
 A run is only “done” when all apply.
 
-### Contract & scope
+### Diagnosis & scope
 
+- `diagnosis.md` exists and identifies the real problem or capability gap
+- `solution-decision.md` exists and records rejected shortcuts
 - `flow-spec.md` exists and matches shipped behavior
 - `test-contract.md` exists and the run followed it honestly
 - `env-plan.md` explains how the harness was controlled
 - non-goals are explicit
 - no unapproved scope creep
+
+### Implementation quality
+
+- every task has a `task-brief.md`
+- every task has `test-report.md`, `implementer-report.md`, and `checker-report.md`
+- every task has `Verdict: ACCEPT`
+- no task is accepted via symptom-hiding patch unless explicitly documented as a bounded workaround
 
 ### Tests & verification
 
@@ -28,7 +37,6 @@ A run is only “done” when all apply.
 - evidence is written to `verification.md`
 - raw logs exist under `.xlfg/`
 - `scorecard.md` reflects the required scenario status
-- every plan task has implementer + checker reports with `Verdict: ACCEPT`
 
 ### UX
 
@@ -60,21 +68,4 @@ Ask:
 3. Can failure leave stale or orphaned state?
 4. What other interfaces expose the same behavior?
 5. Can the harness produce a fake green result?
-
-## Evidence capture
-
-- prefer captured logs
-- record exit codes
-- summarize the first actionable failure
-- do not bury environment problems under code churn
-
-## Final pre-ship checklist
-
-- [ ] contracts written first
-- [ ] plan complete
-- [ ] every task has ACCEPTed checker report
-- [ ] verification green
-- [ ] review has no P0 findings
-- [ ] scorecard green for required scenarios
-- [ ] run summary exists
-- [ ] compound summary exists
+6. Did we fix the real problem or only hide the symptom?

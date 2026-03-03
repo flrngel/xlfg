@@ -1,6 +1,6 @@
 # xlfg-engineering (Claude Code plugin)
 
-`/xlfg` is a **behavior-contract-first SDLC workflow** for Claude Code.
+`/xlfg` is a **diagnosis-first SDLC macro** for Claude Code.
 
 It is designed for:
 
@@ -14,20 +14,22 @@ It is designed for:
 
 | Command | Purpose |
 |---|---|
-| `/xlfg` | End-to-end workflow (contract → plan → implement → targeted verify → gate verify → review → compound) |
-| `/lfg` | Sequential wrapper for `/xlfg` |
-| `/slfg` | Swarm wrapper for `/xlfg` |
+| `/xlfg` | Macro that runs init → plan → implement → verify → review → compound |
 | `/xlfg:init` | Create `docs/xlfg/` + `.xlfg/` scaffolding in the target repo |
+| `/xlfg:plan` | Diagnose the problem and write the root-solution contracts before coding |
+| `/xlfg:implement` | Execute bounded task loops with explicit implementation agents |
 | `/xlfg:verify` | Run layered verification + write evidence |
 | `/xlfg:review` | Parallel multi-lens review into files |
 | `/xlfg:compound` | Convert a run into durable knowledge for future work |
 
-`/xlfg` is intentionally **self-contained**: it performs init / verify / review / compound steps inline so the workflow does not get stuck on subcommand chaining.
+`/xlfg` intentionally mirrors Compound’s macro style: it is a set of other commands, not one giant hidden workflow prompt.
 
 ## Key artifact model
 
 Before coding, every serious run should produce:
 
+- `diagnosis.md`
+- `solution-decision.md`
 - `flow-spec.md`
 - `test-contract.md`
 - `env-plan.md`
@@ -37,15 +39,19 @@ These are the shared contracts for implementation, verification, and review.
 
 ## Agents
 
-Planning / contracts:
+Planning:
+- `xlfg-repo-mapper`
+- `xlfg-root-cause-analyst`
 - `xlfg-spec-author`
 - `xlfg-test-strategist`
 - `xlfg-env-doctor`
+- `xlfg-solution-architect`
 - `xlfg-risk-assessor`
 - `xlfg-brainstorm`
-- context investigators / repo mapper / researcher (when needed)
+- context investigators / researcher when needed
 
 Implementation:
+- `xlfg-test-implementer`
 - `xlfg-task-implementer`
 - `xlfg-task-checker`
 
@@ -73,8 +79,10 @@ Point Claude Code at `plugins/xlfg-engineering` as a plugin directory.
 
 ## Versioning
 
-Follow semver. Update all three files together:
+Follow semver. Update all of these together:
 
+- `xlfg/__init__.py`
 - `.claude-plugin/plugin.json`
-- `CHANGELOG.md`
-- `README.md`
+- `.cursor-plugin/plugin.json`
+- `plugins/xlfg-engineering/CHANGELOG.md`
+- `plugins/xlfg-engineering/README.md`

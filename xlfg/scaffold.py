@@ -12,7 +12,7 @@ This folder is the **file-based context** system-of-record for `/xlfg` runs.
 ## Structure
 
 - `knowledge/` — durable patterns, decisions, flow contracts, and harness learnings (commit this)
-- `runs/` — one folder per run containing contracts, plans, reviews, scorecards, and run summaries (commit this)
+- `runs/` — one folder per run containing diagnosis, solution decisions, contracts, plans, reviews, scorecards, and run summaries (commit this)
 
 Ephemeral logs (do not commit):
 
@@ -20,12 +20,14 @@ Ephemeral logs (do not commit):
 
 ## The core rule
 
-Define **what to build** and **what to test** *before* implementation:
+Define **what the real problem is** and **what to build / test** *before* implementation:
 
-1. `flow-spec.md` — UX / behavior contract
-2. `test-contract.md` — F2P + P2P test mapping
-3. `env-plan.md` — exact harness and dev-server plan
-4. `scorecard.md` — step-level status for requirements and regressions
+1. `diagnosis.md` — root problem or missing capability
+2. `solution-decision.md` — chosen solution and rejected shortcuts
+3. `flow-spec.md` — UX / behavior contract
+4. `test-contract.md` — F2P + P2P test mapping
+5. `env-plan.md` — exact harness and dev-server plan
+6. `scorecard.md` — step-level status for requirements and regressions
 
 ## How to use
 
@@ -37,8 +39,10 @@ Define **what to build** and **what to test** *before* implementation:
 
 QUALITY_BAR_MD = """# xlfg quality bar
 
-Nothing is \"done\" unless:
+Nothing is "done" unless:
 
+- **Diagnosis is explicit** (`diagnosis.md` exists)
+- **The root solution is explicit** (`solution-decision.md` exists and records rejected shortcuts)
 - **Behavior is contracted first** (`flow-spec.md` exists)
 - **Test intent is shared** (`test-contract.md` exists and maps scenarios to checks)
 - **Environment is controlled** (`env-plan.md` explains ports, healthchecks, and cleanup)
@@ -62,6 +66,7 @@ Record durable architectural and product decisions made during `/xlfg` runs.
 - **Decision**:
 - **Context**:
 - **Alternatives considered**:
+- **Rejected shortcut**:
 - **Consequences**:
 - **Links**: (run folder, PR, issues)
 """
@@ -77,6 +82,7 @@ Reusable patterns discovered while shipping.
 - **When to use**:
 - **Why it works**:
 - **Implementation notes**:
+- **What shortcut it replaces**:
 - **Pitfalls**:
 - **Examples / links**:
 """
@@ -95,6 +101,7 @@ Durable testing learnings captured from `/xlfg` runs.
 - **Fastest check that catches it**:
 - **Real-flow / integration check**:
 - **Regression suite that must stay green**:
+- **Root-cause proof note**:
 - **Stabilization notes**:
 - **Links**: (run folder, PR, issue)
 """
@@ -147,6 +154,7 @@ Rules for running reliable local verification.
 - **Required command / flag**:
 - **Healthcheck / readiness rule**:
 - **Cleanup rule**:
+- **Wrong-green trap to avoid**:
 - **Links**:
 """
 
@@ -164,7 +172,7 @@ COMMANDS_JSON = """{
     "startup_timeout_sec": 120,
     "reuse_if_healthy": true
   },
-  "notes": "Fill in canonical commands and the dev-server contract. xlfg will auto-detect best-effort defaults if this file stays empty."
+  "notes": "Fill in canonical commands and the dev-server contract. xlfg will auto-detect best-effort defaults if this file stays empty. Prefer commands that are non-interactive and prove the real user flow."
 }
 """
 
@@ -178,12 +186,10 @@ def init_scaffold(root: Path) -> Dict[str, List[str]]:
     created: List[str] = []
     updated: List[str] = []
 
-    # directories
     ensure_dir(root / "docs" / "xlfg" / "knowledge")
     ensure_dir(root / "docs" / "xlfg" / "runs")
     ensure_dir(root / ".xlfg" / "runs")
 
-    # gitignore
     gitignore_path = root / ".gitignore"
     if append_unique_line(gitignore_path, ".xlfg/"):
         updated.append(str(gitignore_path))

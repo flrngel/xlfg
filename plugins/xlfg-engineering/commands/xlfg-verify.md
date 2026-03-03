@@ -31,10 +31,13 @@ Define:
 
 Read first (if present):
 
+- `diagnosis.md`
+- `solution-decision.md`
 - `flow-spec.md`
 - `test-contract.md`
 - `env-plan.md`
 - `scorecard.md`
+- `run-summary.md`
 - `docs/xlfg/knowledge/commands.json`
 - `docs/xlfg/knowledge/failure-memory.md`
 - `docs/xlfg/knowledge/harness-rules.md`
@@ -56,11 +59,11 @@ Run layers in this order:
 3. Required e2e / real-flow checks
 4. Broader regression suites and build/package checks
 
-The important rule is:
+Important rules:
 
-> **Do not jump straight to giant e2e by default.**
-
-Use `test-contract.md` to decide which P0/P1 flows truly deserve smoke or e2e.
+- **Do not jump straight to giant e2e by default.**
+- **Verify the root solution, not just the absence of the old symptom.**
+- Use `test-contract.md` to decide which P0/P1 flows truly deserve smoke or e2e.
 
 ## 3) Environment doctor (before smoke / e2e)
 
@@ -110,15 +113,14 @@ Reducer responsibilities:
 - update `scorecard.md`
 - if RED, write `verify-fix-plan.md`
 - identify the **first actionable failure only**
+- call out if the test contract is too weak to prove the chosen solution
 
 ## 6) If failing, iterate correctly
 
 If verification is RED:
 
 - fix the first actionable failure
-- update the plan if the failure changes scope
+- update `diagnosis.md` or `plan.md` if the failure changes the understanding of the problem
 - re-run `/xlfg:verify`
 
-If the **same failure repeats twice without a new hypothesis**, stop and record it in the run as an environment / harness problem rather than mindlessly rerunning the same command.
-
-Only declare success when the required layers are green.
+Do not continue to review while verification is RED.

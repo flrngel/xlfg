@@ -40,6 +40,18 @@ class TestXLFG(unittest.TestCase):
             self.assertEqual(result2["created"], [])
             self.assertIn("docs/xlfg/knowledge/commands.json", result["created"])
 
+    def test_create_run_seeds_diagnosis_and_solution_files(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            init_scaffold(root)
+            run = create_run(root, request="fix login flow")
+            run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
+            self.assertTrue((run_dir / "diagnosis.md").exists())
+            self.assertTrue((run_dir / "solution-decision.md").exists())
+            self.assertTrue((run_dir / "flow-spec.md").exists())
+            self.assertTrue((run_dir / "tasks").exists())
+
     def test_detect_node_package_json_and_dev(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

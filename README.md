@@ -1,22 +1,24 @@
 # xlfg-engineering-plugin
 
-`/xlfg` is a **behavior-contract-first** software development workflow for agents.
+`/xlfg` is a **diagnosis-first, contract-shared** software development workflow for agents.
 
-The core change in this version is simple:
+The core change in this revision is simple:
 
-> **Define the user flow and the shared test contract before writing code.**
+> **Do not code until the problem, the user flow, the test contract, and the environment contract all agree.**
 
-Instead of waiting until the end to ask "does this work?", xlfg now starts by creating a shared contract for:
+Instead of treating verification as a late question — “does this work?” — xlfg now treats planning and implementation as the first line of quality:
 
-1. **What to build** — `flow-spec.md`
-2. **What to test** — `test-contract.md`
-3. **How the environment must run** — `env-plan.md`
-4. **How progress is scored** — `scorecard.md`
+1. **Diagnose the real problem** — `diagnosis.md`
+2. **Choose the root solution, not the tempting patch** — `solution-decision.md`
+3. **Define the shared user-flow contract** — `flow-spec.md`
+4. **Define the shared test contract** — `test-contract.md`
+5. **Define the environment / harness contract** — `env-plan.md`
+6. **Execute bounded task loops with targeted proof** — `tasks/<task-id>/...`
 
 This repository includes:
 
-1. A **Claude Code plugin** (in `plugins/xlfg-engineering`) that implements `/xlfg`, `/lfg`, and `/slfg`.
-2. A dependency-free **Python CLI** (`xlfg`) that creates the same file structure, runs environment doctor checks, and writes verification evidence.
+1. A **Claude Code plugin** (in `plugins/xlfg-engineering`) with `/xlfg`, `/xlfg:init`, `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, `/xlfg:review`, and `/xlfg:compound`.
+2. A dependency-free **Python CLI** (`xlfg`) that creates the same file structure and writes verification evidence.
 
 ## Quick start (Claude Code)
 
@@ -25,10 +27,14 @@ This repository includes:
    - `/xlfg:init` once per repo
    - `/xlfg "what you want built"`
 
-Shortcuts:
+`/xlfg` is now a **macro command** that orchestrates the subcommands in order:
 
-- `/lfg` — single lead + focused subagents
-- `/slfg` — broader swarm / team orchestration
+1. `/xlfg:init`
+2. `/xlfg:plan`
+3. `/xlfg:implement`
+4. `/xlfg:verify`
+5. `/xlfg:review`
+6. `/xlfg:compound`
 
 ## Quick start (CLI)
 
@@ -58,7 +64,7 @@ Durable knowledge (intended to be committed):
 
 - `docs/xlfg/index.md` — map of the knowledge base
 - `docs/xlfg/knowledge/` — decisions, patterns, test learnings, UX flows, failure memory, harness rules
-- `docs/xlfg/runs/<run-id>/` — contracts, plans, scorecards, reviews, summaries
+- `docs/xlfg/runs/<run-id>/` — diagnosis, solution decisions, contracts, plans, scorecards, reviews, summaries
 
 Ephemeral execution logs (intended to be gitignored):
 
@@ -67,35 +73,38 @@ Ephemeral execution logs (intended to be gitignored):
 
 ## Commands included (plugin)
 
-- `/xlfg` — end-to-end SDLC workflow (contract → plan → implement → targeted verify → gate verify → review → compound)
-- `/lfg` — sequential mode guidance
-- `/slfg` — swarm mode guidance
+- `/xlfg` — macro that runs the full SDLC command chain
 - `/xlfg:init` — add repo scaffolding for xlfg runs
+- `/xlfg:plan` — diagnosis-first planning and contract creation
+- `/xlfg:implement` — bounded implementation loops with explicit agents and targeted checks
 - `/xlfg:verify` — run layered verification and write evidence
 - `/xlfg:review` — parallel multi-lens review into files
 - `/xlfg:compound` — turn a run into durable knowledge
 
 ## Why this version is different
 
-### Old pattern
-- define acceptance loosely
-- implement
-- run big tests later
-- get stuck on port conflicts / watch mode / stale servers
-- repeat the same failed command
+### Old failure mode
+- vague request handling
+- coding starts before the problem is understood
+- tests are decided late
+- review agents clean up bad implementation choices
+- shortcut patches sneak through
+- the same environment mistakes repeat
 
-### New pattern
-- define **user-flow contract** first
-- define **test contract** first
-- define **environment contract** first
-- run the **fastest relevant check after each task**
-- run **full gate verification only at the right time**
-- compound real failures into **failure memory** and **harness rules**
+### New discipline
+- diagnose first
+- reject shortcut patches during planning
+- make implementation and verification share the same contracts
+- require specified agents for planning and implementation
+- run the cheapest proof that matches the scenario after each task
+- treat review as confirmation, not cleanup
+- compound real failures into reusable harness and testing memory
 
 ## Design principles
 
-- **Shift-left contracts:** behavior, testing, and environment are agreed before coding.
-- **Dual-set verification:** prove new behavior (Fail → Pass) and preserve old behavior (Pass → Pass).
+- **Diagnosis first:** identify the real change surface before writing code.
+- **Root-cause over symptom patches:** every run must record tempting shortcuts and why they were rejected.
+- **Contract-shared execution:** planning, implementation, verification, and review use the same flow/test/env contracts.
 - **File-based context:** agents share state through files, not chat history.
 - **Evidence-first:** no “done” without passing verification + captured evidence.
 - **Verified compounding:** only durable, provenance-backed lessons enter the knowledge base.

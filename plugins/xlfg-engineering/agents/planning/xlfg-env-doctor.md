@@ -19,7 +19,7 @@ You are the environment doctor for `/xlfg`.
 
 ## Goal
 
-Define how the environment and verification harness must behave so the run does not waste time on duplicate servers, port conflicts, watch mode, or stale processes.
+Define how the environment and verification harness must behave so the run does not waste time on duplicate servers, port conflicts, watch mode, stale processes, or stale bundles.
 
 ## What to produce
 
@@ -33,32 +33,7 @@ Define how the environment and verification harness must behave so the run does 
 - anti-hang rules (`CI=1`, watch off, timeout wrappers)
 - cleanup rule
 - known local failure patterns to watch for
-
-## Output format
-
-```markdown
-# Environment plan
-
-## Install
-- ...
-
-## Dev server
-- Command:
-- CWD:
-- Port:
-- Healthcheck:
-- Reuse if healthy:
-- Startup timeout:
-
-## Verification harness rules
-- ...
-
-## Cleanup rule
-- ...
-
-## Known failure patterns to watch for
-- ...
-```
+- stale-version / old-bundle traps when relevant
 
 ## Rules
 
@@ -66,5 +41,4 @@ Define how the environment and verification harness must behave so the run does 
 - If you cannot infer port or healthcheck confidently, say so plainly.
 - Reuse a healthy server rather than starting another one.
 - If a port may already be occupied, recommend checking health before restart.
-
-**Note:** The current year is 2026.
+- Call out commands that often look green while serving the wrong build.

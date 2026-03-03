@@ -1,7 +1,7 @@
 {
   "name": "xlfg-engineering",
-  "version": "1.0.0",
-  "description": "Behavior-contract-first SDLC workflow with layered verification, environment doctoring, and compounding.",
+  "version": "2.0.0",
+  "description": "Diagnosis-first SDLC workflow with contract-shared verification, environment discipline, and verified compounding.",
   "author": {
     "name": "xlfg",
     "email": "",

@@ -30,6 +30,65 @@ CONTEXT_MD_TEMPLATE = """# Context
 - ...
 """
 
+DIAGNOSIS_TEMPLATE = """# Diagnosis
+
+## Problem summary
+- ...
+
+## Current behavior / baseline
+- ...
+
+## Causal chain
+1. ...
+2. ...
+3. ...
+
+## Root cause / missing capability
+- ...
+
+## Evidence
+- ...
+
+## Tempting shortcuts to reject
+- ...
+
+## Unknowns
+- ...
+
+## Quick validation probes
+- ...
+"""
+
+SOLUTION_DECISION_TEMPLATE = """# Solution decision
+
+## Options considered
+
+### Option A
+- How it works:
+- Pros:
+- Cons:
+
+### Option B
+- How it works:
+- Pros:
+- Cons:
+
+## Chosen solution
+- ...
+
+## Why this is the root solution
+- ...
+
+## Rejected shortcuts
+- ...
+
+## Testing / rollout implications
+- ...
+
+## Task decomposition hints
+- ...
+"""
+
 FLOW_SPEC_TEMPLATE = """# Flow spec
 
 This file is the shared **behavior contract** for implementation and verification.
@@ -61,6 +120,12 @@ SPEC_TEMPLATE = """# Spec
 
 ## Summary
 
+## Root cause / missing capability
+
+## Chosen solution
+
+## Rejected shortcuts
+
 ## Acceptance criteria
 
 ## Non-goals
@@ -71,9 +136,11 @@ PLAN_TEMPLATE = """# Plan
 ## Summary
 
 ## Ordered tasks
-- [ ] T1 <task aligned to scenario IDs>
+- [ ] T1 <task aligned to scenario IDs> | scenario IDs: <...> | scope: <...> | checks: <...>
 
 ## Definition of done
+- Diagnosis confirmed or updated intentionally
+- Root solution implemented (or bounded workaround explicitly approved)
 - Flow spec satisfied
 - Test contract satisfied
 - Verification green
@@ -117,6 +184,7 @@ ENV_PLAN_TEMPLATE = """# Environment plan
 - Avoid watch mode
 - Capture logs under `.xlfg/`
 - Do not start duplicate dev servers
+- Call out stale-version or stale-bundle traps
 
 ## Known failure patterns to watch for
 - Port already in use
@@ -127,10 +195,10 @@ ENV_PLAN_TEMPLATE = """# Environment plan
 SCORECARD_TEMPLATE = """# Scorecard
 
 ## F2P status
-- `P0-1`: UNASSESSED
+- `P0-1`: UNASSESSED | proof: <command or artifact>
 
 ## P2P status
-- Core regression suites: UNASSESSED
+- Core regression suites: UNASSESSED | proof: <command or artifact>
 
 ## Notes
 - Update this after verification and review.
@@ -158,6 +226,8 @@ def create_run(root: Path, request: str, run_id: Optional[str] = None) -> dict:
     ensure_dir(docs_dir / "tasks")
 
     safe_write(docs_dir / "context.md", CONTEXT_MD_TEMPLATE.format(request=request.strip()))
+    safe_write(docs_dir / "diagnosis.md", DIAGNOSIS_TEMPLATE)
+    safe_write(docs_dir / "solution-decision.md", SOLUTION_DECISION_TEMPLATE)
     safe_write(docs_dir / "flow-spec.md", FLOW_SPEC_TEMPLATE)
     safe_write(docs_dir / "spec.md", SPEC_TEMPLATE)
     safe_write(docs_dir / "plan.md", PLAN_TEMPLATE)

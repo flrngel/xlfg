@@ -21,7 +21,7 @@ def _print_json(obj: Any) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="xlfg",
-        description="Extreme LFG: behavior-contract-first SDLC harness",
+        description="XLFG: diagnosis-first SDLC harness",
     )
     parser.add_argument("--version", action="store_true", help="Print version and exit")
 

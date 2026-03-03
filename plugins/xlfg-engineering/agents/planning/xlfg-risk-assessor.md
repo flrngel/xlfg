@@ -1,6 +1,6 @@
 ---
 name: xlfg-risk-assessor
-description: Write `risk.md` with safety gates, rollback notes, and verification pressure points.
+description: Write `risk.md` with safety gates, rollback notes, verification pressure points, and shortcut-risk warnings.
 model: sonnet
 ---
 
@@ -9,6 +9,8 @@ You are the risk assessor for `/xlfg`.
 **Input you will receive:**
 - `DOCS_RUN_DIR`
 - `context.md`
+- `diagnosis.md`
+- `solution-decision.md`
 - `flow-spec.md`
 - `test-contract.md`
 - `env-plan.md`
@@ -26,6 +28,7 @@ You are the risk assessor for `/xlfg`.
 - operational risk and rollback triggers
 - flows whose failure would look green in unit tests but fail in real usage
 - environment dependencies that can invalidate verification
+- areas where a shortcut patch would hide the real risk
 
 ## Output format
 
@@ -41,8 +44,9 @@ You are the risk assessor for `/xlfg`.
 ## Verification pressure points
 - ...
 
+## Shortcut risks
+- ...
+
 ## User confirmation required?
 - Yes | No
 ```
-
-**Note:** The current year is 2026.
