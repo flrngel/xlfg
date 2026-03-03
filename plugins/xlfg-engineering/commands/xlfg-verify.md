@@ -41,6 +41,7 @@ Read first (if present):
 - `docs/xlfg/knowledge/commands.json`
 - `docs/xlfg/knowledge/failure-memory.md`
 - `docs/xlfg/knowledge/harness-rules.md`
+- `docs/xlfg/knowledge/agent-memory/verify-reducer.md`
 
 ## 2) Decide the layered verify plan
 
@@ -64,6 +65,7 @@ Important rules:
 - **Do not jump straight to giant e2e by default.**
 - **Verify the root solution, not just the absence of the old symptom.**
 - Use `test-contract.md` to decide which P0/P1 flows truly deserve smoke or e2e.
+- Prefer **environment-state verification** when relevant (healthy port, correct bundle, correct endpoint behavior), not just proof that a start command was invoked.
 
 ## 3) Environment doctor (before smoke / e2e)
 

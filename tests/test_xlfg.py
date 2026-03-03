@@ -7,10 +7,11 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from xlfg import __version__
 from xlfg.detect import detect_commands
 from xlfg.doctor import ensure_dev_server
 from xlfg.runs import create_run
-from xlfg.scaffold import init_scaffold
+from xlfg.scaffold import ensure_scaffold, scaffold_status
 from xlfg.verify import verify
 
 
@@ -25,26 +26,40 @@ class _OkHandler(BaseHTTPRequestHandler):
 
 
 class TestXLFG(unittest.TestCase):
-    def test_init_scaffold_creates_expected_files(self) -> None:
+    def test_prepare_scaffold_creates_expected_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / ".git").mkdir()
-            result = init_scaffold(root)
+            result = ensure_scaffold(root, __version__)
             self.assertTrue((root / "docs" / "xlfg" / "index.md").exists())
-            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "failure-memory.md").exists())
-            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "harness-rules.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "meta.json").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "env-doctor.md").exists())
             self.assertTrue((root / ".xlfg" / "runs").exists())
             gi = (root / ".gitignore").read_text(encoding="utf-8")
             self.assertIn(".xlfg/", gi)
-            result2 = init_scaffold(root)
+            self.assertIn("docs/xlfg/runs/*", gi)
+            self.assertIn("!docs/xlfg/runs/.gitkeep", gi)
+            self.assertIn("docs/xlfg/meta.json", result["updated"])
+            result2 = ensure_scaffold(root, __version__)
             self.assertEqual(result2["created"], [])
-            self.assertIn("docs/xlfg/knowledge/commands.json", result["created"])
+            self.assertFalse(result2["needs_migration"])
+
+    def test_prepare_detects_version_drift_and_writes_migration(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            ensure_scaffold(root, "2.0.0")
+            result = ensure_scaffold(root, __version__)
+            self.assertEqual(result["previous_tool_version"], "2.0.0")
+            self.assertTrue((root / "docs" / "xlfg" / "migrations" / "2.0.0-to-2.0.1.md").exists())
+            status = scaffold_status(root, __version__)
+            self.assertFalse(status["needs_migration"])
 
     def test_create_run_seeds_diagnosis_and_solution_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / ".git").mkdir()
-            init_scaffold(root)
+            ensure_scaffold(root, __version__)
             run = create_run(root, request="fix login flow")
             run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
             self.assertTrue((run_dir / "diagnosis.md").exists())
@@ -82,7 +97,7 @@ class TestXLFG(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / ".git").mkdir()
-            init_scaffold(root)
+            ensure_scaffold(root, __version__)
             run = create_run(root, request="example")
 
             server = ThreadingHTTPServer(("127.0.0.1", 0), _OkHandler)
@@ -113,7 +128,7 @@ class TestXLFG(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / ".git").mkdir()
-            init_scaffold(root)
+            ensure_scaffold(root, __version__)
             run = create_run(root, request="example")
             res = verify(root, run_id=run["run_id"], mode="full")
             self.assertFalse(res["ok"])

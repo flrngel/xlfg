@@ -37,6 +37,7 @@ A run is only “done” when all apply.
 - evidence is written to `verification.md`
 - raw logs exist under `.xlfg/`
 - `scorecard.md` reflects the required scenario status
+- verification proves actual environment state when required (not just that a command was invoked)
 
 ### UX
 
@@ -57,7 +58,7 @@ A run is only “done” when all apply.
 
 - monitoring / validation plan exists
 - rollback plan exists for risky changes
-- repeated harness failures are compounded into `failure-memory.md` or `harness-rules.md`
+- repeated harness failures are compounded into `failure-memory.md`, `harness-rules.md`, or the relevant role memory file
 
 ## Sanity check before calling a task “done”
 

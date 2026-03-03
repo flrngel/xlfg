@@ -1,20 +1,15 @@
-# Research notes behind xlfg 1.0
+# Research notes behind xlfg 2.0.1
 
-This version was redesigned around a few recurring lessons from recent agent systems and long-horizon benchmarks:
+This revision tightened four ideas.
 
-- Long-horizon coding fails early when requirements are vague and when agents only discover real constraints during late execution.
-- Dual-set verification matters: prove the new requirement and separately protect existing behavior.
-- Better planning upfront is often cheaper than repeated self-correction after the agent has already gone down the wrong branch.
-- Memory and compounding need verification gates and provenance, otherwise the system just accumulates noisy summaries.
-- Environment control is part of correctness. Port conflicts, stale servers, and watch-mode hangs are agent failure modes, not just local annoyances.
+## 1) Bootstrap should be cheap; long runs should carry the cost
+A repo that is already prepared should not pay a full init tax every run. xlfg now prefers a fast **prepare / migrate** check and only applies scaffold changes when the version drifts.
 
-xlfg turns those lessons into concrete artifacts:
+## 2) Dual-set verification must be defined from the requirement doc, not improvised late
+The testing contract should explicitly map new requirements (F2P) and preserved behavior (P2P) before implementation. That is why flow specs, test contracts, and scorecards are seeded before coding.
 
-- `flow-spec.md`
-- `test-contract.md`
-- `env-plan.md`
-- `scorecard.md`
-- `failure-memory.md`
-- `harness-rules.md`
+## 3) Role memory beats one giant summary file
+Certain roles hit the same failures repeatedly: diagnosis, test strategy, env setup, reduction of failures, and UX review. xlfg now keeps compact, role-specific memory files so those lessons remain retrievable without bloating every agent prompt.
 
-The goal is not maximum agent fan-out. The goal is **fast, correct, compounding execution**.
+## 4) Runs are episodic memory, not durable knowledge
+Run folders are valuable locally, but the durable artifact should be the promoted lesson in `knowledge/`, not the full run log. That is why `docs/xlfg/runs/` is local-only by default.

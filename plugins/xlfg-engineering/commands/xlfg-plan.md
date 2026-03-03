@@ -18,10 +18,11 @@ If the request is empty, ask the user what they want to build or fix and stop un
 2. **No late-thinking shortcuts.** The goal is the root solution, not the fastest patch.
 3. **Do not hide behind “run the full suite later.”** The test contract must be scenario-based and explicit.
 4. **Ask the user only blocking questions.** If a safe default exists, record it and proceed.
+5. **Disconfirm yourself.** Every chosen solution must record what evidence would prove it wrong.
 
-## Phase 0 — Ensure scaffolding + create run
+## Phase 0 — Fast scaffold check + create run
 
-If `docs/xlfg/index.md` is missing, do the equivalent of `/xlfg:init` first.
+If `docs/xlfg/meta.json` is missing or stale, do the equivalent of `/xlfg:prepare` first.
 
 Create a new `RUN_ID=<YYYYMMDD-HHMMSS>-<slug>` and these paths:
 
@@ -91,6 +92,7 @@ For each task include:
 - allowed file scope
 - targeted checks to run after the task
 - invariants that must stay true
+- one **disproof probe** or stop condition that would force diagnosis review
 - stop conditions / blockers
 
 The plan must align to `diagnosis.md`, `solution-decision.md`, and `flow-spec.md`.
@@ -112,6 +114,7 @@ Do **not** continue to implementation until all are true:
 - `test-contract.md` maps scenarios to explicit checks
 - `env-plan.md` explains how local verification will avoid server/harness traps
 - `plan.md` has bounded tasks with file scope and targeted checks
+- at least one disconfirming probe exists in `solution-decision.md` or `plan.md`
 
 ## Completion
 

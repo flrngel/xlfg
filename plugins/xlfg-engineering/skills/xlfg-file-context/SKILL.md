@@ -11,14 +11,16 @@ Use file-based context to keep long-horizon work reliable and legible.
 
 Treat files as the system of record:
 
-- **Durable (commit):** `docs/xlfg/` — diagnosis, contracts, plans, reviews, scorecards, lessons
-- **Ephemeral (gitignore):** `.xlfg/` — raw logs, screenshots, traces, doctor reports
+- **Tracked durable knowledge:** `docs/xlfg/knowledge/` + `docs/xlfg/meta.json`
+- **Local episodic evidence:** `docs/xlfg/runs/`
+- **Ephemeral raw logs:** `.xlfg/`
 
 ## Standard structure
 
 ```text
 docs/xlfg/
   index.md
+  meta.json
   knowledge/
     quality-bar.md
     decision-log.md
@@ -28,6 +30,15 @@ docs/xlfg/
     failure-memory.md
     harness-rules.md
     commands.json
+    agent-memory/
+      root-cause-analyst.md
+      test-strategist.md
+      env-doctor.md
+      task-implementer.md
+      verify-reducer.md
+      ux-reviewer.md
+  migrations/
+    <from>-to-<to>.md
   runs/
     <run-id>/
       context.md
@@ -63,7 +74,13 @@ docs/xlfg/
 
 ## Core workflow
 
-### 1) Diagnose + contract first
+### 1) Prepare fast
+
+- Check `docs/xlfg/meta.json`.
+- If the version matches, do not re-init.
+- If the version drifted, migrate only the missing structure.
+
+### 2) Diagnose + contract first
 
 Before implementation, make sure the run has:
 
@@ -73,18 +90,19 @@ Before implementation, make sure the run has:
 - `test-contract.md`
 - `env-plan.md`
 
-### 2) Map
+### 3) Map
 
 - Spawn subagents with isolated contexts.
 - Give each a single responsibility and a single output path.
 - Avoid chat coordination.
+- Give a role its own memory file only if that role repeatedly needs the same lesson.
 
-### 3) Reduce
+### 4) Reduce
 
 - The lead merges results into canonical files.
 - The plan must align tasks to scenario IDs and diagnosis.
 
-### 4) Implement with bounded pair loops
+### 5) Implement with bounded pair loops
 
 - Test implementer writes targeted test changes and proof notes.
 - Implementer writes code + implementer report.

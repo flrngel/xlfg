@@ -9,7 +9,7 @@ from . import __version__
 from .detect import detect_commands
 from .doctor import cleanup_dev_server, ensure_dev_server
 from .runs import create_run
-from .scaffold import init_scaffold
+from .scaffold import ensure_scaffold, scaffold_status
 from .util import repo_root
 from .verify import verify
 
@@ -27,8 +27,14 @@ def main(argv: list[str] | None = None) -> int:
 
     subparsers = parser.add_subparsers(dest="command")
 
-    p_init = subparsers.add_parser("init", help="Initialize docs/xlfg + .xlfg scaffolding")
+    p_prepare = subparsers.add_parser("prepare", help="Fast scaffold/version check with auto-migration")
+    p_prepare.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
+
+    p_init = subparsers.add_parser("init", help="Bootstrap or repair docs/xlfg + .xlfg scaffolding")
     p_init.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
+
+    p_status = subparsers.add_parser("status", help="Show scaffold version status")
+    p_status.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
 
     p_start = subparsers.add_parser("start", help="Start a new run and write initial context")
     p_start.add_argument("request", help="Feature/bugfix request")
@@ -59,24 +65,29 @@ def main(argv: list[str] | None = None) -> int:
 
     root = Path(args.root).resolve() if getattr(args, "root", None) else repo_root()
 
-    if args.command == "init":
-        result = init_scaffold(root)
+    if args.command == "status":
+        _print_json({"root": str(root), **scaffold_status(root, __version__)})
+        return 0
+
+    if args.command in {"prepare", "init"}:
+        result = ensure_scaffold(root, __version__)
         _print_json({"root": str(root), **result})
         return 0
 
     if args.command == "start":
-        init_scaffold(root)
+        prep = ensure_scaffold(root, __version__)
         result = create_run(root, request=args.request, run_id=args.run_id)
-        _print_json({"root": str(root), **result})
+        _print_json({"root": str(root), "prepare": prep, **result})
         return 0
 
     if args.command == "detect":
+        ensure_scaffold(root, __version__)
         detected = detect_commands(root)
         _print_json({"root": str(root), **detected})
         return 0
 
     if args.command == "doctor":
-        init_scaffold(root)
+        ensure_scaffold(root, __version__)
         from .runs import latest_run_id
 
         rid = args.run_id or latest_run_id(root)
@@ -89,7 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if report.get("status") in {"reused", "started", "no-config"} else 2
 
     if args.command == "verify":
-        init_scaffold(root)
+        ensure_scaffold(root, __version__)
         result = verify(root, run_id=args.run_id, mode=args.mode)
         _print_json({"root": str(root), **result})
         return 0 if result.get("ok") else 2

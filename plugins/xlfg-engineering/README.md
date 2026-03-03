@@ -14,8 +14,9 @@ It is designed for:
 
 | Command | Purpose |
 |---|---|
-| `/xlfg` | Macro that runs init → plan → implement → verify → review → compound |
-| `/xlfg:init` | Create `docs/xlfg/` + `.xlfg/` scaffolding in the target repo |
+| `/xlfg` | Macro that runs prepare → plan → implement → verify → review → compound |
+| `/xlfg:prepare` | Fast scaffold/version check; migrate only on drift |
+| `/xlfg:init` | Manual bootstrap / repair of `docs/xlfg/` + `.xlfg/` scaffolding |
 | `/xlfg:plan` | Diagnose the problem and write the root-solution contracts before coding |
 | `/xlfg:implement` | Execute bounded task loops with explicit implementation agents |
 | `/xlfg:verify` | Run layered verification + write evidence |
@@ -36,6 +37,14 @@ Before coding, every serious run should produce:
 - `scorecard.md`
 
 These are the shared contracts for implementation, verification, and review.
+
+## Tracking model
+
+- `docs/xlfg/knowledge/` → tracked durable knowledge
+- `docs/xlfg/runs/` → local episodic evidence, gitignored by default
+- `.xlfg/` → ephemeral raw logs, gitignored
+
+This split keeps git clean while preserving local run history for compounding.
 
 ## Agents
 
@@ -67,6 +76,7 @@ Review:
 
 Subagent model:
 - `/xlfg` subagents use `sonnet`.
+- Certain agents have **role-specific memory** under `docs/xlfg/knowledge/agent-memory/`.
 
 ## Skills
 
@@ -79,9 +89,10 @@ Point Claude Code at `plugins/xlfg-engineering` as a plugin directory.
 
 ## Versioning
 
-Follow semver. Update all of these together:
+Only patch versions are bumped in normal evolution. Update all of these together:
 
 - `xlfg/__init__.py`
+- `pyproject.toml`
 - `.claude-plugin/plugin.json`
 - `.cursor-plugin/plugin.json`
 - `plugins/xlfg-engineering/CHANGELOG.md`

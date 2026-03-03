@@ -40,6 +40,7 @@ Read these first and refuse to proceed if any are missing:
 - **Do not weaken tests to get green.**
 - **Do not broaden file scope casually.** If scope must expand, update the plan first.
 - **Use targeted checks after each task.** Final verification comes later.
+- **If a disproof probe trips, stop and return to planning.**
 
 ## 4) Task loop
 
@@ -54,6 +55,7 @@ Ensure `tasks/<task-id>/` exists and write `task-brief.md` with:
 - allowed file scope
 - required checks
 - relevant invariants
+- disproof probe / stop condition
 - any blocker context
 
 ### 4B) Run the specified implementation agents

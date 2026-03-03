@@ -12,6 +12,7 @@ Read first (if present):
 - `verification.md`
 - `scorecard.md`
 - `verify-fix-plan.md`
+- `docs/xlfg/knowledge/agent-memory/ux-reviewer.md`
 
 ## What to check
 
@@ -50,5 +51,6 @@ Read first (if present):
 ```
 
 If UI changes are involved, request screenshots or a smoke checklist when missing.
+Use role memory only for repeated UX traps that match the current flow type.
 
 **Note:** The current year is 2026.

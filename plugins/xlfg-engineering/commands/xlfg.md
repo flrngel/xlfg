@@ -9,7 +9,7 @@ Run these slash commands in order. Do not invent a shortcut workflow.
 
 ## Workflow
 
-1. `/xlfg:init`
+1. `/xlfg:prepare`
 2. `/xlfg:plan $ARGUMENTS`
 3. Capture the `RUN_ID` printed by `/xlfg:plan`.
 4. `/xlfg:implement <RUN_ID>`
@@ -19,6 +19,7 @@ Run these slash commands in order. Do not invent a shortcut workflow.
 
 ## Rules
 
+- `/xlfg:prepare` should be fast. If the scaffold is current, it should effectively no-op.
 - Do not start coding before `/xlfg:plan` finishes.
 - `/xlfg:plan` must produce `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `test-contract.md`, `env-plan.md`, and `plan.md`.
 - If `/xlfg:plan` surfaces blocking clarification, stop, ask the question, update the plan, and only then continue.

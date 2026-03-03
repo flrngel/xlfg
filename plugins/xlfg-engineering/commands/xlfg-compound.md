@@ -1,6 +1,6 @@
 ---
 name: xlfg:compound
-description: Convert an xlfg run into durable knowledge (tests, failures, harness rules, patterns, and root-solution learnings).
+description: Convert an xlfg run into durable knowledge (tests, failures, harness rules, patterns, and role-specific memory).
 argument-hint: "[run-id | latest]"
 ---
 
@@ -19,8 +19,9 @@ Paths:
 
 - `DOCS_RUN_DIR=docs/xlfg/runs/<run-id>`
 - `KB_DIR=docs/xlfg/knowledge`
+- `AGENT_MEMORY_DIR=docs/xlfg/knowledge/agent-memory`
 
-Ensure `KB_DIR` exists.
+Ensure both knowledge directories exist.
 
 ## 2) Read run artifacts
 
@@ -44,6 +45,7 @@ Read (if present):
 
 Append small, specific entries to the right knowledge files:
 
+Shared memory:
 - `patterns.md` — durable implementation or design patterns
 - `decision-log.md` — durable decisions and rejected shortcuts worth remembering
 - `testing.md` — scenario-level testing lessons
@@ -51,6 +53,14 @@ Append small, specific entries to the right knowledge files:
 - `failure-memory.md` — repeated unexpected failures and proven fixes
 - `harness-rules.md` — dev-server, watch-mode, port, readiness, cleanup rules
 - `quality-bar.md` — missing gate discovered by this run
+
+Role memory (only when role-specific and compact):
+- `agent-memory/root-cause-analyst.md`
+- `agent-memory/test-strategist.md`
+- `agent-memory/env-doctor.md`
+- `agent-memory/task-implementer.md`
+- `agent-memory/verify-reducer.md`
+- `agent-memory/ux-reviewer.md`
 
 ### Admission rule
 
@@ -61,6 +71,9 @@ Only write entries that are:
 - tied to a concrete symptom, decision, or contract gap
 - backed by verification, review, or a repeated real failure
 - likely to help the next run directly
+- small enough that the role can retrieve them without prompt bloat
+
+Prefer shared memory unless the lesson is clearly role-specific.
 
 ## 4) Write run-level compounding summary
 
@@ -68,6 +81,7 @@ Write `DOCS_RUN_DIR/compound-summary.md` with:
 
 - what was learned
 - what was added to each knowledge file
+- what was added to role memory and why
 - what shortcuts were rejected and why
 - what was intentionally not added and why
 - what the next similar run should do first

@@ -6,13 +6,15 @@
 
 ```text
 /xlfg
-  ├─ /xlfg:init
+  ├─ /xlfg:prepare
   ├─ /xlfg:plan
   ├─ /xlfg:implement
   ├─ /xlfg:verify
   ├─ /xlfg:review
   └─ /xlfg:compound
 ```
+
+`/xlfg:init` remains available as a manual bootstrap / repair command, but the main workflow should prefer the fast prepare/migrate check.
 
 This keeps the workflow debuggable, composable, and easy to re-run from any intermediate stage.
 
@@ -29,6 +31,13 @@ Every serious run writes:
 - `scorecard.md`
 
 These files are the contract shared across planning, implementation, verification, review, and compounding.
+
+## Memory split
+
+- `docs/xlfg/knowledge/` → tracked durable knowledge
+- `docs/xlfg/knowledge/agent-memory/` → tracked role-specific memory
+- `docs/xlfg/runs/` → local episodic evidence
+- `.xlfg/` → ephemeral raw logs
 
 ## Quality placement
 

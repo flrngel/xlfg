@@ -1,31 +1,43 @@
 ---
 name: xlfg:init
-description: Initialize xlfg scaffolding (diagnosis, contracts, knowledge, and .xlfg logs) in this repo.
+description: Manual bootstrap / repair for xlfg scaffolding in this repo.
 ---
 
 # /xlfg:init
 
-Create the durable **xlfg knowledge base** plus the ephemeral execution-log directory.
+Use this when you want to explicitly bootstrap or repair the xlfg scaffold.
 
-> Tip: If you have the CLI installed, `xlfg init` generates the same scaffolding.
+`/xlfg` itself should normally use `/xlfg:prepare`, not force a full init every run.
 
 ## Safety + idempotency rules
 
 - Do **not** overwrite existing files.
 - If a file already exists, only add missing sections.
 - Do **not** modify unrelated docs or tooling.
+- Respect the tracking model: `knowledge/` tracked, `runs/` local-only, `.xlfg/` ephemeral.
 
-## What to create
+## What to create or repair
 
 ### Directories
 
+Tracked:
 - `docs/xlfg/knowledge/`
+- `docs/xlfg/knowledge/agent-memory/`
+- `docs/xlfg/migrations/`
+- `docs/xlfg/meta.json`
+
+Local-only:
 - `docs/xlfg/runs/`
 - `.xlfg/runs/`
 
 ### Gitignore
 
-Ensure `.xlfg/` is listed in the repo root `.gitignore`.
+Ensure the repo root `.gitignore` contains:
+
+- `.xlfg/`
+- `docs/xlfg/runs/*`
+- `!docs/xlfg/runs/.gitkeep`
+- `!docs/xlfg/runs/README.md`
 
 ### Durable knowledge files
 
@@ -40,20 +52,12 @@ Create these if missing:
 - `docs/xlfg/knowledge/failure-memory.md`
 - `docs/xlfg/knowledge/harness-rules.md`
 - `docs/xlfg/knowledge/commands.json`
-
-### Important default in this version
-
-The knowledge base must support five pre-implementation artifacts:
-
-- `diagnosis.md` — what the real problem is
-- `solution-decision.md` — why this is the root solution and what shortcuts were rejected
-- `flow-spec.md` — what the user flow must do
-- `test-contract.md` — what verification must prove
-- `env-plan.md` — how the harness and dev server must behave
+- role memories under `docs/xlfg/knowledge/agent-memory/`
 
 ## Completion
 
-After scaffolding is created:
+After scaffolding is created or repaired:
 
 - Print created paths
+- Print the scaffold version written to `docs/xlfg/meta.json`
 - Suggest running `/xlfg <your request>`

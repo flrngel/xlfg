@@ -82,6 +82,9 @@ SOLUTION_DECISION_TEMPLATE = """# Solution decision
 ## Rejected shortcuts
 - ...
 
+## Disconfirming evidence to watch for
+- What result would prove this design is wrong?
+
 ## Testing / rollout implications
 - ...
 
@@ -97,6 +100,13 @@ This file is the shared **behavior contract** for implementation and verificatio
 
 - Goal:
 - Non-goals:
+
+## State / transition model
+
+- Start state:
+- Key transitions:
+- Success terminal state:
+- Failure terminal state:
 
 ## Scenarios
 
@@ -129,6 +139,8 @@ SPEC_TEMPLATE = """# Spec
 ## Acceptance criteria
 
 ## Non-goals
+
+## Rollout / rollback notes
 """
 
 PLAN_TEMPLATE = """# Plan
@@ -136,7 +148,7 @@ PLAN_TEMPLATE = """# Plan
 ## Summary
 
 ## Ordered tasks
-- [ ] T1 <task aligned to scenario IDs> | scenario IDs: <...> | scope: <...> | checks: <...>
+- [ ] T1 <task aligned to scenario IDs> | scenario IDs: <...> | scope: <...> | checks: <...> | disproof probe: <...>
 
 ## Definition of done
 - Diagnosis confirmed or updated intentionally
@@ -152,6 +164,9 @@ TEST_CONTRACT_TEMPLATE = """# Test contract
 
 This file defines **what to test** before implementation starts.
 
+## Flow-to-proof map
+- `P0-1` → start state: ... | action variants: click / keyboard / enter / button | success proof: ... | failure proof: ...
+
 ## F2P (new / changed requirements)
 - `P0-1` → fast check: ... | integration / e2e: ... | owner: ...
 
@@ -165,6 +180,9 @@ This file defines **what to test** before implementation starts.
 4. Broader regression suites
 
 ## Manual smoke checklist
+- ...
+
+## Wrong-green traps
 - ...
 """
 
