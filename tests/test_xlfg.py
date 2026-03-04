@@ -51,9 +51,43 @@ class TestXLFG(unittest.TestCase):
             ensure_scaffold(root, "2.0.0")
             result = ensure_scaffold(root, __version__)
             self.assertEqual(result["previous_tool_version"], "2.0.0")
-            self.assertTrue((root / "docs" / "xlfg" / "migrations" / "2.0.0-to-2.0.1.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "migrations" / f"2.0.0-to-{__version__}.md").exists())
             status = scaffold_status(root, __version__)
             self.assertFalse(status["needs_migration"])
+
+    def test_status_reports_installed_and_repo_versions_separately(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            ensure_scaffold(root, __version__)
+            status = scaffold_status(root, __version__)
+            self.assertEqual(status["installed_tool_version"], __version__)
+            self.assertEqual(status["repo_scaffold_version"], __version__)
+            self.assertEqual(status["version_source"], "meta.json:tool_version")
+
+    def test_legacy_metadata_json_is_migrated_and_normalized(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            (root / "docs" / "xlfg" / "knowledge").mkdir(parents=True)
+            legacy = root / "docs" / "xlfg" / "metadata.json"
+            legacy.write_text(json.dumps({"version": "1.0.0"}), encoding="utf-8")
+            status_before = scaffold_status(root, __version__)
+            self.assertEqual(status_before["repo_scaffold_version"], "1.0.0")
+            self.assertEqual(status_before["installed_tool_version"], __version__)
+            self.assertEqual(status_before["version_source"], "metadata.json:version")
+            self.assertTrue(status_before["needs_migration"])
+            result = ensure_scaffold(root, __version__)
+            self.assertEqual(result["previous_repo_scaffold_version"], "1.0.0")
+            meta = json.loads((root / "docs" / "xlfg" / "meta.json").read_text(encoding="utf-8"))
+            self.assertEqual(meta["tool_version"], __version__)
+            legacy_meta = json.loads(legacy.read_text(encoding="utf-8"))
+            self.assertEqual(legacy_meta["tool_version"], __version__)
+            self.assertTrue(legacy_meta["deprecated"])
+            self.assertEqual(legacy_meta["canonical_path"], "docs/xlfg/meta.json")
+            status_after = scaffold_status(root, __version__)
+            self.assertEqual(status_after["repo_scaffold_version"], __version__)
+            self.assertFalse(status_after["needs_migration"])
 
     def test_create_run_seeds_diagnosis_and_solution_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:

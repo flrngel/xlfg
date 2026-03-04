@@ -60,7 +60,7 @@ xlfg verify --mode full
 Tracked durable knowledge:
 
 - `docs/xlfg/index.md` — map of the knowledge base
-- `docs/xlfg/meta.json` — scaffold version and migration state
+- `docs/xlfg/meta.json` — canonical scaffold version and migration state
 - `docs/xlfg/knowledge/` — decisions, patterns, test learnings, UX flows, failure memory, harness rules
 - `docs/xlfg/knowledge/agent-memory/` — small role-specific memory files
 - `docs/xlfg/migrations/` — notes written when xlfg versions drift

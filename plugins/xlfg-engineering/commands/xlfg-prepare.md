@@ -9,7 +9,7 @@ Make xlfg ready in this repo **without paying a full init cost every run**.
 
 ## Rules
 
-- If `docs/xlfg/meta.json` exists and its version matches the plugin version, this command should be fast and effectively no-op.
+- Compare the **installed xlfg/plugin version** against the repo scaffold version in `docs/xlfg/meta.json` (or legacy `docs/xlfg/metadata.json`). If they match, this command should be fast and effectively no-op.
 - If `docs/xlfg/` is missing, bootstrap the minimal scaffold.
 - If the version differs, apply the missing structure changes and write a migration note under `docs/xlfg/migrations/`.
 - Do not overwrite user-authored files.
@@ -42,6 +42,7 @@ Ensure the repo root `.gitignore` contains:
 Print:
 - whether bootstrap was needed
 - whether migration was needed
-- previous version (if any)
-- current version
+- previous repo scaffold version (if any)
+- installed xlfg/plugin version
+- version source used for the repo scaffold check
 - changed paths

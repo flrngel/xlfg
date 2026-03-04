@@ -1,6 +1,6 @@
 {
   "name": "xlfg-engineering",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Diagnosis-first SDLC workflow with contract-shared verification, environment discipline, and verified compounding.",
   "author": {
     "name": "xlfg",

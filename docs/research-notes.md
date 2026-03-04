@@ -1,4 +1,4 @@
-# Research notes behind xlfg 2.0.1
+# Research notes behind xlfg 2.0.2
 
 This revision tightened four ideas.
 

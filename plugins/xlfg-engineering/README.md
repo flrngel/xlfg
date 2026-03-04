@@ -15,7 +15,7 @@ It is designed for:
 | Command | Purpose |
 |---|---|
 | `/xlfg` | Macro that runs prepare → plan → implement → verify → review → compound |
-| `/xlfg:prepare` | Fast scaffold/version check; migrate only on drift |
+| `/xlfg:prepare` | Fast scaffold/version check; compare installed tool version vs repo scaffold version and migrate only on drift |
 | `/xlfg:init` | Manual bootstrap / repair of `docs/xlfg/` + `.xlfg/` scaffolding |
 | `/xlfg:plan` | Diagnose the problem and write the root-solution contracts before coding |
 | `/xlfg:implement` | Execute bounded task loops with explicit implementation agents |

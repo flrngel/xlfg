@@ -319,6 +319,11 @@ If you intentionally want to share a specific run, copy or export the relevant f
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
+    "2.0.2": [
+        "Status / prepare now distinguish installed xlfg version from repo scaffold version.",
+        "Legacy docs/xlfg/metadata.json is normalized to the canonical docs/xlfg/meta.json format.",
+        "Prepare reports the source of the repo scaffold version to avoid stale-file confusion.",
+    ],
     "2.0.1": [
         "`/xlfg` now treats scaffold bootstrap as a fast prepare/migrate check instead of mandatory init.",
         "`docs/xlfg/runs/` is now gitignored by default; durable knowledge remains tracked.",
@@ -344,19 +349,84 @@ def _read_json(path: Path) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _extract_version(meta: Optional[Dict[str, Any]]) -> tuple[Optional[str], Optional[str]]:
+    if not meta:
+        return None, None
+    for key in ("tool_version", "version", "scaffold_version"):
+        value = meta.get(key)
+        if value:
+            return str(value), key
+    return None, None
+
+
+def _meta_state(docs_dir: Path) -> Dict[str, Any]:
+    canonical = docs_dir / "meta.json"
+    legacy = docs_dir / "metadata.json"
+
+    if canonical.exists():
+        data = _read_json(canonical) or {}
+        version, version_key = _extract_version(data)
+        return {
+            "canonical_path": canonical,
+            "legacy_path": legacy if legacy.exists() else None,
+            "source_path": canonical,
+            "data": data,
+            "version": version,
+            "version_key": version_key,
+            "source_kind": "canonical",
+        }
+
+    if legacy.exists():
+        data = _read_json(legacy) or {}
+        version, version_key = _extract_version(data)
+        return {
+            "canonical_path": canonical,
+            "legacy_path": legacy,
+            "source_path": legacy,
+            "data": data,
+            "version": version,
+            "version_key": version_key,
+            "source_kind": "legacy",
+        }
+
+    return {
+        "canonical_path": canonical,
+        "legacy_path": legacy if legacy.exists() else None,
+        "source_path": canonical,
+        "data": None,
+        "version": None,
+        "version_key": None,
+        "source_kind": "missing",
+    }
+
+
 def scaffold_status(root: Path, tool_version: str) -> Dict[str, Any]:
     docs_dir = root / "docs" / "xlfg"
-    meta_path = docs_dir / "meta.json"
-    meta = _read_json(meta_path) or {}
+    meta = _meta_state(docs_dir)
     exists = docs_dir.exists() and (docs_dir / "knowledge").exists()
-    current_version = str(meta.get("tool_version") or "") if meta else ""
+    repo_version = meta.get("version")
+    needs_meta_sync = bool(
+        exists and (
+            meta.get("source_kind") != "canonical"
+            or repo_version is None
+            or repo_version != tool_version
+        )
+    )
+    version_source = None
+    if meta.get("source_path") and meta.get("version_key"):
+        version_source = f"{Path(meta['source_path']).name}:{meta['version_key']}"
     return {
         "exists": exists,
-        "meta_path": str(meta_path),
-        "current_tool_version": current_version or None,
+        "meta_path": str(meta["canonical_path"]),
+        "legacy_meta_path": str(meta["legacy_path"]) if meta.get("legacy_path") else None,
+        "version_source": version_source,
+        "repo_scaffold_version": repo_version,
+        "current_tool_version": repo_version,  # backward-compatible alias; means repo scaffold version
+        "installed_tool_version": tool_version,
         "target_tool_version": tool_version,
         "needs_bootstrap": not exists,
-        "needs_migration": bool(exists and current_version and current_version != tool_version),
+        "needs_meta_sync": needs_meta_sync,
+        "needs_migration": bool(exists and repo_version and repo_version != tool_version),
     }
 
 
@@ -396,7 +466,7 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
     notes: List[str] = []
 
     status = scaffold_status(root, tool_version)
-    previous_version = status.get("current_tool_version") or None
+    previous_version = status.get("repo_scaffold_version") or None
 
     ensure_dir(root / "docs" / "xlfg" / "knowledge")
     ensure_dir(root / "docs" / "xlfg" / "knowledge" / "agent-memory")
@@ -453,10 +523,25 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
         meta_path.write_text(json.dumps(desired_manifest, indent=2) + "\n", encoding="utf-8")
         updated.append(str(meta_path.relative_to(root)))
 
+    legacy_meta_path = root / "docs" / "xlfg" / "metadata.json"
+    if legacy_meta_path.exists():
+        legacy_manifest = {
+            **desired_manifest,
+            "deprecated": True,
+            "canonical_path": "docs/xlfg/meta.json",
+        }
+        current_legacy_manifest = _read_json(legacy_meta_path)
+        if current_legacy_manifest != legacy_manifest:
+            legacy_meta_path.write_text(json.dumps(legacy_manifest, indent=2) + "\n", encoding="utf-8")
+            updated.append(str(legacy_meta_path.relative_to(root)))
+            notes.append("Normalized legacy docs/xlfg/metadata.json to mirror docs/xlfg/meta.json.")
+
     if status["needs_bootstrap"]:
         notes.append("Bootstrapped xlfg scaffold.")
     elif status["needs_migration"]:
         notes.append(f"Migrated xlfg scaffold from {previous_version} to {tool_version}.")
+    elif status.get("needs_meta_sync"):
+        notes.append("Synchronized scaffold metadata to the canonical docs/xlfg/meta.json format.")
     else:
         notes.append("Scaffold already current; prepare check passed with no migration.")
 
@@ -464,8 +549,12 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
         "created": created,
         "updated": sorted(set(updated)),
         "needs_bootstrap": bool(status["needs_bootstrap"]),
+        "needs_meta_sync": bool(status.get("needs_meta_sync")),
         "needs_migration": bool(status["needs_migration"]),
+        "previous_repo_scaffold_version": previous_version,
         "previous_tool_version": previous_version,
+        "installed_tool_version": tool_version,
+        "repo_scaffold_version": tool_version,
         "tool_version": tool_version,
         "migration_note": migration_note,
         "notes": notes,

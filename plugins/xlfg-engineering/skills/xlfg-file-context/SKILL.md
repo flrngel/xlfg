@@ -76,8 +76,8 @@ docs/xlfg/
 
 ### 1) Prepare fast
 
-- Check `docs/xlfg/meta.json`.
-- If the version matches, do not re-init.
+- Check canonical `docs/xlfg/meta.json` first; if a legacy `docs/xlfg/metadata.json` exists, treat it as legacy scaffold metadata only.
+- Compare the installed xlfg/plugin version to the repo scaffold version. If they match, do not re-init.
 - If the version drifted, migrate only the missing structure.
 
 ### 2) Diagnose + contract first

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.2 - 2026-03-03
+
+### Fixed
+- `prepare` / `status` now clearly separate **installed xlfg version** from **repo scaffold version**.
+- Legacy `docs/xlfg/metadata.json` is now recognized during migration and normalized to the canonical `docs/xlfg/meta.json` manifest.
+- Version reports now include the **source file and key** used for repo scaffold detection to avoid stale-file confusion.
+
+### Changed
+- Migration notes now cover the metadata normalization step.
+- Tests now cover legacy metadata migration and explicit installed-vs-repo version reporting.
+
 ## 2.0.1 - 2026-03-03
 
 ### Added
