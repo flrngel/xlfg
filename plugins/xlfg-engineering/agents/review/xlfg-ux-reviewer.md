@@ -13,6 +13,7 @@ Read first (if present):
 - `scorecard.md`
 - `verify-fix-plan.md`
 - `docs/xlfg/knowledge/agent-memory/ux-reviewer.md`
+- `docs/xlfg/knowledge/ledger.jsonl` if present
 
 ## What to check
 
@@ -52,5 +53,6 @@ Read first (if present):
 
 If UI changes are involved, request screenshots or a smoke checklist when missing.
 Use role memory only for repeated UX traps that match the current flow type.
+- Treat ledger hits as stronger than vague recollection.
 
 **Note:** The current year is 2026.

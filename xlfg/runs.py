@@ -30,6 +30,20 @@ CONTEXT_MD_TEMPLATE = """# Context
 - ...
 """
 
+MEMORY_RECALL_TEMPLATE = """# Memory recall
+
+Summarize only the smallest relevant slice of prior knowledge before planning.
+
+## Relevant prior lessons
+- ...
+
+## Why they match this run
+- ...
+
+## What is intentionally *not* reused
+- ...
+"""
+
 DIAGNOSIS_TEMPLATE = """# Diagnosis
 
 ## Problem summary
@@ -244,6 +258,7 @@ def create_run(root: Path, request: str, run_id: Optional[str] = None) -> dict:
     ensure_dir(docs_dir / "tasks")
 
     safe_write(docs_dir / "context.md", CONTEXT_MD_TEMPLATE.format(request=request.strip()))
+    safe_write(docs_dir / "memory-recall.md", MEMORY_RECALL_TEMPLATE)
     safe_write(docs_dir / "diagnosis.md", DIAGNOSIS_TEMPLATE)
     safe_write(docs_dir / "solution-decision.md", SOLUTION_DECISION_TEMPLATE)
     safe_write(docs_dir / "flow-spec.md", FLOW_SPEC_TEMPLATE)

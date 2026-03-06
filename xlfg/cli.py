@@ -9,6 +9,7 @@ from . import __version__
 from .detect import detect_commands
 from .doctor import cleanup_dev_server, ensure_dev_server
 from .runs import create_run
+from .recall import recall
 from .scaffold import ensure_scaffold, scaffold_status
 from .util import repo_root
 from .verify import verify
@@ -43,6 +44,12 @@ def main(argv: list[str] | None = None) -> int:
 
     p_detect = subparsers.add_parser("detect", help="Detect verification commands")
     p_detect.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
+
+    p_recall = subparsers.add_parser("recall", help="Deterministic recall over xlfg knowledge, role memory, and local runs")
+    p_recall.add_argument("query", nargs="*", help="Plain topic/date query or typed query document")
+    p_recall.add_argument("--file", dest="query_file", default=None, help="Read query text from a file (use - for stdin)")
+    p_recall.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
+    p_recall.add_argument("--limit", type=int, default=10, help="Maximum results to return (default: 10)")
 
     p_doctor = subparsers.add_parser("doctor", help="Check or start the configured dev server")
     p_doctor.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
@@ -84,6 +91,23 @@ def main(argv: list[str] | None = None) -> int:
         ensure_scaffold(root, __version__)
         detected = detect_commands(root)
         _print_json({"root": str(root), **detected})
+        return 0
+
+    if args.command == "recall":
+        ensure_scaffold(root, __version__)
+        if args.query_file is not None:
+            if args.query_file == "-":
+                import sys
+
+                query = sys.stdin.read()
+            else:
+                query = Path(args.query_file).read_text(encoding="utf-8")
+        else:
+            query = " ".join(args.query).strip()
+        if not query:
+            raise RuntimeError("Recall query is empty. Provide a plain query, a date expression, or --file.")
+        result = recall(root, query, limit=args.limit)
+        _print_json({"root": str(root), **result})
         return 0
 
     if args.command == "doctor":

@@ -15,7 +15,9 @@ You are a task implementer for `/xlfg`.
 - `flow-spec.md`
 - `test-contract.md`
 - `env-plan.md`
+- `DOCS_RUN_DIR/memory-recall.md` if present
 - `docs/xlfg/knowledge/agent-memory/task-implementer.md` if present
+- `docs/xlfg/knowledge/ledger.jsonl` if present
 - `risk.md` if present
 - `tasks/<task-id>/test-report.md`
 - handoff path: `DOCS_RUN_DIR/tasks/<task-id>/implementer-report.md`
@@ -33,6 +35,7 @@ You are a task implementer for `/xlfg`.
 - Do not replace a root fix with a symptom-hiding patch.
 - Keep changes minimal and reviewable.
 - Reuse role memory only when it fits the current task shape.
+- If a shortcut is faster but violates the diagnosis or flow contract, reject it.
 - If blocked, stop and write the blocker clearly.
 
 ## Handoff report format

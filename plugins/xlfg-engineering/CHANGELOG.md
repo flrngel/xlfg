@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.0.3 - 2026-03-06
+
+### Added
+- Deterministic `xlfg recall` CLI command over shared knowledge, role memory, the append-only ledger, migrations, and local runs.
+- New `/xlfg:recall` plugin command and `xlfg-recall` skill.
+- New scaffolded durable memory files: `docs/xlfg/knowledge/ledger.jsonl`, `docs/xlfg/knowledge/ledger.md`, and `docs/xlfg/knowledge/queries.md`.
+- New `memory-recall.md` run artifact seeded for every run.
+
+### Changed
+- `/xlfg:plan` now performs stage-aligned memory recall before broad repo investigation.
+- `/xlfg:compound` now appends structured immutable memory events to `ledger.jsonl`.
+- Certain specialists now read and write stage-aligned memory rather than relying on one global summary blob.
+- `xlfg recall` now supports `--file` and stdin (`--file -`) for multi-line typed query documents.
+
+### Intentionally omitted
+- Vector search, HyDE, LLM query expansion, and reranker-driven recall were kept out of xlfg's core path to preserve determinism and auditability.
+
+
 ## 2.0.2 - 2026-03-03
 
 ### Fixed

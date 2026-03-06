@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from .util import append_unique_line, ensure_dir, safe_write
 
-SCAFFOLD_SCHEMA_VERSION = 2
+SCAFFOLD_SCHEMA_VERSION = 3
 
 INDEX_MD = """# xlfg
 
@@ -16,7 +16,7 @@ This folder is the **file-based context** system-of-record for `/xlfg` work.
 
 Tracked durable knowledge:
 
-- `knowledge/` — patterns, decisions, testing knowledge, UX flows, harness rules, and role-specific memories (commit this)
+- `knowledge/` — patterns, decisions, testing knowledge, UX flows, harness rules, role-specific memories, and an append-only memory ledger (commit this)
 - `meta.json` — scaffold version + migration state (commit this)
 - `migrations/` — migration notes when the xlfg version changes (commit this)
 
@@ -52,8 +52,9 @@ xlfg compounds in two layers:
 
 1. **Shared memory** in `knowledge/` for repo-wide rules and patterns
 2. **Role memory** in `knowledge/agent-memory/` for agents that repeatedly need the same lessons
+3. **Memory ledger** in `knowledge/ledger.jsonl` for append-only, structured durable memory events
 
-Role memory must stay small, typed, and admission-gated. Do not dump raw run summaries there.
+Role memory must stay small, typed, and admission-gated. Do not dump raw run summaries there. The ledger is append-only; corrections should supersede old entries rather than silently rewriting them.
 """
 
 QUALITY_BAR_MD = """# xlfg quality bar
@@ -176,6 +177,111 @@ Rules for running reliable local verification.
 - **Wrong-green trap to avoid**:
 - **Links**:
 """
+
+MEMORY_LEDGER_MD = """# xlfg memory ledger
+
+`ledger.jsonl` is the machine-readable durable memory store for xlfg.
+
+Why it exists:
+- append-only audit trail for compounded lessons
+- stage- and role-aligned retrieval without prompt bloat
+- deterministic recall over exact text, tags, and filters
+
+## Event shape
+
+One JSON object per line. Preferred event types:
+- `memory.added`
+- `memory.superseded`
+- `memory.invalidated`
+
+Recommended fields for `memory.added`:
+
+```json
+{
+  "id": "mem-20260306-01",
+  "event": "memory.added",
+  "created_at": "2026-03-06T12:34:56Z",
+  "run_id": "20260306-123456-login-flow",
+  "kind": "harness-rule",
+  "stage": "verify",
+  "role": "env-doctor",
+  "title": "Reuse healthy dev server before starting another one",
+  "summary": "Check the configured health endpoint first and reuse a healthy process.",
+  "symptom": "`yarn dev` started twice and the second process failed with EADDRINUSE.",
+  "root_cause": "The harness assumed no existing server and skipped readiness reuse.",
+  "action": "Probe health, reuse if healthy, otherwise kill stale PID and restart once.",
+  "prevention": "Never spawn a second dev server without a health check.",
+  "lex": "yarn dev EADDRINUSE duplicate server port already in use healthcheck reuse",
+  "tags": ["yarn", "dev-server", "port", "healthcheck"],
+  "evidence": ["docs/xlfg/runs/<run-id>/verification.md"],
+  "status": "active"
+}
+```
+
+## Admission rules
+
+Only append a memory event when the lesson is:
+- concrete
+- reusable
+- evidenced by verification, review, or repeated real failure
+- small enough to retrieve directly
+
+Do not store vague summaries or speculative advice.
+"""
+
+QUERIES_MD = """# xlfg recall query syntax
+
+xlfg recall uses deterministic typed query documents inspired by QMD's query documents, but **without vector search, HyDE, or LLM expansion**.
+
+## Plain query
+
+A plain query is treated as an exact lexical search:
+
+```
+xlfg recall 'login button enter submit'
+```
+
+If the plain query is a supported date expression, xlfg does temporal recall instead:
+
+```
+xlfg recall yesterday
+xlfg recall last week
+xlfg recall 2026-03-06
+```
+
+## Typed query document
+
+Each non-empty line is `type: value`. Supported types:
+- `lex:` quoted phrases + negation + exact lexical terms
+- `kind:` filter memory kind(s)
+- `stage:` filter SDLC stage(s)
+- `role:` filter role memory
+- `scope:` filter `knowledge`, `agent-memory`, `ledger`, `runs`, `migrations`, `memory`, or `all`
+- `path:` substring filter on relative path
+- `when:` temporal filter (`today`, `yesterday`, `last week`, `YYYY-MM-DD`, `last 7 days`)
+
+Example:
+
+```
+lex: "login button" enter -oauth
+stage: plan verify
+kind: testing harness-rule
+role: test-strategist env-doctor
+scope: memory runs
+when: last 14 days
+```
+
+## Lex rules
+
+- `word` → exact token / prefix-like lexical match
+- `"phrase"` → exact phrase
+- `-word` → exclude results containing the word
+- `-"phrase"` → exclude results containing the phrase
+
+This mode is intentionally precision-first and auditable.
+"""
+
+LEDGER_JSONL = """"""
 
 AGENT_MEMORY_INDEX_MD = """# xlfg agent memory
 
@@ -319,6 +425,11 @@ If you intentionally want to share a specific run, copy or export the relevant f
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
+    "2.0.3": [
+        "Added deterministic `xlfg recall` over durable knowledge, role memory, the append-only ledger, and local runs.",
+        "Introduced `docs/xlfg/knowledge/ledger.jsonl` and recall query syntax docs for stage- and role-aligned retrieval.",
+        "Compounding now has a structured append-only memory target instead of relying only on prose markdown files.",
+    ],
     "2.0.2": [
         "Status / prepare now distinguish installed xlfg version from repo scaffold version.",
         "Legacy docs/xlfg/metadata.json is normalized to the canonical docs/xlfg/meta.json format.",
@@ -339,6 +450,8 @@ def _manifest(tool_version: str) -> Dict[str, Any]:
         "run_tracking": "local-only",
         "knowledge_tracking": "tracked",
         "agent_memory": "enabled",
+        "recall": "deterministic-lexical",
+        "memory_ledger": "append-only-jsonl",
     }
 
 
@@ -493,6 +606,9 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
         "docs/xlfg/knowledge/ux-flows.md": UX_FLOWS_MD,
         "docs/xlfg/knowledge/failure-memory.md": FAILURE_MEMORY_MD,
         "docs/xlfg/knowledge/harness-rules.md": HARNESS_RULES_MD,
+        "docs/xlfg/knowledge/ledger.md": MEMORY_LEDGER_MD,
+        "docs/xlfg/knowledge/ledger.jsonl": LEDGER_JSONL,
+        "docs/xlfg/knowledge/queries.md": QUERIES_MD,
         "docs/xlfg/knowledge/commands.json": COMMANDS_JSON,
         "docs/xlfg/knowledge/agent-memory/README.md": AGENT_MEMORY_INDEX_MD,
         "docs/xlfg/knowledge/agent-memory/root-cause-analyst.md": ROOT_CAUSE_MEMORY_MD,

@@ -21,7 +21,7 @@ Run these slash commands in order. Do not invent a shortcut workflow.
 
 - `/xlfg:prepare` should be fast. If the scaffold is current, it should effectively no-op.
 - Do not start coding before `/xlfg:plan` finishes.
-- `/xlfg:plan` must produce `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `test-contract.md`, `env-plan.md`, and `plan.md`.
+- `/xlfg:plan` must produce `memory-recall.md`, `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `test-contract.md`, `env-plan.md`, and `plan.md`.
 - If `/xlfg:plan` surfaces blocking clarification, stop, ask the question, update the plan, and only then continue.
 - If `/xlfg:implement` invalidates the diagnosis, return to planning instead of pushing forward with a patch.
 - Finish with a concise final summary that includes:

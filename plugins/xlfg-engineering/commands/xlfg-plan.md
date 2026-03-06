@@ -32,6 +32,7 @@ Create a new `RUN_ID=<YYYYMMDD-HHMMSS>-<slug>` and these paths:
 Ensure the run contains at least:
 
 - `context.md`
+- `memory-recall.md`
 - `diagnosis.md`
 - `solution-decision.md`
 - `flow-spec.md`
@@ -44,7 +45,22 @@ Ensure the run contains at least:
 
 Write the raw request and known constraints to `context.md`.
 
-## Phase 1 — Map the repo and hidden requirements
+## Phase 1 — Recall prior relevant experience before you fan out
+
+Before scanning the repo widely, load the smallest relevant slice of prior memory:
+
+- If this looks like a repeated harness / test / UX problem, run `xlfg recall` with a typed query document first.
+- Prefer stage- and role-aligned recall over global memory dumps.
+- Good example:
+
+```bash
+xlfg recall $'lex: "port already in use" yarn dev healthcheck\nstage: verify\nkind: failure harness-rule\nrole: env-doctor\nscope: memory runs'
+```
+
+Write a 3–8 bullet summary of the reused lessons to `memory-recall.md`.
+If nothing relevant is found, say so explicitly and move on.
+
+## Phase 2 — Map the repo and hidden requirements
 
 Run these agents in parallel. Each agent must write to its owned file.
 
@@ -55,7 +71,7 @@ Run these agents in parallel. Each agent must write to its owned file.
 - `xlfg-brainstorm` → `brainstorm.md` only if the request is materially ambiguous
 - `xlfg-researcher` → `research.md` only if the stack or domain is unfamiliar / high-risk
 
-## Phase 2 — Diagnose before solutioning
+## Phase 3 — Diagnose before solutioning
 
 Run these agents next:
 
@@ -66,7 +82,7 @@ Run these agents next:
 - `xlfg-solution-architect` → `solution-decision.md`
 - `xlfg-risk-assessor` → `risk.md` when auth, money, destructive data, or reliability risk is present
 
-## Phase 3 — Reduce into canonical planning files
+## Phase 4 — Reduce into canonical planning files
 
 Write `spec.md` and `plan.md` yourself by reducing the agent outputs.
 

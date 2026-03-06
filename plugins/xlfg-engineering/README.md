@@ -22,6 +22,7 @@ It is designed for:
 | `/xlfg:verify` | Run layered verification + write evidence |
 | `/xlfg:review` | Parallel multi-lens review into files |
 | `/xlfg:compound` | Convert a run into durable knowledge for future work |
+| `/xlfg:recall` | Deterministic recall over knowledge, role memory, ledger, and local runs |
 
 `/xlfg` intentionally mirrors Compound’s macro style: it is a set of other commands, not one giant hidden workflow prompt.
 
@@ -41,6 +42,7 @@ These are the shared contracts for implementation, verification, and review.
 ## Tracking model
 
 - `docs/xlfg/knowledge/` → tracked durable knowledge
+- `docs/xlfg/knowledge/ledger.jsonl` → append-only durable memory events
 - `docs/xlfg/runs/` → local episodic evidence, gitignored by default
 - `.xlfg/` → ephemeral raw logs, gitignored
 
@@ -82,6 +84,7 @@ Subagent model:
 
 - `xlfg-file-context`
 - `xlfg-quality-gates`
+- `xlfg-recall`
 
 ## Installation
 
@@ -97,3 +100,8 @@ Only patch versions are bumped in normal evolution. Update all of these together
 - `.cursor-plugin/plugin.json`
 - `plugins/xlfg-engineering/CHANGELOG.md`
 - `plugins/xlfg-engineering/README.md`
+
+
+## Recall model
+
+`/xlfg:recall` and `xlfg recall` are intentionally **deterministic**. They support temporal run recall and typed lexical query documents, but do not depend on vector search, HyDE, or LLM query expansion.

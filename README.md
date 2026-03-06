@@ -12,7 +12,7 @@ And do not force slow bootstrap when a repo is already prepared:
 
 This repository includes:
 
-1. A **Claude Code plugin** (in `plugins/xlfg-engineering`) with `/xlfg`, `/xlfg:prepare`, `/xlfg:init`, `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, `/xlfg:review`, and `/xlfg:compound`.
+1. A **Claude Code plugin** (in `plugins/xlfg-engineering`) with `/xlfg`, `/xlfg:prepare`, `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, `/xlfg:review`, `/xlfg:compound`, and `/xlfg:recall`.
 2. A dependency-free **Python CLI** (`xlfg`) that creates the same file structure and writes verification evidence.
 
 ## Quick start (Claude Code)
@@ -51,6 +51,11 @@ xlfg status
 xlfg detect
 xlfg doctor
 
+# deterministic recall over durable knowledge and local runs
+xlfg recall yesterday
+xlfg recall "login button enter submit"
+xlfg recall --file query.qmd
+
 # run verification and write evidence
 xlfg verify --mode full
 ```
@@ -63,6 +68,8 @@ Tracked durable knowledge:
 - `docs/xlfg/meta.json` — canonical scaffold version and migration state
 - `docs/xlfg/knowledge/` — decisions, patterns, test learnings, UX flows, failure memory, harness rules
 - `docs/xlfg/knowledge/agent-memory/` — small role-specific memory files
+- `docs/xlfg/knowledge/ledger.jsonl` — append-only durable memory events
+- `docs/xlfg/knowledge/queries.md` — deterministic recall query syntax
 - `docs/xlfg/migrations/` — notes written when xlfg versions drift
 
 Local run evidence (gitignored by default):
@@ -81,6 +88,7 @@ Local run evidence (gitignored by default):
 - `/xlfg:verify` — run layered verification and write evidence
 - `/xlfg:review` — parallel multi-lens review into files
 - `/xlfg:compound` — turn a run into durable knowledge
+- `/xlfg:recall` — deterministic lexical/temporal recall over knowledge, role memory, ledger, and runs
 
 ## Why this version is different
 
@@ -103,6 +111,28 @@ Local run evidence (gitignored by default):
 - give certain agents their own compact memory
 - treat review as confirmation, not cleanup
 - compound real failures into reusable harness and testing memory
+
+
+## Deterministic recall, not experimental RAG
+
+This revision adds a **deterministic recall layer** inspired by `/recall` and QMD, but strips out the parts that are hard to audit or easy to mis-rank in production.
+
+Adopted:
+
+- temporal recall over local run history
+- typed query documents with exact lexical syntax
+- role- and stage-aligned memory lookup
+- append-only durable memory events in `ledger.jsonl`
+
+Intentionally omitted:
+
+- vector search
+- HyDE / hypothetical query generation
+- LLM query expansion
+- reranking as a required dependency
+- graph visualization as a core workflow dependency
+
+The goal is **auditable recall**: you can see exactly why something matched and where it came from.
 
 ## Design principles
 

@@ -1,15 +1,15 @@
-# Research notes behind xlfg 2.0.2
+# Research notes behind xlfg 2.0.3
 
-This revision tightened four ideas.
+This revision adds a deterministic memory and recall layer.
 
-## 1) Bootstrap should be cheap; long runs should carry the cost
-A repo that is already prepared should not pay a full init tax every run. xlfg now prefers a fast **prepare / migrate** check and only applies scaffold changes when the version drifts.
+## 1) Recall should load the right context, not the most "semantic" context
+We borrowed the useful shape of `/recall` and QMD: temporal recall, typed query documents, and exact lexical syntax. We intentionally did **not** adopt vector search, HyDE, or LLM query expansion in xlfg because the goal here is auditable recall for production engineering workflows.
 
-## 2) Dual-set verification must be defined from the requirement doc, not improvised late
-The testing contract should explicitly map new requirements (F2P) and preserved behavior (P2P) before implementation. That is why flow specs, test contracts, and scorecards are seeded before coding.
+## 2) Memory should be aligned to the current stage and role
+Large, episode-level memory blobs are too coarse for long software workflows. xlfg now keeps shared knowledge, role-specific memory, and an append-only ledger, and retrieval can filter by stage, role, kind, scope, path, and time.
 
-## 3) Role memory beats one giant summary file
-Certain roles hit the same failures repeatedly: diagnosis, test strategy, env setup, reduction of failures, and UX review. xlfg now keeps compact, role-specific memory files so those lessons remain retrievable without bloating every agent prompt.
+## 3) Durable memory should be append-only and replayable
+Instead of rewriting one giant summary, xlfg now keeps `ledger.jsonl` as a structured event log. The run stays local and episodic; durable lessons are promoted into shared knowledge and logged as immutable events.
 
-## 4) Runs are episodic memory, not durable knowledge
-Run folders are valuable locally, but the durable artifact should be the promoted lesson in `knowledge/`, not the full run log. That is why `docs/xlfg/runs/` is local-only by default.
+## 4) Keep the retrieval contract simple enough to trust
+The recall system is intentionally lexical-first. That makes it weaker than the best hybrid retrieval systems on broad QA benchmarks, but much easier to audit in engineering workflows where exactness and provenance matter more than fuzzy semantic reach.

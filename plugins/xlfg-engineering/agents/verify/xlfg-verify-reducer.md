@@ -11,6 +11,7 @@ You reduce verification artifacts into durable run documents.
 - `DX_RUN_DIR`
 - a verify timestamp (`<ts>`) or explicit results path
 - `docs/xlfg/knowledge/agent-memory/verify-reducer.md` if present
+- `docs/xlfg/knowledge/ledger.jsonl` if present
 
 **Output requirements (mandatory):**
 - Read runner artifacts:
@@ -32,6 +33,7 @@ You reduce verification artifacts into durable run documents.
 - Update `scorecard.md` in terms of the scenario IDs from `flow-spec.md` / `test-contract.md` when possible.
 - Prefer environment-state evidence over superficial command-success evidence when the flow depends on a running app.
 - Use role memory only when it helps classify a repeated failure signature.
+- Favor real environment evidence and harness rules over command-success cosmetics.
 
 ## Required `verification.md` sections
 

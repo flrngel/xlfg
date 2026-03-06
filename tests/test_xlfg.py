@@ -11,6 +11,7 @@ from xlfg import __version__
 from xlfg.detect import detect_commands
 from xlfg.doctor import ensure_dev_server
 from xlfg.runs import create_run
+from xlfg.recall import recall
 from xlfg.scaffold import ensure_scaffold, scaffold_status
 from xlfg.verify import verify
 
@@ -100,6 +101,88 @@ class TestXLFG(unittest.TestCase):
             self.assertTrue((run_dir / "solution-decision.md").exists())
             self.assertTrue((run_dir / "flow-spec.md").exists())
             self.assertTrue((run_dir / "tasks").exists())
+
+
+    def test_prepare_scaffold_creates_recall_files(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            ensure_scaffold(root, __version__)
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "ledger.jsonl").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "queries.md").exists())
+
+    def test_create_run_seeds_memory_recall_file(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            ensure_scaffold(root, __version__)
+            run = create_run(root, request="fix login flow")
+            run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
+            self.assertTrue((run_dir / "memory-recall.md").exists())
+
+    def test_recall_searches_ledger_and_agent_memory_with_filters(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            ensure_scaffold(root, __version__)
+            ledger = root / "docs" / "xlfg" / "knowledge" / "ledger.jsonl"
+            ledger.write_text(
+                '\n'.join(
+                    [
+                        json.dumps(
+                            {
+                                "id": "mem-1",
+                                "event": "memory.added",
+                                "created_at": "2026-03-06T12:00:00",
+                                "run_id": "20260306-120000-login",
+                                "kind": "failure",
+                                "stage": "verify",
+                                "role": "env-doctor",
+                                "title": "Port already in use from duplicate yarn dev",
+                                "summary": "Reuse the healthy server instead of starting another yarn dev.",
+                                "lex": "port already in use yarn dev healthcheck",
+                                "evidence": ["verification.md", "doctor.log"],
+                            }
+                        )
+                    ]
+                )
+                + '\n',
+                encoding="utf-8",
+            )
+            agent_mem = root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "env-doctor.md"
+            agent_mem.write_text(
+                "# env-doctor memory\n\n- Reuse healthy dev servers before spawning another `yarn dev`.\n",
+                encoding="utf-8",
+            )
+            result = recall(
+                root,
+                '\n'.join(
+                    [
+                        'lex: "port already in use" yarn dev',
+                        'stage: verify',
+                        'kind: failure agent-memory',
+                        'role: env-doctor',
+                        'scope: memory',
+                    ]
+                ),
+                limit=5,
+            )
+            self.assertEqual(result["mode"], "search")
+            self.assertGreaterEqual(len(result["results"]), 1)
+            self.assertEqual(result["results"][0]["role"], "env-doctor")
+            self.assertIn(result["results"][0]["scope"], {"ledger", "agent-memory"})
+
+    def test_recall_temporal_lists_recent_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            ensure_scaffold(root, __version__)
+            create_run(root, request="fix login flow", run_id="20260306-120000-login")
+            create_run(root, request="improve search flow", run_id="20260306-130000-search")
+            result = recall(root, "2026-03-06", limit=10)
+            self.assertEqual(result["mode"], "temporal")
+            self.assertEqual(len(result["results"]), 2)
+            self.assertEqual(result["results"][0]["run_id"], "20260306-130000-search")
 
     def test_detect_node_package_json_and_dev(self) -> None:
         with tempfile.TemporaryDirectory() as td:

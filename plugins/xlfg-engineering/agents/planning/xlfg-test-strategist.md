@@ -11,7 +11,9 @@ You are the test-contract author for `/xlfg`.
 - `DOCS_RUN_DIR/context.md`
 - `DOCS_RUN_DIR/diagnosis.md`
 - `DOCS_RUN_DIR/flow-spec.md`
+- `DOCS_RUN_DIR/memory-recall.md` if present
 - durable testing / failure knowledge under `docs/xlfg/knowledge/`
+- `docs/xlfg/knowledge/ledger.jsonl` if present
 - `docs/xlfg/knowledge/agent-memory/test-strategist.md` if present
 - relevant repository files
 
@@ -33,11 +35,13 @@ Define **what to test** before implementation begins.
 6. Manual smoke steps if automation is not enough
 7. Relevant prior learnings reused from `testing.md`, `failure-memory.md`, `harness-rules.md`, or role memory
 8. Any checks needed to prove the root-cause solution rather than a symptom patch
+9. Stage-aligned prior lessons from `memory-recall.md` or the ledger when they genuinely match
 
 ## Rules
 
 - Do not hide behind “run the whole suite”.
 - Prefer the cheapest check that proves the requirement.
+- Prefer exact flow/state assertions over generic suite breadth.
 - Reserve e2e for flows that truly need it.
 - Explicitly map **interaction variants** (keyboard vs click, Enter vs button) when the UX flow depends on them.
 - If commands are uncertain, mark them `GUESS` and explain how you inferred them.
