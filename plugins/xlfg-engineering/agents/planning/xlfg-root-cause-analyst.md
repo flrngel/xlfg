@@ -13,6 +13,7 @@ You are the diagnosis specialist for `/xlfg`.
 - `DOCS_RUN_DIR/context/*.md` if present
 - `DOCS_RUN_DIR/brainstorm.md` if present
 - `DOCS_RUN_DIR/memory-recall.md` if present
+- `docs/xlfg/knowledge/current-state.md` if present
 - `docs/xlfg/knowledge/agent-memory/root-cause-analyst.md` if present
 - `docs/xlfg/knowledge/ledger.jsonl` if present
 - relevant repository files
@@ -74,6 +75,7 @@ For a feature, that means the missing capability or invariant — not a superfic
 
 ## Rules
 
+- Read `current-state.md` and `memory-recall.md` before inventing a fresh story.
 - Prefer evidence over speculation.
 - Use role memory only when the current symptom genuinely matches it.
 - Prefer stage-aligned recall evidence over broad similarity.

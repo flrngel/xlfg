@@ -17,6 +17,10 @@ You are a task checker for `/xlfg`.
 - `flow-spec.md`
 - `test-contract.md`
 - `env-plan.md`
+- `memory-recall.md` if present
+- `docs/xlfg/knowledge/current-state.md` if present
+- `docs/xlfg/knowledge/agent-memory/task-checker.md` if present
+- `docs/xlfg/knowledge/ledger.jsonl` if present
 - `risk.md` if present
 - `tasks/<task-id>/test-report.md`
 - implementer handoff: `DOCS_RUN_DIR/tasks/<task-id>/implementer-report.md`
@@ -36,6 +40,7 @@ You are a task checker for `/xlfg`.
 - Harness honesty: did the implementer avoid fake-green shortcuts?
 - Risk compliance: auth, destructive state, rollback / error handling alignment
 - Scope compliance: only allowed files changed
+- Recall fidelity: did the task ignore a relevant warning from `memory-recall.md` or `current-state.md`?
 
 ## System-wide check before ACCEPT
 
@@ -47,6 +52,7 @@ Ask:
 4. **What other interfaces hit the same behavior?**
 5. **Did the implementation drift into a temporal patch?**
 6. **Would the environment plan still make this look green if the real app were broken?**
+7. **Did a known recall-derived warning get ignored?**
 
 If any answer reveals a gap, issue `REVISE`.
 

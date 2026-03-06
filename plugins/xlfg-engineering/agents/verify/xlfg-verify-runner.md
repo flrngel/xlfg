@@ -11,6 +11,7 @@ You run verification commands and capture evidence artifacts.
 - `DX_RUN_DIR`
 - an ordered list of layered verification commands
 - any notes from `env-plan.md`
+- any repeated failure signatures or wrong-green traps from `memory-recall.md` or `current-state.md`
 
 **Output requirements (mandatory):**
 - Create `DX_RUN_DIR/verify/<YYYYMMDD-HHMMSS>/`.
@@ -33,6 +34,7 @@ You run verification commands and capture evidence artifacts.
 - For Node-based commands, set `CI=1` unless the repo forbids it.
 - If a command appears to hang and `timeout` is available, use it.
 - Stop at the first failure unless explicitly told otherwise.
+- If a known repeated failure signature appears again, note it clearly in `summary.md`.
 
 ## Required `results.json` shape
 

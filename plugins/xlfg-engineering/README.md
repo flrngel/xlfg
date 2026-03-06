@@ -1,6 +1,6 @@
 # xlfg-engineering (Claude Code plugin)
 
-`/xlfg` is a **diagnosis-first SDLC macro** for Claude Code.
+`/xlfg` is a **recall-first diagnosis-first SDLC macro** for Claude Code.
 
 It is designed for:
 
@@ -14,15 +14,15 @@ It is designed for:
 
 | Command | Purpose |
 |---|---|
-| `/xlfg` | Macro that runs prepare → plan → implement → verify → review → compound |
+| `/xlfg` | Macro that runs prepare → recall → plan → implement → verify → review → compound |
 | `/xlfg:prepare` | Fast scaffold/version check; compare installed tool version vs repo scaffold version and migrate only on drift |
 | `/xlfg:init` | Manual bootstrap / repair of `docs/xlfg/` + `.xlfg/` scaffolding |
+| `/xlfg:recall` | Deterministic recall over current-state, knowledge, role memory, the ledger, and local runs |
 | `/xlfg:plan` | Diagnose the problem and write the root-solution contracts before coding |
 | `/xlfg:implement` | Execute bounded task loops with explicit implementation agents |
 | `/xlfg:verify` | Run layered verification + write evidence |
 | `/xlfg:review` | Parallel multi-lens review into files |
-| `/xlfg:compound` | Convert a run into durable knowledge for future work |
-| `/xlfg:recall` | Deterministic recall over knowledge, role memory, ledger, and local runs |
+| `/xlfg:compound` | Convert a run into durable knowledge and refresh the next-agent handoff |
 
 `/xlfg` intentionally mirrors Compound’s macro style: it is a set of other commands, not one giant hidden workflow prompt.
 
@@ -30,6 +30,7 @@ It is designed for:
 
 Before coding, every serious run should produce:
 
+- `memory-recall.md`
 - `diagnosis.md`
 - `solution-decision.md`
 - `flow-spec.md`
@@ -41,6 +42,7 @@ These are the shared contracts for implementation, verification, and review.
 
 ## Tracking model
 
+- `docs/xlfg/knowledge/current-state.md` → tracked handoff doc for the next agent
 - `docs/xlfg/knowledge/` → tracked durable knowledge
 - `docs/xlfg/knowledge/ledger.jsonl` → append-only durable memory events
 - `docs/xlfg/runs/` → local episodic evidence, gitignored by default
@@ -79,6 +81,7 @@ Review:
 Subagent model:
 - `/xlfg` subagents use `sonnet`.
 - Certain agents have **role-specific memory** under `docs/xlfg/knowledge/agent-memory/`.
+- The first tracked context doc in a target repo should always be `current-state.md`.
 
 ## Skills
 
@@ -100,8 +103,8 @@ Only patch versions are bumped in normal evolution. Update all of these together
 - `.cursor-plugin/plugin.json`
 - `plugins/xlfg-engineering/CHANGELOG.md`
 - `plugins/xlfg-engineering/README.md`
-
+- `NEXT_AGENT_CONTEXT.md`
 
 ## Recall model
 
-`/xlfg:recall` and `xlfg recall` are intentionally **deterministic**. They support temporal run recall and typed lexical query documents, but do not depend on vector search, HyDE, or LLM query expansion.
+`/xlfg:recall` is intentionally **deterministic**. It supports temporal run recall and typed lexical query documents, but does not depend on vector search, HyDE, or LLM query expansion. If the helper CLI is absent, the same recall discipline can still be performed directly over the tracked files with `rg`, `find`, and file reads.

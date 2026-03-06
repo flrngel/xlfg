@@ -31,6 +31,7 @@ Define:
 
 Read first (if present):
 
+- `memory-recall.md`
 - `diagnosis.md`
 - `solution-decision.md`
 - `flow-spec.md`
@@ -38,9 +39,11 @@ Read first (if present):
 - `env-plan.md`
 - `scorecard.md`
 - `run-summary.md`
+- `docs/xlfg/knowledge/current-state.md`
 - `docs/xlfg/knowledge/commands.json`
 - `docs/xlfg/knowledge/failure-memory.md`
 - `docs/xlfg/knowledge/harness-rules.md`
+- `docs/xlfg/knowledge/agent-memory/env-doctor.md`
 - `docs/xlfg/knowledge/agent-memory/verify-reducer.md`
 
 ## 2) Decide the layered verify plan
@@ -66,6 +69,7 @@ Important rules:
 - **Verify the root solution, not just the absence of the old symptom.**
 - Use `test-contract.md` to decide which P0/P1 flows truly deserve smoke or e2e.
 - Prefer **environment-state verification** when relevant (healthy port, correct bundle, correct endpoint behavior), not just proof that a start command was invoked.
+- If `memory-recall.md`, `current-state.md`, or failure memory describes a repeated wrong-green trap, make sure the verify plan explicitly guards against it.
 
 ## 3) Environment doctor (before smoke / e2e)
 
@@ -86,6 +90,7 @@ Run Task `xlfg-verify-runner` with:
 - `DX_RUN_DIR`
 - ordered layered commands
 - any relevant notes from `env-plan.md`
+- any repeated failure signatures from `memory-recall.md` or `current-state.md`
 
 Runner responsibilities:
 
@@ -116,6 +121,7 @@ Reducer responsibilities:
 - if RED, write `verify-fix-plan.md`
 - identify the **first actionable failure only**
 - call out if the test contract is too weak to prove the chosen solution
+- call out if a known repeated harness failure reappeared
 
 ## 6) If failing, iterate correctly
 

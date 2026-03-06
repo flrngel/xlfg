@@ -12,6 +12,7 @@ You are the test-contract author for `/xlfg`.
 - `DOCS_RUN_DIR/diagnosis.md`
 - `DOCS_RUN_DIR/flow-spec.md`
 - `DOCS_RUN_DIR/memory-recall.md` if present
+- `docs/xlfg/knowledge/current-state.md` if present
 - durable testing / failure knowledge under `docs/xlfg/knowledge/`
 - `docs/xlfg/knowledge/ledger.jsonl` if present
 - `docs/xlfg/knowledge/agent-memory/test-strategist.md` if present
@@ -33,7 +34,7 @@ Define **what to test** before implementation begins.
 4. Which scenarios truly require smoke or e2e
 5. Which broader suites must run before shipping
 6. Manual smoke steps if automation is not enough
-7. Relevant prior learnings reused from `testing.md`, `failure-memory.md`, `harness-rules.md`, or role memory
+7. Relevant prior learnings reused from `current-state.md`, `testing.md`, `failure-memory.md`, `harness-rules.md`, or role memory
 8. Any checks needed to prove the root-cause solution rather than a symptom patch
 9. Stage-aligned prior lessons from `memory-recall.md` or the ledger when they genuinely match
 

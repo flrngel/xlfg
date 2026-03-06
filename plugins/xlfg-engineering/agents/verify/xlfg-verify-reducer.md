@@ -10,6 +10,7 @@ You reduce verification artifacts into durable run documents.
 - `DOCS_RUN_DIR`
 - `DX_RUN_DIR`
 - a verify timestamp (`<ts>`) or explicit results path
+- `docs/xlfg/knowledge/current-state.md` if present
 - `docs/xlfg/knowledge/agent-memory/verify-reducer.md` if present
 - `docs/xlfg/knowledge/ledger.jsonl` if present
 
@@ -34,6 +35,7 @@ You reduce verification artifacts into durable run documents.
 - Prefer environment-state evidence over superficial command-success evidence when the flow depends on a running app.
 - Use role memory only when it helps classify a repeated failure signature.
 - Favor real environment evidence and harness rules over command-success cosmetics.
+- Call out if a known repeated failure or wrong-green trap from current-state or prior recall reappeared.
 
 ## Required `verification.md` sections
 

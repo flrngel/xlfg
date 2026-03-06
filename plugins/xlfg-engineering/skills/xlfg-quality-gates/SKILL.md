@@ -13,6 +13,7 @@ A run is only “done” when all apply.
 
 ### Diagnosis & scope
 
+- `memory-recall.md` exists and captures the strongest prior relevant lessons or an explicit no-hit
 - `diagnosis.md` exists and identifies the real problem or capability gap
 - `solution-decision.md` exists and records rejected shortcuts
 - `flow-spec.md` exists and matches shipped behavior
@@ -59,6 +60,7 @@ A run is only “done” when all apply.
 - monitoring / validation plan exists
 - rollback plan exists for risky changes
 - repeated harness failures are compounded into `failure-memory.md`, `harness-rules.md`, or the relevant role memory file
+- `docs/xlfg/knowledge/current-state.md` is refreshed when the run changes what the next agent should know first
 
 ## Sanity check before calling a task “done”
 

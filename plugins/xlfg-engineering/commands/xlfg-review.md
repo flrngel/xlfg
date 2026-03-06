@@ -1,6 +1,6 @@
 ---
 name: xlfg:review
-description: Parallel multi-lens review using the shared diagnosis, flow, test, and environment contract.
+description: Parallel multi-lens review using the shared diagnosis, recall, flow, test, and environment contract.
 argument-hint: "[run-id | latest]"
 ---
 
@@ -24,12 +24,13 @@ Ensure `DOCS_RUN_DIR/reviews/` exists.
 ## 2) Review doctrine
 
 Review is a confirmation gate, not the main place where quality is created.
-Reviewers should verify that planning and implementation already controlled risk.
+Reviewers should verify that recall, planning, and implementation already controlled risk.
 
 ## 3) Map phase: independent review agents
 
 Always read first (if present):
 
+- `memory-recall.md`
 - `diagnosis.md`
 - `solution-decision.md`
 - `flow-spec.md`
@@ -38,6 +39,7 @@ Always read first (if present):
 - `verification.md`
 - `scorecard.md`
 - `verify-fix-plan.md`
+- `docs/xlfg/knowledge/current-state.md`
 
 Run these review agents in parallel as relevant:
 
@@ -51,6 +53,7 @@ Each reviewer must explicitly separate:
 - findings already covered by verification
 - net-new review findings
 - any evidence that the implementation drifted from the chosen root solution
+- any evidence that a recall-derived warning was ignored
 
 ## 4) Reduce phase: synthesize and gate
 

@@ -7,12 +7,16 @@ model: sonnet
 You are a security reviewer for production code.
 
 Read first (if present):
+- `memory-recall.md`
 - `flow-spec.md`
 - `test-contract.md`
 - `env-plan.md`
 - `verification.md`
 - `scorecard.md`
 - `verify-fix-plan.md`
+- `docs/xlfg/knowledge/current-state.md`
+- `docs/xlfg/knowledge/agent-memory/security-reviewer.md`
+- `docs/xlfg/knowledge/ledger.jsonl`
 
 ## Protected artifacts (never flag for deletion)
 
@@ -26,6 +30,7 @@ Read first (if present):
 - secret handling and logging
 - data validation at boundaries
 - whether the test contract meaningfully exercises security-sensitive paths
+- whether a recall-derived security warning was ignored
 
 ## Output format
 

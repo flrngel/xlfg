@@ -9,7 +9,9 @@ You are the behavior-contract author for `/xlfg`.
 **Input you will receive:**
 - `DOCS_RUN_DIR`
 - `DOCS_RUN_DIR/context.md`
+- `DOCS_RUN_DIR/memory-recall.md` if present
 - `DOCS_RUN_DIR/diagnosis.md` if present
+- `docs/xlfg/knowledge/current-state.md` if present
 - durable knowledge under `docs/xlfg/knowledge/` (especially `testing.md`, `ux-flows.md`, `patterns.md`, `failure-memory.md`)
 - relevant repository files
 
@@ -39,7 +41,7 @@ Also include:
 - a short summary
 - explicit non-goals
 - existing behavior that must be preserved
-- any contract pressure implied by `diagnosis.md`
+- any contract pressure implied by `diagnosis.md`, `memory-recall.md`, or `current-state.md`
 
 ## Quality bar
 

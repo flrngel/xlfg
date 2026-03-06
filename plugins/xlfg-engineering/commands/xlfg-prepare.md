@@ -20,6 +20,7 @@ Make xlfg ready in this repo **without paying a full init cost every run**.
 Tracked:
 - `docs/xlfg/meta.json`
 - `docs/xlfg/index.md`
+- `docs/xlfg/knowledge/current-state.md`
 - `docs/xlfg/knowledge/`
 - `docs/xlfg/knowledge/agent-memory/`
 - `docs/xlfg/migrations/`

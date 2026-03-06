@@ -34,7 +34,11 @@ class TestXLFG(unittest.TestCase):
             result = ensure_scaffold(root, __version__)
             self.assertTrue((root / "docs" / "xlfg" / "index.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "meta.json").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "current-state.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "env-doctor.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "solution-architect.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "test-implementer.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "task-checker.md").exists())
             self.assertTrue((root / ".xlfg" / "runs").exists())
             gi = (root / ".gitignore").read_text(encoding="utf-8")
             self.assertIn(".xlfg/", gi)
@@ -253,6 +257,22 @@ class TestXLFG(unittest.TestCase):
             fix = root / "docs" / "xlfg" / "runs" / run["run_id"] / "verify-fix-plan.md"
             self.assertTrue(vmd.exists())
             self.assertTrue(fix.exists())
+
+
+    def test_plugin_macro_runs_recall_before_plan(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        xlfg_cmd = repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md"
+        text = xlfg_cmd.read_text(encoding="utf-8")
+        self.assertIn("/xlfg:recall $ARGUMENTS", text)
+        self.assertLess(text.index("/xlfg:recall $ARGUMENTS"), text.index("/xlfg:plan $ARGUMENTS"))
+
+    def test_bundle_context_exists_and_mentions_recall_first(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        handoff = repo_root / "NEXT_AGENT_CONTEXT.md"
+        self.assertTrue(handoff.exists())
+        text = handoff.read_text(encoding="utf-8")
+        self.assertIn("/xlfg", text)
+        self.assertIn("recall", text.lower())
 
 
 if __name__ == "__main__":

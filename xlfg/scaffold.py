@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from .util import append_unique_line, ensure_dir, safe_write
 
-SCAFFOLD_SCHEMA_VERSION = 3
+SCAFFOLD_SCHEMA_VERSION = 4
 
 INDEX_MD = """# xlfg
 
@@ -16,7 +16,7 @@ This folder is the **file-based context** system-of-record for `/xlfg` work.
 
 Tracked durable knowledge:
 
-- `knowledge/` — patterns, decisions, testing knowledge, UX flows, harness rules, role-specific memories, and an append-only memory ledger (commit this)
+- `knowledge/` — current state, patterns, decisions, testing knowledge, UX flows, harness rules, role-specific memories, and an append-only memory ledger (commit this)
 - `meta.json` — scaffold version + migration state (commit this)
 - `migrations/` — migration notes when the xlfg version changes (commit this)
 
@@ -50,11 +50,12 @@ Define **what the real problem is** and **what to build / test** *before* implem
 
 xlfg compounds in two layers:
 
-1. **Shared memory** in `knowledge/` for repo-wide rules and patterns
-2. **Role memory** in `knowledge/agent-memory/` for agents that repeatedly need the same lessons
-3. **Memory ledger** in `knowledge/ledger.jsonl` for append-only, structured durable memory events
+1. **`current-state.md`** as the shortest tracked handoff for the next agent
+2. **Shared memory** in `knowledge/` for repo-wide rules and patterns
+3. **Role memory** in `knowledge/agent-memory/` for agents that repeatedly need the same lessons
+4. **Memory ledger** in `knowledge/ledger.jsonl` for append-only, structured durable memory events
 
-Role memory must stay small, typed, and admission-gated. Do not dump raw run summaries there. The ledger is append-only; corrections should supersede old entries rather than silently rewriting them.
+Keep `current-state.md` short and current. Role memory must stay small, typed, and admission-gated. Do not dump raw run summaries there. The ledger is append-only; corrections should supersede old entries rather than silently rewriting them.
 """
 
 QUALITY_BAR_MD = """# xlfg quality bar
@@ -74,6 +75,34 @@ Nothing is "done" unless:
 - **Operational plan exists** (monitoring + rollback notes)
 
 Evidence should be recorded in each run's `verification.md` and `scorecard.md`.
+"""
+
+CURRENT_STATE_MD = """# xlfg current state
+
+Read this file first when entering a repo that uses xlfg. It is the shortest tracked handoff for the next agent.
+
+## Service / product context
+- What is this repo / service trying to do right now?
+
+## Current high-signal truths
+- The most important facts that should shape new work immediately
+
+## Active UX / behavior contracts
+- Flows or invariants that repeatedly matter
+
+## Current harness / verification rules
+- Ports, healthchecks, non-interactive rules, dev-server reuse rules
+
+## Repeated failures to avoid
+- The recurring failure signatures and the proven first response
+
+## Open risks / debts
+- Things the next agent should keep in mind before touching risky areas
+
+## Best starting recall queries
+- One or two exact lexical or typed queries that load the right memory fast
+
+Keep this document short, current, and biased toward actionable truths. Historical detail belongs in the ledger, shared knowledge files, or local runs.
 """
 
 DECISION_LOG_MD = """# xlfg decision log
@@ -231,7 +260,7 @@ Do not store vague summaries or speculative advice.
 
 QUERIES_MD = """# xlfg recall query syntax
 
-xlfg recall uses deterministic typed query documents inspired by QMD's query documents, but **without vector search, HyDE, or LLM expansion**.
+xlfg recall uses deterministic typed query documents inspired by QMD's query documents, but **without vector search, HyDE, or LLM expansion**. Always read `current-state.md` first.
 
 ## Plain query
 
@@ -256,7 +285,7 @@ Each non-empty line is `type: value`. Supported types:
 - `kind:` filter memory kind(s)
 - `stage:` filter SDLC stage(s)
 - `role:` filter role memory
-- `scope:` filter `knowledge`, `agent-memory`, `ledger`, `runs`, `migrations`, `memory`, or `all`
+- `scope:` filter `knowledge`, `agent-memory`, `ledger`, `runs`, `migrations`, `memory`, or `all` (with `current-state.md` living under `knowledge`)
 - `path:` substring filter on relative path
 - `when:` temporal filter (`today`, `yesterday`, `last week`, `YYYY-MM-DD`, `last 7 days`)
 
@@ -299,11 +328,17 @@ Only compound something into role memory when it is:
 ## Files
 
 - `root-cause-analyst.md`
+- `solution-architect.md`
 - `test-strategist.md`
 - `env-doctor.md`
+- `test-implementer.md`
 - `task-implementer.md`
+- `task-checker.md`
 - `verify-reducer.md`
 - `ux-reviewer.md`
+- `architecture-reviewer.md`
+- `security-reviewer.md`
+- `performance-reviewer.md`
 """
 
 ROOT_CAUSE_MEMORY_MD = """# Agent memory: root-cause-analyst
@@ -320,6 +355,22 @@ Store reusable diagnosis lessons that help avoid symptom patches.
 - **Evidence threshold before reuse**:
 - **Links**:
 """
+
+SOLUTION_ARCHITECT_MEMORY_MD = """# Agent memory: solution-architect
+
+Store solution-selection rules that repeatedly pick the right layer and reject the wrong shortcut.
+
+## Entry template
+
+## Decision pattern: <name>
+- **Problem shape**:
+- **Correct layer for the fix**:
+- **Shortcut to reject**:
+- **Tradeoff notes**:
+- **Disconfirming signal**:
+- **Links**:
+"""
+
 
 TEST_STRATEGIST_MEMORY_MD = """# Agent memory: test-strategist
 
@@ -351,6 +402,21 @@ Store durable harness and environment lessons.
 - **Links**:
 """
 
+TEST_IMPLEMENTER_MEMORY_MD = """# Agent memory: test-implementer
+
+Store tactical testing patterns for proving scenario contracts honestly.
+
+## Entry template
+
+## Test pattern: <name>
+- **Scenario shape**:
+- **Fast honest proof**:
+- **When smoke / e2e is still required**:
+- **Wrong-green trap**:
+- **Links**:
+"""
+
+
 TASK_IMPLEMENTER_MEMORY_MD = """# Agent memory: task-implementer
 
 Store implementation patterns that repeatedly land the root fix cleanly.
@@ -365,6 +431,21 @@ Store implementation patterns that repeatedly land the root fix cleanly.
 - **Minimal proving change**:
 - **Links**:
 """
+
+TASK_CHECKER_MEMORY_MD = """# Agent memory: task-checker
+
+Store recurring acceptance / rejection rules for scoped task reviews.
+
+## Entry template
+
+## Review pattern: <name>
+- **Task shape**:
+- **Most common hidden drift**:
+- **Acceptance evidence required**:
+- **Common false green**:
+- **Links**:
+"""
+
 
 VERIFY_REDUCER_MEMORY_MD = """# Agent memory: verify-reducer
 
@@ -393,6 +474,49 @@ Store UX issues verification commonly misses.
 - **Review prompt / checklist**:
 - **Links**:
 """
+
+ARCHITECTURE_REVIEWER_MEMORY_MD = """# Agent memory: architecture-reviewer
+
+Store recurring architecture drift patterns that deserve fast review attention.
+
+## Entry template
+
+## Drift pattern: <name>
+- **System shape**:
+- **What tends to drift**:
+- **Correct boundary / layering rule**:
+- **Why verification often misses it**:
+- **Links**:
+"""
+
+SECURITY_REVIEWER_MEMORY_MD = """# Agent memory: security-reviewer
+
+Store recurring security review traps that are easy to miss during fast implementation.
+
+## Entry template
+
+## Security trap: <name>
+- **Flow type**:
+- **Sensitive boundary**:
+- **What often slips through**:
+- **Required review question**:
+- **Links**:
+"""
+
+PERFORMANCE_REVIEWER_MEMORY_MD = """# Agent memory: performance-reviewer
+
+Store recurring performance or iteration-speed traps worth checking quickly.
+
+## Entry template
+
+## Performance trap: <name>
+- **Path / system type**:
+- **What usually gets slow**:
+- **Fast signal to inspect**:
+- **Why it matters to iteration or production**:
+- **Links**:
+"""
+
 
 COMMANDS_JSON = """{
   "install": null,
@@ -425,6 +549,11 @@ If you intentionally want to share a specific run, copy or export the relevant f
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
+    "2.0.4": [
+        "`/xlfg` now requires deterministic recall before planning.",
+        "Added `docs/xlfg/knowledge/current-state.md` as the tracked handoff document for the next agent.",
+        "Expanded role-memory scaffolds for more planning, implementation, and review specialists.",
+    ],
     "2.0.3": [
         "Added deterministic `xlfg recall` over durable knowledge, role memory, the append-only ledger, and local runs.",
         "Introduced `docs/xlfg/knowledge/ledger.jsonl` and recall query syntax docs for stage- and role-aligned retrieval.",
@@ -449,6 +578,7 @@ def _manifest(tool_version: str) -> Dict[str, Any]:
         "scaffold_schema_version": SCAFFOLD_SCHEMA_VERSION,
         "run_tracking": "local-only",
         "knowledge_tracking": "tracked",
+        "current_state": "tracked-brief",
         "agent_memory": "enabled",
         "recall": "deterministic-lexical",
         "memory_ledger": "append-only-jsonl",
@@ -534,7 +664,6 @@ def scaffold_status(root: Path, tool_version: str) -> Dict[str, Any]:
         "legacy_meta_path": str(meta["legacy_path"]) if meta.get("legacy_path") else None,
         "version_source": version_source,
         "repo_scaffold_version": repo_version,
-        "current_tool_version": repo_version,  # backward-compatible alias; means repo scaffold version
         "installed_tool_version": tool_version,
         "target_tool_version": tool_version,
         "needs_bootstrap": not exists,
@@ -599,6 +728,7 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
 
     files = {
         "docs/xlfg/index.md": INDEX_MD,
+        "docs/xlfg/knowledge/current-state.md": CURRENT_STATE_MD,
         "docs/xlfg/knowledge/quality-bar.md": QUALITY_BAR_MD,
         "docs/xlfg/knowledge/decision-log.md": DECISION_LOG_MD,
         "docs/xlfg/knowledge/patterns.md": PATTERNS_MD,
@@ -612,11 +742,17 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
         "docs/xlfg/knowledge/commands.json": COMMANDS_JSON,
         "docs/xlfg/knowledge/agent-memory/README.md": AGENT_MEMORY_INDEX_MD,
         "docs/xlfg/knowledge/agent-memory/root-cause-analyst.md": ROOT_CAUSE_MEMORY_MD,
+        "docs/xlfg/knowledge/agent-memory/solution-architect.md": SOLUTION_ARCHITECT_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/test-strategist.md": TEST_STRATEGIST_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/env-doctor.md": ENV_DOCTOR_MEMORY_MD,
+        "docs/xlfg/knowledge/agent-memory/test-implementer.md": TEST_IMPLEMENTER_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/task-implementer.md": TASK_IMPLEMENTER_MEMORY_MD,
+        "docs/xlfg/knowledge/agent-memory/task-checker.md": TASK_CHECKER_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/verify-reducer.md": VERIFY_REDUCER_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/ux-reviewer.md": UX_REVIEWER_MEMORY_MD,
+        "docs/xlfg/knowledge/agent-memory/architecture-reviewer.md": ARCHITECTURE_REVIEWER_MEMORY_MD,
+        "docs/xlfg/knowledge/agent-memory/security-reviewer.md": SECURITY_REVIEWER_MEMORY_MD,
+        "docs/xlfg/knowledge/agent-memory/performance-reviewer.md": PERFORMANCE_REVIEWER_MEMORY_MD,
         "docs/xlfg/runs/.gitkeep": "",
         "docs/xlfg/runs/README.md": RUNS_README_MD,
     }

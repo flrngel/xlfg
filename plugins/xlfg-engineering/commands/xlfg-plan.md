@@ -1,6 +1,6 @@
 ---
 name: xlfg:plan
-description: Diagnose the real problem, reject shortcut fixes, and write the shared contracts before coding.
+description: Recall first, diagnose the real problem, reject shortcut fixes, and write the shared contracts before coding.
 argument-hint: "[feature description, bugfix, or product request]"
 ---
 
@@ -15,10 +15,11 @@ If the request is empty, ask the user what they want to build or fix and stop un
 ## Hard rules
 
 1. **No coding in this command.** Planning only.
-2. **No late-thinking shortcuts.** The goal is the root solution, not the fastest patch.
-3. **Do not hide behind “run the full suite later.”** The test contract must be scenario-based and explicit.
-4. **Ask the user only blocking questions.** If a safe default exists, record it and proceed.
-5. **Disconfirm yourself.** Every chosen solution must record what evidence would prove it wrong.
+2. **Recall is mandatory.** Do not broad-scan the repo until `memory-recall.md` exists.
+3. **No late-thinking shortcuts.** The goal is the root solution, not the fastest patch.
+4. **Do not hide behind “run the full suite later.”** The test contract must be scenario-based and explicit.
+5. **Ask the user only blocking questions.** If a safe default exists, record it and proceed.
+6. **Disconfirm yourself.** Every chosen solution must record what evidence would prove it wrong.
 
 ## Phase 0 — Fast scaffold check + create run
 
@@ -45,20 +46,43 @@ Ensure the run contains at least:
 
 Write the raw request and known constraints to `context.md`.
 
-## Phase 1 — Recall prior relevant experience before you fan out
+## Phase 1 — Mandatory recall before you fan out
 
-Before scanning the repo widely, load the smallest relevant slice of prior memory:
+Before scanning the repo widely, load the smallest relevant slice of prior memory.
 
-- If this looks like a repeated harness / test / UX problem, run `xlfg recall` with a typed query document first.
-- Prefer stage- and role-aligned recall over global memory dumps.
-- Good example:
+### 1A) Read the tracked handoff first
+
+Read `docs/xlfg/knowledge/current-state.md` if present.
+
+### 1B) Use the immediately preceding `/xlfg:recall` result if available
+
+If `/xlfg` already ran `/xlfg:recall`, reuse its best findings.
+
+### 1C) If recall has not already been done, do it now
+
+Run deterministic recall yourself using `/xlfg:recall` or the equivalent manual lexical search discipline.
+
+### 1D) Do one request-shaped recall, then one focused follow-up if needed
+
+Minimum recall:
+- one broad recall shaped by the raw request
+
+Add a focused typed query if the request touches repeated harness / UX / testing / flow / environment risk.
+
+Good example:
 
 ```bash
 xlfg recall $'lex: "port already in use" yarn dev healthcheck\nstage: verify\nkind: failure harness-rule\nrole: env-doctor\nscope: memory runs'
 ```
 
-Write a 3–8 bullet summary of the reused lessons to `memory-recall.md`.
-If nothing relevant is found, say so explicitly and move on.
+Write `memory-recall.md` with all of these sections filled:
+- queries / sources used
+- strong matches
+- rules carried into this run
+- rejected near-matches / why they do not apply
+- explicit no-hit statement when nothing relevant matched
+
+You may not proceed to repo fan-out until `memory-recall.md` is non-placeholder.
 
 ## Phase 2 — Map the repo and hidden requirements
 
@@ -81,6 +105,8 @@ Run these agents next:
 - `xlfg-env-doctor` → `env-plan.md`
 - `xlfg-solution-architect` → `solution-decision.md`
 - `xlfg-risk-assessor` → `risk.md` when auth, money, destructive data, or reliability risk is present
+
+Every specialist should prefer `current-state.md`, `memory-recall.md`, and exact role memory over broad vague recollection.
 
 ## Phase 4 — Reduce into canonical planning files
 
@@ -110,8 +136,9 @@ For each task include:
 - invariants that must stay true
 - one **disproof probe** or stop condition that would force diagnosis review
 - stop conditions / blockers
+- any recall-derived rule that must not be violated
 
-The plan must align to `diagnosis.md`, `solution-decision.md`, and `flow-spec.md`.
+The plan must align to `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, and `memory-recall.md`.
 
 ### `scorecard.md` must include
 
@@ -124,6 +151,7 @@ The plan must align to `diagnosis.md`, `solution-decision.md`, and `flow-spec.md
 
 Do **not** continue to implementation until all are true:
 
+- `memory-recall.md` exists and is specific
 - `diagnosis.md` exists and identifies the real problem or capability gap
 - `solution-decision.md` exists and records rejected shortcuts
 - `flow-spec.md` is concrete enough to test from

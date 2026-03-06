@@ -17,10 +17,16 @@ _NEG_TERM_RE = re.compile(r"(?<!\S)-([a-z0-9_][a-z0-9_\-/]*)")
 _ROLE_STAGE = {
     "root-cause-analyst": "plan",
     "test-strategist": "plan",
+    "solution-architect": "plan",
     "env-doctor": "verify",
+    "test-implementer": "implement",
     "task-implementer": "implement",
+    "task-checker": "implement",
     "verify-reducer": "verify",
     "ux-reviewer": "review",
+    "architecture-reviewer": "review",
+    "security-reviewer": "review",
+    "performance-reviewer": "review",
 }
 _RUN_STAGE_BY_NAME = {
     "context": "plan",
@@ -47,6 +53,7 @@ _RUN_STAGE_BY_NAME = {
     "test-report": "implement",
 }
 _KNOWLEDGE_KIND = {
+    "current-state": ("state-brief", "cross"),
     "patterns": ("pattern", "implement"),
     "decision-log": ("decision", "plan"),
     "testing": ("testing", "verify"),

@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.0.4 - 2026-03-06
+
+### Added
+- New tracked `docs/xlfg/knowledge/current-state.md` scaffolded in target repos as the single handoff document a next agent should read first.
+- New role-memory scaffolds for `solution-architect`, `test-implementer`, `task-checker`, `architecture-reviewer`, `security-reviewer`, and `performance-reviewer`.
+- New bundle-level `NEXT_AGENT_CONTEXT.md` so future agents can continue this repo without extra explanation.
+
+### Changed
+- `/xlfg` now runs deterministic recall before planning.
+- `/xlfg:plan` now treats recall as mandatory and requires `memory-recall.md` to capture the query, strong matches, rejected near-matches, and explicit no-hit cases before broad repo fan-out.
+- `/xlfg:compound` now refreshes `current-state.md` in addition to shared memory, role memory, and the ledger.
+- Plugin docs now explicitly treat the CLI as optional support rather than the product.
+- More specialist prompts now read `current-state.md` and their own role memory when relevant.
+
+### Why
+- A recall system is only valuable if `/xlfg` actually uses it.
+- A target repo needs one tracked handoff document so the next agent can start fast.
+- Role memory should exist for specialists that repeatedly benefit from compact tactical memory.
+
 ## 2.0.3 - 2026-03-06
 
 ### Added

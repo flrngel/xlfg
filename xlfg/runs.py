@@ -32,16 +32,24 @@ CONTEXT_MD_TEMPLATE = """# Context
 
 MEMORY_RECALL_TEMPLATE = """# Memory recall
 
-Summarize only the smallest relevant slice of prior knowledge before planning.
+Summarize only the smallest relevant slice of prior knowledge before planning. This file must make it obvious what was queried, what matched, and what was *not* reused.
 
-## Relevant prior lessons
+## Queries / sources used
+- current-state.md:
+- typed query or lexical query:
+- scopes checked:
+
+## Strong matches
 - ...
 
-## Why they match this run
+## Rules carried into this run
 - ...
 
-## What is intentionally *not* reused
+## Rejected near-matches / why they do not apply
 - ...
+
+## Explicit no-hit statement
+- If nothing relevant matched, say it plainly here.
 """
 
 DIAGNOSIS_TEMPLATE = """# Diagnosis

@@ -1,6 +1,6 @@
 ---
 name: xlfg:compound
-description: Convert an xlfg run into durable knowledge (tests, failures, harness rules, patterns, and role-specific memory).
+description: Convert an xlfg run into durable knowledge, role memory, and the next-agent handoff.
 argument-hint: "[run-id | latest]"
 ---
 
@@ -28,6 +28,7 @@ Ensure all knowledge paths exist.
 
 Read (if present):
 
+- `memory-recall.md`
 - `diagnosis.md`
 - `solution-decision.md`
 - `flow-spec.md`
@@ -41,12 +42,14 @@ Read (if present):
 - `verify-fix-plan.md`
 - `review-summary.md`
 - `run-summary.md`
+- `docs/xlfg/knowledge/current-state.md`
 
 ## 3) Extract only reusable, verified lessons
 
 Append small, specific entries to the right knowledge files, and append structured durable events to `ledger.jsonl`:
 
 Shared memory:
+- `current-state.md` — short tracked handoff for the next agent
 - `patterns.md` — durable implementation or design patterns
 - `decision-log.md` — durable decisions and rejected shortcuts worth remembering
 - `testing.md` — scenario-level testing lessons
@@ -57,11 +60,17 @@ Shared memory:
 
 Role memory (only when role-specific and compact):
 - `agent-memory/root-cause-analyst.md`
+- `agent-memory/solution-architect.md`
 - `agent-memory/test-strategist.md`
 - `agent-memory/env-doctor.md`
+- `agent-memory/test-implementer.md`
 - `agent-memory/task-implementer.md`
+- `agent-memory/task-checker.md`
 - `agent-memory/verify-reducer.md`
 - `agent-memory/ux-reviewer.md`
+- `agent-memory/architecture-reviewer.md`
+- `agent-memory/security-reviewer.md`
+- `agent-memory/performance-reviewer.md`
 
 ### Ledger event rule
 
@@ -104,7 +113,22 @@ Only write entries that are:
 
 Prefer shared memory unless the lesson is clearly role-specific.
 
-## 4) Write run-level compounding summary
+## 4) Refresh `current-state.md`
+
+Update `docs/xlfg/knowledge/current-state.md` so the next agent has one tracked document to read first.
+
+Keep it short and current. It should contain only the highest-signal truths that remain useful after this run, such as:
+
+- the current service / product context if it materially changed
+- the most important UX / behavior contracts now in force
+- the harness / verification rules that should shape the next run immediately
+- repeated failure signatures and the proven first response
+- open risks / debts worth carrying forward
+- one or two strong starting recall queries
+
+Do not paste the whole run into `current-state.md`.
+
+## 5) Write run-level compounding summary
 
 Write `DOCS_RUN_DIR/compound-summary.md` with:
 
@@ -112,14 +136,16 @@ Write `DOCS_RUN_DIR/compound-summary.md` with:
 - what was added to each knowledge file
 - what was appended to `ledger.jsonl`
 - what was added to role memory and why
+- how `current-state.md` changed
 - what shortcuts were rejected and why
 - what was intentionally not added and why
 - what the next similar run should do first
 
-## 5) Completion
+## 6) Completion
 
 Print:
 
 - what knowledge was added
 - where it was written
+- path to `current-state.md`
 - path to `compound-summary.md`

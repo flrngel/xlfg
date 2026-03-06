@@ -44,6 +44,7 @@ Ensure the repo root `.gitignore` contains:
 Create these if missing:
 
 - `docs/xlfg/index.md`
+- `docs/xlfg/knowledge/current-state.md`
 - `docs/xlfg/knowledge/quality-bar.md`
 - `docs/xlfg/knowledge/decision-log.md`
 - `docs/xlfg/knowledge/patterns.md`
@@ -51,6 +52,9 @@ Create these if missing:
 - `docs/xlfg/knowledge/ux-flows.md`
 - `docs/xlfg/knowledge/failure-memory.md`
 - `docs/xlfg/knowledge/harness-rules.md`
+- `docs/xlfg/knowledge/ledger.jsonl`
+- `docs/xlfg/knowledge/ledger.md`
+- `docs/xlfg/knowledge/queries.md`
 - `docs/xlfg/knowledge/commands.json`
 - role memories under `docs/xlfg/knowledge/agent-memory/`
 

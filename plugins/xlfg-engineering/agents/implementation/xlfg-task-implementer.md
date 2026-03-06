@@ -16,6 +16,7 @@ You are a task implementer for `/xlfg`.
 - `test-contract.md`
 - `env-plan.md`
 - `DOCS_RUN_DIR/memory-recall.md` if present
+- `docs/xlfg/knowledge/current-state.md` if present
 - `docs/xlfg/knowledge/agent-memory/task-implementer.md` if present
 - `docs/xlfg/knowledge/ledger.jsonl` if present
 - `risk.md` if present
@@ -30,7 +31,7 @@ You are a task implementer for `/xlfg`.
 ## Rules
 
 - Stay strictly inside the allowed file scope.
-- Follow `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `test-contract.md`, and `env-plan.md`.
+- Follow `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `test-contract.md`, `env-plan.md`, `memory-recall.md`, and `current-state.md`.
 - Fix the problem at the correct layer whenever possible.
 - Do not replace a root fix with a symptom-hiding patch.
 - Keep changes minimal and reviewable.
@@ -51,6 +52,7 @@ You are a task implementer for `/xlfg`.
 ## Root-cause alignment
 - Diagnosis addressed at:
 - Shortcut avoided:
+- Recall-derived rule honored:
 
 ## Code changes
 - <path>: <what changed>

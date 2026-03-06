@@ -1,18 +1,31 @@
 ---
 name: xlfg-recall
-description: Deterministic recall for xlfg memory. Use temporal recall for recent runs and typed lexical query documents for durable knowledge, role memory, and the append-only ledger.
+description: Deterministic recall for xlfg memory. Use current-state first, then temporal or typed lexical recall over durable knowledge, role memory, the ledger, and runs.
 ---
 
 # xlfg recall skill
 
 Use this when an xlfg agent or user needs past context without relying on vector search.
 
+## Read order
+
+1. `docs/xlfg/knowledge/current-state.md`
+2. `docs/xlfg/knowledge/*.md`
+3. `docs/xlfg/knowledge/agent-memory/*.md`
+4. `docs/xlfg/knowledge/ledger.jsonl`
+5. `docs/xlfg/runs/`
+
 ## Backends
 
-- `docs/xlfg/runs/` — local episodic run history
-- `docs/xlfg/knowledge/*.md` — durable shared knowledge
-- `docs/xlfg/knowledge/agent-memory/*.md` — compact role memory
-- `docs/xlfg/knowledge/ledger.jsonl` — append-only structured memory events
+If the helper CLI exists, you may use it:
+
+```bash
+xlfg recall yesterday
+xlfg recall 'login button enter submit'
+xlfg recall --file query.qmd
+```
+
+If the helper CLI does not exist, perform the same deterministic recall manually with exact lexical search over the files above.
 
 ## Query modes
 
@@ -40,7 +53,7 @@ Supported keys:
 - `lex:` exact lexical search with phrases and negation
 - `kind:` memory kind(s)
 - `stage:` `plan`, `implement`, `verify`, `review`, `compound`, `cross`
-- `role:` `root-cause-analyst`, `test-strategist`, `env-doctor`, `task-implementer`, `verify-reducer`, `ux-reviewer`
+- `role:` `root-cause-analyst`, `solution-architect`, `test-strategist`, `env-doctor`, `test-implementer`, `task-implementer`, `task-checker`, `verify-reducer`, `ux-reviewer`, `architecture-reviewer`, `security-reviewer`, `performance-reviewer`
 - `scope:` `knowledge`, `agent-memory`, `ledger`, `runs`, `migrations`, `memory`, `all`
 - `path:` substring filter
 - `when:` date filter
@@ -51,4 +64,5 @@ Supported keys:
 - Use `scope: memory` when you want only durable tracked knowledge.
 - Use `scope: runs` when you want recent local context.
 - Use quoted phrases and negation when a term is overloaded.
+- Preserve strong hits or an explicit no-hit in `memory-recall.md` before planning continues.
 - Do not ask for vector-like semantic recall; this skill is intentionally deterministic.

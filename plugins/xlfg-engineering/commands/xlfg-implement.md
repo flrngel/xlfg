@@ -1,6 +1,6 @@
 ---
 name: xlfg:implement
-description: Execute the planned tasks with explicit implementation agents, targeted proof, and no shortcut patches.
+description: Execute the planned tasks with explicit implementation agents, targeted proof, recall-informed discipline, and no shortcut patches.
 argument-hint: "[run-id | latest]"
 ---
 
@@ -19,10 +19,11 @@ Set:
 
 - `DOCS_RUN_DIR=docs/xlfg/runs/<run-id>`
 
-## 2) Read the mandatory contracts
+## 2) Read the mandatory contracts and memory
 
 Read these first and refuse to proceed if any are missing:
 
+- `memory-recall.md`
 - `diagnosis.md`
 - `solution-decision.md`
 - `flow-spec.md`
@@ -32,6 +33,8 @@ Read these first and refuse to proceed if any are missing:
 - `env-plan.md`
 - `scorecard.md`
 - `risk.md` if present
+- `docs/xlfg/knowledge/current-state.md` if present
+- relevant role memory under `docs/xlfg/knowledge/agent-memory/`
 
 ## 3) Implementation doctrine
 
@@ -41,6 +44,7 @@ Read these first and refuse to proceed if any are missing:
 - **Do not broaden file scope casually.** If scope must expand, update the plan first.
 - **Use targeted checks after each task.** Final verification comes later.
 - **If a disproof probe trips, stop and return to planning.**
+- **Do not repeat a known failure pattern** already called out in `memory-recall.md`, `current-state.md`, or role memory.
 
 ## 4) Task loop
 
@@ -57,6 +61,7 @@ Ensure `tasks/<task-id>/` exists and write `task-brief.md` with:
 - relevant invariants
 - disproof probe / stop condition
 - any blocker context
+- reused recall rules that matter for this task
 
 ### 4B) Run the specified implementation agents
 
@@ -74,6 +79,7 @@ A task is only complete when:
 - the targeted checks pass
 - the checker verdict is `ACCEPT`
 - the task checkbox in `plan.md` is marked complete
+- no known recall-derived trap was ignored silently
 
 ### 4D) Anti-loop rule
 
@@ -103,5 +109,6 @@ When all tasks are complete, write or update `run-summary.md` with:
 - targeted checks already run
 - areas that still depend on `/xlfg:verify`
 - known risks or `none`
+- which recall-derived rules mattered most during implementation
 
 Do not call final verification or review in this command. The workflow continues with `/xlfg:verify`.
