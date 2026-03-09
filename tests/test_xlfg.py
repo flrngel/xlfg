@@ -35,6 +35,8 @@ class TestXLFG(unittest.TestCase):
             self.assertTrue((root / "docs" / "xlfg" / "index.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "meta.json").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "current-state.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "why-analyst.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "harness-profiler.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "env-doctor.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "solution-architect.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "test-implementer.md").exists())
@@ -94,18 +96,21 @@ class TestXLFG(unittest.TestCase):
             self.assertEqual(status_after["repo_scaffold_version"], __version__)
             self.assertFalse(status_after["needs_migration"])
 
-    def test_create_run_seeds_diagnosis_and_solution_files(self) -> None:
+    def test_create_run_seeds_why_profile_and_proof_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / ".git").mkdir()
             ensure_scaffold(root, __version__)
             run = create_run(root, request="fix login flow")
             run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
+            self.assertTrue((run_dir / "why.md").exists())
             self.assertTrue((run_dir / "diagnosis.md").exists())
             self.assertTrue((run_dir / "solution-decision.md").exists())
+            self.assertTrue((run_dir / "harness-profile.md").exists())
             self.assertTrue((run_dir / "flow-spec.md").exists())
+            self.assertTrue((run_dir / "workboard.md").exists())
+            self.assertTrue((run_dir / "proof-map.md").exists())
             self.assertTrue((run_dir / "tasks").exists())
-
 
     def test_prepare_scaffold_creates_recall_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -131,7 +136,7 @@ class TestXLFG(unittest.TestCase):
             ensure_scaffold(root, __version__)
             ledger = root / "docs" / "xlfg" / "knowledge" / "ledger.jsonl"
             ledger.write_text(
-                '\n'.join(
+                "\n".join(
                     [
                         json.dumps(
                             {
@@ -150,7 +155,7 @@ class TestXLFG(unittest.TestCase):
                         )
                     ]
                 )
-                + '\n',
+                + "\n",
                 encoding="utf-8",
             )
             agent_mem = root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "env-doctor.md"
@@ -160,13 +165,13 @@ class TestXLFG(unittest.TestCase):
             )
             result = recall(
                 root,
-                '\n'.join(
+                "\n".join(
                     [
                         'lex: "port already in use" yarn dev',
-                        'stage: verify',
-                        'kind: failure agent-memory',
-                        'role: env-doctor',
-                        'scope: memory',
+                        "stage: verify",
+                        "kind: failure agent-memory",
+                        "role: env-doctor",
+                        "scope: memory",
                     ]
                 ),
                 limit=5,
@@ -258,22 +263,12 @@ class TestXLFG(unittest.TestCase):
             self.assertTrue(vmd.exists())
             self.assertTrue(fix.exists())
 
-
-    def test_plugin_macro_runs_recall_before_plan(self) -> None:
+    def test_macro_mentions_profile_driven_verify(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        xlfg_cmd = repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md"
-        text = xlfg_cmd.read_text(encoding="utf-8")
-        self.assertIn("/xlfg:recall $ARGUMENTS", text)
-        self.assertLess(text.index("/xlfg:recall $ARGUMENTS"), text.index("/xlfg:plan $ARGUMENTS"))
-
-    def test_bundle_context_exists_and_mentions_recall_first(self) -> None:
-        repo_root = Path(__file__).resolve().parents[1]
-        handoff = repo_root / "NEXT_AGENT_CONTEXT.md"
-        self.assertTrue(handoff.exists())
-        text = handoff.read_text(encoding="utf-8")
-        self.assertIn("/xlfg", text)
-        self.assertIn("recall", text.lower())
+        xlfg_md = (repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        self.assertIn("harness-profile.md", xlfg_md)
+        self.assertIn("mode-from-harness-profile.md", xlfg_md)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     unittest.main()

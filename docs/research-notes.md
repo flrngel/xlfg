@@ -1,15 +1,29 @@
-# Research notes behind xlfg 2.0.3
+# Research notes behind xlfg 2.0.5
 
-This revision adds a deterministic memory and recall layer.
+This revision adds a more explicit harness model instead of just adding more prompts.
 
-## 1) Recall should load the right context, not the most "semantic" context
-We borrowed the useful shape of `/recall` and QMD: temporal recall, typed query documents, and exact lexical syntax. We intentionally did **not** adopt vector search, HyDE, or LLM query expansion in xlfg because the goal here is auditable recall for production engineering workflows.
+## 1) A harness is runtime structure, not a bigger prompt
 
-## 2) Memory should be aligned to the current stage and role
-Large, episode-level memory blobs are too coarse for long software workflows. xlfg now keeps shared knowledge, role-specific memory, and an append-only ledger, and retrieval can filter by stage, role, kind, scope, path, and time.
+The most useful lesson from recent harness writeups is that long-horizon agent quality improves when the environment, execution loop, and artifacts are made more explicit and enforceable.
 
-## 3) Durable memory should be append-only and replayable
-Instead of rewriting one giant summary, xlfg now keeps `ledger.jsonl` as a structured event log. The run stays local and episodic; durable lessons are promoted into shared knowledge and logged as immutable events.
+That is why xlfg now adds:
+- `why.md`
+- `harness-profile.md`
+- `workboard.md`
+- `proof-map.md`
 
-## 4) Keep the retrieval contract simple enough to trust
-The recall system is intentionally lexical-first. That makes it weaker than the best hybrid retrieval systems on broad QA benchmarks, but much easier to audit in engineering workflows where exactness and provenance matter more than fuzzy semantic reach.
+## 2) Memory should align to the actual unit of work
+
+Large, episode-level memory blobs are too coarse for long software workflows. xlfg keeps shared knowledge, role-specific memory, and an append-only ledger, and retrieval can filter by stage, role, kind, scope, path, and time.
+
+## 3) Verification must be linked to the requirement, not only to command success
+
+The new `proof-map.md` makes verification answer a stricter question: *what exact evidence would prove this scenario really works?*
+
+## 4) Capability loading should be progressive
+
+Optional agents now load only when the diagnosis justifies them. This borrows the useful “progressive loading” idea from larger harnesses without importing the whole runtime stack.
+
+## 5) Deterministic recall stays the default
+
+This repo still intentionally avoids vector search, HyDE, and LLM query expansion in the core path. The priority is auditability, exact provenance, and high-signal retrieval for production engineering work.

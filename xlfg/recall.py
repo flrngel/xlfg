@@ -15,8 +15,10 @@ _TOKEN_RE = re.compile(r"[a-z0-9_]+")
 _QUOTED_RE = re.compile(r'(-?)"([^"]+)"')
 _NEG_TERM_RE = re.compile(r"(?<!\S)-([a-z0-9_][a-z0-9_\-/]*)")
 _ROLE_STAGE = {
+    "why-analyst": "plan",
     "root-cause-analyst": "plan",
     "test-strategist": "plan",
+    "harness-profiler": "plan",
     "solution-architect": "plan",
     "env-doctor": "verify",
     "test-implementer": "implement",
@@ -29,18 +31,22 @@ _ROLE_STAGE = {
     "performance-reviewer": "review",
 }
 _RUN_STAGE_BY_NAME = {
+    "why": "plan",
     "context": "plan",
     "repo-map": "plan",
     "brainstorm": "plan",
     "research": "plan",
     "risk": "plan",
+    "harness-profile": "plan",
     "diagnosis": "plan",
     "solution-decision": "plan",
     "flow-spec": "plan",
     "spec": "plan",
     "plan": "plan",
     "test-contract": "plan",
+    "workboard": "cross",
     "env-plan": "verify",
+    "proof-map": "verify",
     "scorecard": "verify",
     "verification": "verify",
     "verify-fix-plan": "verify",

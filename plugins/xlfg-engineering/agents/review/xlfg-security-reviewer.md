@@ -8,9 +8,12 @@ You are a security reviewer for production code.
 
 Read first (if present):
 - `memory-recall.md`
+- `why.md`
+- `harness-profile.md`
 - `flow-spec.md`
 - `test-contract.md`
 - `env-plan.md`
+- `proof-map.md`
 - `verification.md`
 - `scorecard.md`
 - `verify-fix-plan.md`

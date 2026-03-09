@@ -1,6 +1,6 @@
 ---
 name: xlfg-file-context
-description: Use docs/xlfg + .xlfg as the file-based context system for long SDLC runs.
+description: Use docs/xlfg + .xlfg as the file-based context system for why-first, proof-aware SDLC runs.
 ---
 
 # xlfg-file-context
@@ -34,7 +34,9 @@ docs/xlfg/
     ledger.jsonl
     commands.json
     agent-memory/
+      why-analyst.md
       root-cause-analyst.md
+      harness-profiler.md
       solution-architect.md
       test-strategist.md
       env-doctor.md
@@ -51,14 +53,18 @@ docs/xlfg/
   runs/
     <run-id>/
       context.md
+      why.md
       memory-recall.md
       diagnosis.md
       solution-decision.md
+      harness-profile.md
       flow-spec.md
       spec.md
       plan.md
       test-contract.md
       env-plan.md
+      workboard.md
+      proof-map.md
       scorecard.md
       risk.md
       tasks/
@@ -99,28 +105,33 @@ Before repo fan-out:
 - write `memory-recall.md`
 - record both strong matches and explicit no-hit cases
 
-### 3) Diagnose + contract first
+### 3) Why + diagnosis + contract first
 
 Before implementation, make sure the run has:
 
+- `why.md`
 - `memory-recall.md`
 - `diagnosis.md`
 - `solution-decision.md`
+- `harness-profile.md`
 - `flow-spec.md`
 - `test-contract.md`
 - `env-plan.md`
+- `workboard.md`
+- `proof-map.md`
 
 ### 4) Map
 
 - Spawn subagents with isolated contexts.
 - Give each a single responsibility and a single output path.
 - Avoid chat coordination.
+- Load optional agents progressively, only when the core diagnosis shows a real need.
 - Give a role its own memory file only if that role repeatedly needs the same lesson.
 
 ### 5) Reduce
 
 - The lead merges results into canonical files.
-- The plan must align tasks to scenario IDs and diagnosis.
+- The plan must align tasks to scenario IDs, why, diagnosis, and proof obligations.
 - The plan should carry forward recall-derived rules when they matter.
 
 ### 6) Implement with bounded pair loops
@@ -128,10 +139,16 @@ Before implementation, make sure the run has:
 - Test implementer writes targeted test changes and proof notes.
 - Implementer writes code + implementer report.
 - Checker reviews and writes checker report.
-- Lead updates the plan.
-- Do not exceed 2 checker loops per task without a fresh diagnosis.
+- Lead updates the plan, workboard, and proof map.
+- Do not exceed the checker-loop budget from `harness-profile.md` without a fresh diagnosis.
 
-### 7) Compound + refresh handoff
+### 7) Verify honestly
+
+- Verification mode should match `harness-profile.md`.
+- A green command is not enough if `proof-map.md` still has a required gap.
+- Update `verification.md`, `scorecard.md`, `proof-map.md`, and `workboard.md` together.
+
+### 8) Compound + refresh handoff
 
 - Promote verified reusable lessons into shared knowledge or role memory.
 - Append durable memory events to the ledger.

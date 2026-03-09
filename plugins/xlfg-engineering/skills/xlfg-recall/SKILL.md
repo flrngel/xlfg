@@ -53,7 +53,7 @@ Supported keys:
 - `lex:` exact lexical search with phrases and negation
 - `kind:` memory kind(s)
 - `stage:` `plan`, `implement`, `verify`, `review`, `compound`, `cross`
-- `role:` `root-cause-analyst`, `solution-architect`, `test-strategist`, `env-doctor`, `test-implementer`, `task-implementer`, `task-checker`, `verify-reducer`, `ux-reviewer`, `architecture-reviewer`, `security-reviewer`, `performance-reviewer`
+- `role:` `why-analyst`, `root-cause-analyst`, `harness-profiler`, `solution-architect`, `test-strategist`, `env-doctor`, `test-implementer`, `task-implementer`, `task-checker`, `verify-reducer`, `ux-reviewer`, `architecture-reviewer`, `security-reviewer`, `performance-reviewer`
 - `scope:` `knowledge`, `agent-memory`, `ledger`, `runs`, `migrations`, `memory`, `all`
 - `path:` substring filter
 - `when:` date filter

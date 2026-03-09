@@ -1,4 +1,4 @@
-# NEXT AGENT CONTEXT
+# NEXT_AGENT_CONTEXT
 
 Read this before touching the repo. This document is the bundle-level handoff so the next intelligent agent can continue without extra explanation.
 
@@ -20,34 +20,56 @@ The harness should make good engineering behavior easier than bad engineering be
 - Do **not** push vector-search / RAG / HyDE / reranking as a required core dependency.
 - Normal evolution bumps **patch version only**.
 
-## 3. What changed in 2.0.4
+## 3. What changed in 2.0.5
 
-This patch fixes the strategic mistake where recall existed but was not guaranteed to shape `/xlfg`.
+This patch takes useful ideas from DeerFlow-style harness thinking without turning xlfg into a giant always-on runtime.
 
 ### Main changes
 
-1. `/xlfg` now runs recall before planning.
-2. `/xlfg:plan` treats recall as mandatory, not optional.
-3. `docs/xlfg/knowledge/current-state.md` was added as a single tracked handoff document for the next agent in any target repo.
-4. `/xlfg:compound` now updates that current-state handoff along with shared memory and role memory.
-5. More role-specific memory files were added for agents that repeatedly need tactical memory.
-6. Plugin docs now make it explicit that the CLI is optional support, not the product.
+1. Planning now starts with an explicit `why.md` written by `xlfg-why-analyst`.
+2. Planning now chooses a run-specific `harness-profile.md` (`quick`, `standard`, `deep`) written by `xlfg-harness-profiler`.
+3. Every run now has a `workboard.md` as a persistent stage / task ledger.
+4. Every run now has a `proof-map.md` so verification cannot pretend that green commands automatically mean real proof.
+5. `/xlfg:plan` now loads optional planning agents progressively instead of fanning out by default.
+6. `/xlfg` now reads the recommended verify mode from `harness-profile.md` instead of assuming maximal verification every time.
+7. Role memory now includes `why-analyst` and `harness-profiler`.
+8. This bundle now includes `docs/deer-flow-harness-review.md`, which explains what was borrowed, what was rejected, and why.
 
-## 4. Design direction
+## 4. Why DeerFlow mattered here
+
+The key useful lesson was **not** “make xlfg huge.”
+
+The useful lesson was:
+- think of the harness as **runtime structure**, not a bigger prompt
+- keep explicit task state
+- bound subagent concurrency and execution cost
+- load capabilities progressively
+- separate durable memory from per-run state
+
+That pushed xlfg toward:
+- `why.md`
+- `harness-profile.md`
+- `workboard.md`
+- `proof-map.md`
+- optional agent fan-out only when the diagnosis justifies it
+
+## 5. Design direction
 
 The desired shape is:
 
 1. **Prepare fast** — check scaffold version, migrate only on drift.
 2. **Recall first** — read the smallest relevant prior context before wide repo scanning.
-3. **Diagnose** — identify the real capability gap or fault chain.
-4. **Contract** — define behavior, tests, and environment up front.
-5. **Implement with bounded loops** — task-scoped work, explicit checks, anti-shortcut discipline.
-6. **Verify honestly** — layered proof with environment-state awareness.
-7. **Review as confirmation** — not as rescue.
-8. **Compound** — promote only small, verified lessons; keep runs local by default.
-9. **Refresh the handoff** — keep a concise tracked context document for the next agent.
+3. **Why first** — anchor the run to the user / operator value and false-success rejection.
+4. **Diagnose** — identify the real capability gap or fault chain.
+5. **Contract** — define behavior, tests, and environment up front.
+6. **Profile** — choose the minimum honest harness intensity.
+7. **Implement with bounded loops** — task-scoped work, explicit checks, anti-shortcut discipline.
+8. **Verify honestly** — layered proof with environment-state awareness.
+9. **Review as confirmation** — not as rescue.
+10. **Compound** — promote only small, verified lessons; keep runs local by default.
+11. **Refresh the handoff** — keep a concise tracked context document for the next agent.
 
-## 5. Why recall is mandatory
+## 6. Why recall is mandatory
 
 The user repeatedly ran into predictable harness failures such as duplicate `yarn dev`, port collisions, stale bundles, and expensive E2E loops that still missed real failures. When the system forgets those lessons at the start of a new run, it wastes time rediscovering them.
 
@@ -60,12 +82,6 @@ Therefore recall is a first-class workflow step, not a side utility.
 - role-specific memory when the role matches
 - the append-only ledger
 - recent local runs when they genuinely match
-
-## 6. Why the CLI is secondary
-
-The Python CLI is still useful as a local deterministic helper for scaffold / recall / verify. But the user does not value xlfg because of a CLI. They value it if the **plugin skill itself** makes agent execution better.
-
-When editing this repo, prefer changes that improve the plugin prompts, contracts, and memory model. Do not mistake backend convenience for product value.
 
 ## 7. Memory model
 
@@ -86,9 +102,9 @@ This repo intentionally follows the non-hype parts of the research and ignores t
 
 - **Long-horizon agents need explicit artifacts** instead of hoping the model keeps everything straight in chat history.
 - **Verification should be requirement-linked** (new behavior and regression behavior) rather than a late generic suite blast.
-- **Memory should be stage- and role-aligned** instead of one giant summary blob.
+- **Memory should be subtask-, stage-, and role-aligned** instead of one giant summary blob.
 - **Append-only memory with provenance** is better than constantly rewriting “what we learned.”
-- **Short, typed, lexical recall** is more auditable than semantic retrieval for production harness memory.
+- **A harness is runtime structure**: state, bounded loops, capability loading, and execution policies.
 
 ### Rejected from the core path
 
@@ -96,7 +112,7 @@ This repo intentionally follows the non-hype parts of the research and ignores t
 - embedding stores
 - HyDE / hypothetical query expansion
 - mandatory reranking
-- speculative graph-memory dependencies
+- giant always-on server architecture for normal plugin usage
 
 Those may be studied elsewhere, but they should not be required in the core harness until they are precise enough for production trust.
 
@@ -107,7 +123,7 @@ These are not solved yet and remain high-value follow-ups:
 - repo-specific stack profiles are still thin; command detection is still heuristic in unknown repos
 - reviewer specialization can improve further for framework-specific systems
 - `current-state.md` needs disciplined curation so it stays short and useful
-- target repos still rely on the agent to honestly maintain contracts; stronger mechanical enforcement could help
+- plugin prompts still rely on the lead agent to honestly maintain `workboard.md` and `proof-map.md`; stronger mechanical enforcement could help
 
 ## 10. Editing rules for the next agent
 
@@ -123,12 +139,12 @@ If you continue evolving this repo:
 
 ## 11. Suggested immediate next checks
 
-If continuing from 2.0.4, inspect these first:
+If continuing from 2.0.5, inspect these first:
 
+- `docs/deer-flow-harness-review.md`
 - `plugins/xlfg-engineering/commands/xlfg.md`
 - `plugins/xlfg-engineering/commands/xlfg-plan.md`
-- `plugins/xlfg-engineering/commands/xlfg-compound.md`
-- `plugins/xlfg-engineering/skills/xlfg-recall/SKILL.md`
+- `plugins/xlfg-engineering/commands/xlfg-verify.md`
 - `xlfg/scaffold.py`
 - `tests/test_xlfg.py`
 
@@ -137,7 +153,8 @@ If continuing from 2.0.4, inspect these first:
 The user should be able to install the plugin, run `/xlfg`, and get a workflow that:
 
 - remembers relevant past failures and harness rules up front
-- defines behavior and proof before coding
+- defines why, behavior, and proof before coding
+- picks an honest harness intensity instead of wasting time by default
 - avoids the same bad dev-server / port / stale-build loops
 - prefers root fixes over temporal patches
 - leaves behind a clear tracked handoff for the next agent

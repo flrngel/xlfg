@@ -1,5 +1,28 @@
 # Changelog
 
+## 2.0.5 - 2026-03-09
+
+### Added
+- New planning agent `xlfg-why-analyst`.
+- New planning agent `xlfg-harness-profiler`.
+- New run artifacts: `why.md`, `harness-profile.md`, `workboard.md`, and `proof-map.md`.
+- New role-memory scaffolds for `why-analyst` and `harness-profiler`.
+- New bundle-level design note `docs/deer-flow-harness-review.md` that explains what xlfg borrowed from DeerFlow and what it intentionally rejected.
+
+### Changed
+- `/xlfg:plan` is now explicitly why-first and progressively loads optional planning agents only when the diagnosis justifies them.
+- `/xlfg` now reads verification depth from `harness-profile.md` instead of assuming the same intensity for every run.
+- `/xlfg:implement` now treats `workboard.md` as execution truth and `proof-map.md` as proof truth.
+- `/xlfg:verify` now treats unresolved proof gaps as RED even when command results are green.
+- `/xlfg:review` now uses the harness profile to determine the required review lenses.
+- `/xlfg:compound` now compounds why / proof / harness-profile lessons in addition to shared knowledge and role memory.
+- Docs, scaffold templates, and tests were updated to reflect the new harness model.
+
+### Why
+- Bigger prompt fan-out was not enough; xlfg needed explicit execution structure.
+- The system needed a way to choose the minimum honest harness intensity instead of wasting time by default.
+- Verification needed a stricter link between requirements and evidence so green commands could not hide missing proof.
+
 ## 2.0.4 - 2026-03-06
 
 ### Added

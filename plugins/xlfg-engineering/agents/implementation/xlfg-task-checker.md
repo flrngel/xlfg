@@ -12,10 +12,13 @@ You are a task checker for `/xlfg`.
 - task contract from `plan.md`
 - allowed file scope
 - `tasks/<task-id>/task-brief.md`
+- `why.md`
 - `diagnosis.md`
 - `solution-decision.md`
+- `harness-profile.md`
 - `flow-spec.md`
 - `test-contract.md`
+- `proof-map.md`
 - `env-plan.md`
 - `memory-recall.md` if present
 - `docs/xlfg/knowledge/current-state.md` if present
@@ -33,6 +36,7 @@ You are a task checker for `/xlfg`.
 
 ## Review rubric
 
+- Why fidelity: does the change still serve the real user / operator value?
 - Diagnosis fidelity: does the change address the real problem or capability gap?
 - Solution fidelity: does the code match `solution-decision.md` rather than a shortcut?
 - Contract match: does the code satisfy the relevant scenario IDs?
@@ -53,6 +57,7 @@ Ask:
 5. **Did the implementation drift into a temporal patch?**
 6. **Would the environment plan still make this look green if the real app were broken?**
 7. **Did a known recall-derived warning get ignored?**
+8. **Does the task overclaim proof relative to `proof-map.md`?**
 
 If any answer reveals a gap, issue `REVISE`.
 

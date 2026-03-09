@@ -1,6 +1,6 @@
 # xlfg-engineering (Claude Code plugin)
 
-`/xlfg` is a **recall-first diagnosis-first SDLC macro** for Claude Code.
+`/xlfg` is a **why-first, recall-first, proof-aware SDLC macro** for Claude Code.
 
 It is designed for:
 
@@ -18,11 +18,11 @@ It is designed for:
 | `/xlfg:prepare` | Fast scaffold/version check; compare installed tool version vs repo scaffold version and migrate only on drift |
 | `/xlfg:init` | Manual bootstrap / repair of `docs/xlfg/` + `.xlfg/` scaffolding |
 | `/xlfg:recall` | Deterministic recall over current-state, knowledge, role memory, the ledger, and local runs |
-| `/xlfg:plan` | Diagnose the problem and write the root-solution contracts before coding |
-| `/xlfg:implement` | Execute bounded task loops with explicit implementation agents |
-| `/xlfg:verify` | Run layered verification + write evidence |
-| `/xlfg:review` | Parallel multi-lens review into files |
-| `/xlfg:compound` | Convert a run into durable knowledge and refresh the next-agent handoff |
+| `/xlfg:plan` | Reload memory, write the why, diagnose the root problem, choose the harness profile, and write the shared contracts before coding |
+| `/xlfg:implement` | Execute bounded task loops with explicit implementation agents, workboard updates, and proof-aware discipline |
+| `/xlfg:verify` | Run profile-aware layered verification + write evidence |
+| `/xlfg:review` | Run only the review lenses justified by the harness profile and changed surface |
+| `/xlfg:compound` | Convert a run into durable knowledge, role memory, and a refreshed next-agent handoff |
 
 `/xlfg` intentionally mirrors Compound’s macro style: it is a set of other commands, not one giant hidden workflow prompt.
 
@@ -30,15 +30,19 @@ It is designed for:
 
 Before coding, every serious run should produce:
 
+- `why.md`
 - `memory-recall.md`
 - `diagnosis.md`
 - `solution-decision.md`
+- `harness-profile.md`
 - `flow-spec.md`
 - `test-contract.md`
 - `env-plan.md`
+- `workboard.md`
+- `proof-map.md`
 - `scorecard.md`
 
-These are the shared contracts for implementation, verification, and review.
+These are the shared contracts for implementation, verification, review, and compounding.
 
 ## Tracking model
 
@@ -50,15 +54,27 @@ These are the shared contracts for implementation, verification, and review.
 
 This split keeps git clean while preserving local run history for compounding.
 
+## Planning and implementation doctrine
+
+- Start from **why**, not from code shape.
+- Use deterministic recall before wide fan-out.
+- Load optional agents progressively; do not fan out just because they exist.
+- Choose the **minimum honest harness profile** (`quick`, `standard`, `deep`).
+- Keep `workboard.md` current; it is the run-truth ledger.
+- Keep `proof-map.md` current; green commands are not enough when proof is still vague.
+- Review is confirmation, not cleanup.
+
 ## Agents
 
 Planning:
+- `xlfg-why-analyst`
 - `xlfg-repo-mapper`
 - `xlfg-root-cause-analyst`
 - `xlfg-spec-author`
 - `xlfg-test-strategist`
 - `xlfg-env-doctor`
 - `xlfg-solution-architect`
+- `xlfg-harness-profiler`
 - `xlfg-risk-assessor`
 - `xlfg-brainstorm`
 - context investigators / researcher when needed

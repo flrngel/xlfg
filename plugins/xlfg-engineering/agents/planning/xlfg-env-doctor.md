@@ -9,6 +9,7 @@ You are the environment doctor for `/xlfg`.
 **Input you will receive:**
 - `DOCS_RUN_DIR`
 - repository files
+- `DOCS_RUN_DIR/why.md`
 - `DOCS_RUN_DIR/memory-recall.md` if present
 - `docs/xlfg/knowledge/current-state.md` if present
 - `docs/xlfg/knowledge/commands.json` if present
@@ -46,5 +47,5 @@ Define how the environment and verification harness must behave so the run does 
 - Reuse a healthy server rather than starting another one.
 - If a port may already be occupied, recommend checking health before restart.
 - Call out commands that often look green while serving the wrong build.
-- Use `current-state.md`, `memory-recall.md`, and role memory when the stack or harness genuinely matches.
+- Use `why.md`, `current-state.md`, `memory-recall.md`, and role memory when the stack or harness genuinely matches.
 - Prefer explicit failure signatures from the ledger over vague “similar stack” intuition.

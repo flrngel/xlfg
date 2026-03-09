@@ -17,6 +17,7 @@ CONTEXT_MD_TEMPLATE = """# Context
 
 - Who is this for?
 - What problem is changing?
+- What friction or failure is happening now?
 
 ## Constraints
 
@@ -24,9 +25,36 @@ CONTEXT_MD_TEMPLATE = """# Context
 - Performance:
 - Security / privacy:
 - UX / accessibility:
+- Delivery constraints:
 
 ## Open questions
 
+- ...
+"""
+
+WHY_TEMPLATE = """# Why
+
+This file keeps the run anchored to the user and product reason for the work.
+
+## Why this work matters now
+- ...
+
+## User / operator pain today
+- ...
+
+## Better state after this run
+- ...
+
+## Non-negotiable quality bar
+- ...
+
+## Things we must not optimize for
+- superficial green tests
+- a symptom-hiding patch
+- unnecessary fan-out
+- “works on my machine” proof
+
+## Non-goals
 - ...
 """
 
@@ -114,6 +142,36 @@ SOLUTION_DECISION_TEMPLATE = """# Solution decision
 - ...
 """
 
+HARNESS_PROFILE_TEMPLATE = """# Harness profile
+
+This file chooses the minimum harness intensity that still gives honest proof.
+
+## Selected profile
+- `quick` | `standard` | `deep`
+
+## Why this profile fits
+- ...
+
+## Planning fan-out
+- required agents:
+- optional agents only if triggered:
+
+## Execution budget
+- max ordered tasks:
+- max checker loops per task:
+- max parallel subagents:
+
+## Verification recommendation
+- recommended verify mode: `fast` | `full`
+- scenario classes that must get smoke or e2e:
+
+## Required review lenses
+- ...
+
+## Escalation rules
+- What conditions force this run to step up to a deeper profile?
+"""
+
 FLOW_SPEC_TEMPLATE = """# Flow spec
 
 This file is the shared **behavior contract** for implementation and verification.
@@ -121,6 +179,7 @@ This file is the shared **behavior contract** for implementation and verificatio
 ## Summary
 
 - Goal:
+- Why this flow matters:
 - Non-goals:
 
 ## State / transition model
@@ -152,6 +211,8 @@ SPEC_TEMPLATE = """# Spec
 
 ## Summary
 
+## Why
+
 ## Root cause / missing capability
 
 ## Chosen solution
@@ -173,10 +234,12 @@ PLAN_TEMPLATE = """# Plan
 - [ ] T1 <task aligned to scenario IDs> | scenario IDs: <...> | scope: <...> | checks: <...> | disproof probe: <...>
 
 ## Definition of done
-- Diagnosis confirmed or updated intentionally
+- Diagnosis confirmed or intentionally revised
 - Root solution implemented (or bounded workaround explicitly approved)
+- Why file still matches the shipped change
 - Flow spec satisfied
 - Test contract satisfied
+- Proof map has concrete evidence links for required scenarios
 - Verification green
 - Review green
 - Compound completed
@@ -224,12 +287,56 @@ ENV_PLAN_TEMPLATE = """# Environment plan
 - Avoid watch mode
 - Capture logs under `.xlfg/`
 - Do not start duplicate dev servers
+- Check actual environment state, not just process start
 - Call out stale-version or stale-bundle traps
 
 ## Known failure patterns to watch for
 - Port already in use
 - Stale server / old bundle
 - Missing seed / missing env vars
+"""
+
+WORKBOARD_TEMPLATE = """# Workboard
+
+This is the run-level task and stage ledger.
+
+## Stage status
+- prepare: DONE
+- recall: TODO
+- plan: TODO
+- implement: TODO
+- verify: TODO
+- review: TODO
+- compound: TODO
+
+## Current next action
+- ...
+
+## Tasks
+| Task | Status | Scenario IDs | Owner | Checks | Notes |
+|---|---|---|---|---|---|
+| T1 | TODO |  |  |  |  |
+
+## Blockers / escalations
+- ...
+"""
+
+PROOF_MAP_TEMPLATE = """# Proof map
+
+This file links every required scenario to concrete evidence.
+
+## Required scenarios
+| Scenario ID | Requirement kind | Required proof | Planned check | Evidence path | Status |
+|---|---|---|---|---|---|
+| P0-1 | F2P |  |  |  | UNASSESSED |
+
+## Regression guards
+| Guard | Planned check | Evidence path | Status |
+|---|---|---|---|
+| Existing behavior |  |  | UNASSESSED |
+
+## Proof gaps
+- Record any scenario that is still not honestly proven.
 """
 
 SCORECARD_TEMPLATE = """# Scorecard
@@ -266,14 +373,18 @@ def create_run(root: Path, request: str, run_id: Optional[str] = None) -> dict:
     ensure_dir(docs_dir / "tasks")
 
     safe_write(docs_dir / "context.md", CONTEXT_MD_TEMPLATE.format(request=request.strip()))
+    safe_write(docs_dir / "why.md", WHY_TEMPLATE)
     safe_write(docs_dir / "memory-recall.md", MEMORY_RECALL_TEMPLATE)
     safe_write(docs_dir / "diagnosis.md", DIAGNOSIS_TEMPLATE)
     safe_write(docs_dir / "solution-decision.md", SOLUTION_DECISION_TEMPLATE)
+    safe_write(docs_dir / "harness-profile.md", HARNESS_PROFILE_TEMPLATE)
     safe_write(docs_dir / "flow-spec.md", FLOW_SPEC_TEMPLATE)
     safe_write(docs_dir / "spec.md", SPEC_TEMPLATE)
     safe_write(docs_dir / "plan.md", PLAN_TEMPLATE)
     safe_write(docs_dir / "test-contract.md", TEST_CONTRACT_TEMPLATE)
     safe_write(docs_dir / "env-plan.md", ENV_PLAN_TEMPLATE)
+    safe_write(docs_dir / "workboard.md", WORKBOARD_TEMPLATE)
+    safe_write(docs_dir / "proof-map.md", PROOF_MAP_TEMPLATE)
     safe_write(docs_dir / "scorecard.md", SCORECARD_TEMPLATE)
 
     return {

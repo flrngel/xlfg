@@ -1,6 +1,6 @@
 ---
 name: xlfg:compound
-description: Convert an xlfg run into durable knowledge, role memory, and the next-agent handoff.
+description: Convert an xlfg run into durable knowledge, role memory, and a next-agent handoff that captures why, proof, and harness lessons.
 argument-hint: "[run-id | latest]"
 ---
 
@@ -29,13 +29,17 @@ Ensure all knowledge paths exist.
 Read (if present):
 
 - `memory-recall.md`
+- `why.md`
 - `diagnosis.md`
 - `solution-decision.md`
+- `harness-profile.md`
 - `flow-spec.md`
 - `spec.md`
 - `plan.md`
 - `test-contract.md`
 - `env-plan.md`
+- `workboard.md`
+- `proof-map.md`
 - `risk.md`
 - `verification.md`
 - `scorecard.md`
@@ -59,7 +63,9 @@ Shared memory:
 - `quality-bar.md` — missing gate discovered by this run
 
 Role memory (only when role-specific and compact):
+- `agent-memory/why-analyst.md`
 - `agent-memory/root-cause-analyst.md`
+- `agent-memory/harness-profiler.md`
 - `agent-memory/solution-architect.md`
 - `agent-memory/test-strategist.md`
 - `agent-memory/env-doctor.md`
@@ -71,6 +77,16 @@ Role memory (only when role-specific and compact):
 - `agent-memory/architecture-reviewer.md`
 - `agent-memory/security-reviewer.md`
 - `agent-memory/performance-reviewer.md`
+
+### What to prefer
+
+Prefer lessons that answer one of these:
+
+- why this class of request matters and what false success looks like
+- which harness profile was actually honest for this problem shape
+- which UX flow or proof obligation repeatedly matters
+- which harness failure signature should be detected first next time
+- which shortcut should be rejected immediately next time
 
 ### Ledger event rule
 
@@ -106,7 +122,7 @@ Do **not** compound vague summaries.
 
 Only write entries that are:
 
-- tied to a concrete symptom, decision, or contract gap
+- tied to a concrete symptom, decision, proof gap, or contract gap
 - backed by verification, review, or a repeated real failure
 - likely to help the next run directly
 - small enough that the role can retrieve them without prompt bloat
@@ -120,8 +136,9 @@ Update `docs/xlfg/knowledge/current-state.md` so the next agent has one tracked 
 Keep it short and current. It should contain only the highest-signal truths that remain useful after this run, such as:
 
 - the current service / product context if it materially changed
+- the most important why / quality-bar truths now in force
 - the most important UX / behavior contracts now in force
-- the harness / verification rules that should shape the next run immediately
+- the harness profile rules that should shape the next similar run immediately
 - repeated failure signatures and the proven first response
 - open risks / debts worth carrying forward
 - one or two strong starting recall queries
@@ -137,11 +154,18 @@ Write `DOCS_RUN_DIR/compound-summary.md` with:
 - what was appended to `ledger.jsonl`
 - what was added to role memory and why
 - how `current-state.md` changed
+- how the why / proof / harness profile shaped the final lessons
 - what shortcuts were rejected and why
 - what was intentionally not added and why
 - what the next similar run should do first
 
-## 6) Completion
+## 6) Update the workboard
+
+Mark in `workboard.md`:
+- `compound: DONE`
+- current next action: `none` or the real follow-up debt
+
+## 7) Completion
 
 Print:
 

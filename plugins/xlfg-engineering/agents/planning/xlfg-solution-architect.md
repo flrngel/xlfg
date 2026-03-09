@@ -8,6 +8,7 @@ You are the solution architect for `/xlfg`.
 
 **Input you will receive:**
 - `DOCS_RUN_DIR`
+- `why.md`
 - `memory-recall.md`
 - `diagnosis.md`
 - `flow-spec.md`
@@ -83,7 +84,8 @@ Choose a solution that addresses the **actual problem**, not just the visible sy
 ## Rules
 
 - Stay grounded in the repo’s real structure.
-- Read `current-state.md` and `memory-recall.md` before picking an option.
+- Read `current-state.md`, `why.md`, and `memory-recall.md` before picking an option.
 - Prefer smaller root-cause solutions over broad rewrites.
+- Reject options that satisfy the symptom but violate the false-success warning in `why.md`.
 - Use role memory only when the problem shape genuinely matches it.
 - If no true root solution is safe right now, say so explicitly and define the workaround as a bounded exception.

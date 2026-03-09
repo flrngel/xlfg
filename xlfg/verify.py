@@ -78,6 +78,42 @@ def _dedupe_phased_commands(detected: Dict[str, Any], mode: Literal["fast", "ful
     return phases
 
 
+
+
+def _recommended_mode_from_harness_profile(docs_run_dir: Path) -> Literal["fast", "full"]:
+    profile_path = docs_run_dir / "harness-profile.md"
+    try:
+        text = profile_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return "full"
+
+    selected_profile: Optional[str] = None
+    recommended_mode: Optional[str] = None
+    for raw_line in text.splitlines():
+        line = raw_line.strip().lower()
+        if "selected profile" in line:
+            continue
+        if line.startswith("- `quick`") or line == "- quick":
+            selected_profile = "quick"
+        elif line.startswith("- `standard`") or line == "- standard":
+            selected_profile = "standard"
+        elif line.startswith("- `deep`") or line == "- deep":
+            selected_profile = "deep"
+        if "recommended verify mode" in line:
+            has_fast = "fast" in line
+            has_full = "full" in line
+            if has_fast and not has_full:
+                recommended_mode = "fast"
+            elif has_full and not has_fast:
+                recommended_mode = "full"
+
+    if recommended_mode in {"fast", "full"}:
+        return recommended_mode  # type: ignore[return-value]
+    if selected_profile == "quick":
+        return "fast"
+    return "full"
+
+
 def _write_verify_fix_plan(docs_run_dir: Path, reason: str, rerun: str) -> None:
     fix_plan = docs_run_dir / "verify-fix-plan.md"
     content = """# Verify fix plan
@@ -95,7 +131,7 @@ def _write_verify_fix_plan(docs_run_dir: Path, reason: str, rerun: str) -> None:
 def verify(
     root: Path,
     run_id: Optional[str],
-    mode: Literal["fast", "full"] = "full",
+    mode: Optional[Literal["fast", "full"]] = None,
 ) -> Dict[str, Any]:
     """Run layered verification and write evidence.
 
@@ -116,8 +152,10 @@ def verify(
     ensure_dir(docs_run_dir)
     ensure_dir(dx_run_dir)
 
+    actual_mode: Literal["fast", "full"] = mode or _recommended_mode_from_harness_profile(docs_run_dir)
+
     detected = detect_commands(root)
-    phased_commands = _dedupe_phased_commands(detected, mode)
+    phased_commands = _dedupe_phased_commands(detected, actual_mode)
 
     ts = _dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     log_dir = dx_run_dir / "verify" / ts
@@ -135,7 +173,7 @@ def verify(
         except Exception:
             timeout_sec = None
     else:
-        timeout_sec = 600 if mode == "fast" else 1800
+        timeout_sec = 600 if actual_mode == "fast" else 1800
 
     need_doctor = any(phase in {"smoke", "e2e"} for phase, _ in phased_commands)
     doctor_report: Optional[Dict[str, Any]] = None
@@ -173,8 +211,8 @@ def verify(
         ok = False
 
     verification_md = docs_run_dir / "verification.md"
-    rerun_cmd = f"xlfg verify --run {rid} --mode {mode}"
-    header = f"## Verification run {ts} ({mode})\n\n"
+    rerun_cmd = f"xlfg verify --run {rid} --mode {actual_mode}"
+    header = f"## Verification run {ts} ({actual_mode})\n\n"
     body_lines: List[str] = []
     body_lines.append(f"Result: {'GREEN' if ok else 'RED'}")
     body_lines.append(f"Log dir: `{log_dir}`")
@@ -229,7 +267,7 @@ def verify(
     results_json = {
         "run_id": rid,
         "timestamp": ts,
-        "mode": mode,
+        "mode": actual_mode,
         "all_green": ok,
         "doctor": doctor_report,
         "cleanup": cleanup_report,

@@ -22,7 +22,7 @@ def _print_json(obj: Any) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="xlfg",
-        description="XLFG: diagnosis-first SDLC harness",
+        description="XLFG: why-first, proof-aware SDLC harness",
     )
     parser.add_argument("--version", action="store_true", help="Print version and exit")
 
@@ -58,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
     p_verify = subparsers.add_parser("verify", help="Run layered verification and write evidence")
     p_verify.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
     p_verify.add_argument("--run", dest="run_id", default=None, help="Run id (default: latest)")
-    p_verify.add_argument("--mode", choices=["fast", "full"], default="full")
+    p_verify.add_argument("--mode", choices=["auto", "fast", "full"], default="auto")
 
     args = parser.parse_args(argv)
 
@@ -125,7 +125,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "verify":
         ensure_scaffold(root, __version__)
-        result = verify(root, run_id=args.run_id, mode=args.mode)
+        mode = None if args.mode == "auto" else args.mode
+        result = verify(root, run_id=args.run_id, mode=mode)
         _print_json({"root": str(root), **result})
         return 0 if result.get("ok") else 2
 

@@ -1,6 +1,6 @@
 ---
 name: xlfg:verify
-description: Run layered verification (fast, smoke, e2e, regression) and write evidence.
+description: Run profile-aware layered verification and update the proof map, scorecard, and workboard with evidence.
 argument-hint: "[run-id | latest] [fast|full]"
 ---
 
@@ -17,7 +17,7 @@ Treat arguments as:
 - First token: `run-id` (or `latest`)
 - Optional second token: `fast` or `full`
 
-Default mode: `full`.
+If no mode is supplied, use the recommended verify mode from `harness-profile.md`.
 
 ## 1) Select run
 
@@ -32,11 +32,15 @@ Define:
 Read first (if present):
 
 - `memory-recall.md`
+- `why.md`
 - `diagnosis.md`
 - `solution-decision.md`
+- `harness-profile.md`
 - `flow-spec.md`
 - `test-contract.md`
 - `env-plan.md`
+- `workboard.md`
+- `proof-map.md`
 - `scorecard.md`
 - `run-summary.md`
 - `docs/xlfg/knowledge/current-state.md`
@@ -46,13 +50,20 @@ Read first (if present):
 - `docs/xlfg/knowledge/agent-memory/env-doctor.md`
 - `docs/xlfg/knowledge/agent-memory/verify-reducer.md`
 
+Before running commands, mark in `workboard.md`:
+- `verify: IN_PROGRESS`
+- current next action
+
 ## 2) Decide the layered verify plan
+
+The verify plan must match **both** the selected harness profile and the `proof-map.md` obligations.
 
 ### `fast`
 
 Only the fastest feedback loop:
 
 - lint / format / typecheck / static checks
+- any ultra-cheap scenario proof explicitly required by `proof-map.md`
 
 ### `full`
 
@@ -60,16 +71,17 @@ Run layers in this order:
 
 1. Fast checks
 2. Scenario-targeted smoke checks from `test-contract.md`
-3. Required e2e / real-flow checks
+3. Required e2e / real-flow checks from `proof-map.md`
 4. Broader regression suites and build/package checks
 
 Important rules:
 
 - **Do not jump straight to giant e2e by default.**
 - **Verify the root solution, not just the absence of the old symptom.**
-- Use `test-contract.md` to decide which P0/P1 flows truly deserve smoke or e2e.
+- Use `test-contract.md` and `proof-map.md` to decide which P0/P1 flows truly deserve smoke or e2e.
 - Prefer **environment-state verification** when relevant (healthy port, correct bundle, correct endpoint behavior), not just proof that a start command was invoked.
 - If `memory-recall.md`, `current-state.md`, or failure memory describes a repeated wrong-green trap, make sure the verify plan explicitly guards against it.
+- A green command run is **not** enough if the proof map still has an unproven required scenario.
 
 ## 3) Environment doctor (before smoke / e2e)
 
@@ -91,6 +103,7 @@ Run Task `xlfg-verify-runner` with:
 - ordered layered commands
 - any relevant notes from `env-plan.md`
 - any repeated failure signatures from `memory-recall.md` or `current-state.md`
+- any explicit proof obligations from `proof-map.md`
 
 Runner responsibilities:
 
@@ -105,6 +118,7 @@ Runner responsibilities:
 - for Node-based commands, set `CI=1` unless the repo forbids it
 - do not run watch mode
 - if a command appears to hang and `timeout` exists, use it
+- if the same harness failure signature reappears, stop and classify it instead of looping blindly
 
 ## 5) Reduce via verify reducer
 
@@ -118,17 +132,40 @@ Reducer responsibilities:
 
 - write `verification.md`
 - update `scorecard.md`
+- update `proof-map.md`
+- update `workboard.md`
 - if RED, write `verify-fix-plan.md`
 - identify the **first actionable failure only**
 - call out if the test contract is too weak to prove the chosen solution
 - call out if a known repeated harness failure reappeared
+- mark proof gaps explicitly when the commands were green but the requirement still is not honestly proven
 
-## 6) If failing, iterate correctly
+## 6) Gate rule
+
+Verification is only GREEN when all are true:
+
+- required commands passed for the selected mode
+- required environment state was healthy when needed
+- `scorecard.md` is green for required F2P / P2P items
+- `proof-map.md` has no unresolved required proof gaps
+- the evidence still matches `why.md` and the chosen root solution
+
+If commands are green but the proof map still has a required gap, the run is RED.
+
+## 7) If failing, iterate correctly
 
 If verification is RED:
 
 - fix the first actionable failure
 - update `diagnosis.md` or `plan.md` if the failure changes the understanding of the problem
+- update `harness-profile.md` if the proof requirement was underestimated
 - re-run `/xlfg:verify`
 
 Do not continue to review while verification is RED.
+
+## 8) Finish verification phase
+
+If GREEN:
+- update `workboard.md` to `verify: DONE`
+- set `review: NEXT`
+- record the evidence location as the current next action

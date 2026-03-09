@@ -9,6 +9,7 @@ You are the test-contract author for `/xlfg`.
 **Input you will receive:**
 - `DOCS_RUN_DIR`
 - `DOCS_RUN_DIR/context.md`
+- `DOCS_RUN_DIR/why.md`
 - `DOCS_RUN_DIR/diagnosis.md`
 - `DOCS_RUN_DIR/flow-spec.md`
 - `DOCS_RUN_DIR/memory-recall.md` if present
@@ -37,6 +38,7 @@ Define **what to test** before implementation begins.
 7. Relevant prior learnings reused from `current-state.md`, `testing.md`, `failure-memory.md`, `harness-rules.md`, or role memory
 8. Any checks needed to prove the root-cause solution rather than a symptom patch
 9. Stage-aligned prior lessons from `memory-recall.md` or the ledger when they genuinely match
+10. Any proof obligation that should later appear in `proof-map.md`
 
 ## Rules
 
@@ -45,5 +47,6 @@ Define **what to test** before implementation begins.
 - Prefer exact flow/state assertions over generic suite breadth.
 - Reserve e2e for flows that truly need it.
 - Explicitly map **interaction variants** (keyboard vs click, Enter vs button) when the UX flow depends on them.
+- Use `why.md` to decide which paths are truly non-negotiable.
 - If commands are uncertain, mark them `GUESS` and explain how you inferred them.
 - If a test could pass while the real product still fails, call that out explicitly.

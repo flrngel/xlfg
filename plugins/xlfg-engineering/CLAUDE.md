@@ -17,9 +17,10 @@ Normal evolution should bump **patch** only.
 ## Read order for future agents
 
 1. `NEXT_AGENT_CONTEXT.md`
-2. `README.md`
-3. the command files under `commands/`
-4. scaffold + tests
+2. `docs/deer-flow-harness-review.md`
+3. `README.md`
+4. the command files under `commands/`
+5. scaffold + tests
 
 Every shipped bundle must contain enough context that the next agent can continue without extra explanation. `NEXT_AGENT_CONTEXT.md` is the required handoff document for this repo.
 
@@ -29,6 +30,7 @@ Every shipped bundle must contain enough context that the next agent can continu
 - Subcommands use `xlfg:` prefix: `/xlfg:prepare`, `/xlfg:init`, `/xlfg:recall`, `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, ...
 - Planning agents should write contracts or analysis files.
 - Implementation agents should write task-scoped artifacts under `tasks/<task-id>/`.
+- New harness-shaping files should usually be added to the run scaffold **only** if they clarify execution truth or proof truth.
 
 ## Context-budget discipline
 
@@ -45,8 +47,10 @@ Put examples and long guidance in the body (loads on invocation).
 - `/xlfg:init` is manual bootstrap / repair only.
 - `/xlfg` is a macro; keep the actual workflow in the subcommands.
 - `/xlfg` must always use deterministic recall before broad repo scanning.
+- `/xlfg:plan` must write `why.md`, `harness-profile.md`, `workboard.md`, and `proof-map.md` before implementation.
+- `/xlfg:plan` should load optional agents progressively instead of always fanning out.
 - `/xlfg:plan` must finish before `/xlfg:implement` starts.
-- `/xlfg` must never claim success unless verification evidence exists.
+- `/xlfg` must never claim success unless verification evidence exists and the proof map is honest.
 - Review is a confirmation gate, not a cleanup crew.
 
 ## Docs

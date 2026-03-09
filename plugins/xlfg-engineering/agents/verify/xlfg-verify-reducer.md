@@ -10,6 +10,10 @@ You reduce verification artifacts into durable run documents.
 - `DOCS_RUN_DIR`
 - `DX_RUN_DIR`
 - a verify timestamp (`<ts>`) or explicit results path
+- `why.md` if present
+- `harness-profile.md` if present
+- `proof-map.md` if present
+- `workboard.md` if present
 - `docs/xlfg/knowledge/current-state.md` if present
 - `docs/xlfg/knowledge/agent-memory/verify-reducer.md` if present
 - `docs/xlfg/knowledge/ledger.jsonl` if present
@@ -22,6 +26,8 @@ You reduce verification artifacts into durable run documents.
 - Write canonical:
   - `DOCS_RUN_DIR/verification.md`
   - `DOCS_RUN_DIR/scorecard.md`
+  - `DOCS_RUN_DIR/proof-map.md`
+  - `DOCS_RUN_DIR/workboard.md`
 - If any command failed, also write:
   - `DOCS_RUN_DIR/verify-fix-plan.md`
 - Do not coordinate via chat; hand off only through files.
@@ -32,9 +38,12 @@ You reduce verification artifacts into durable run documents.
 - If failures exist, identify only the **first actionable failure**.
 - Keep fix guidance minimal and executable.
 - Update `scorecard.md` in terms of the scenario IDs from `flow-spec.md` / `test-contract.md` when possible.
+- Update `proof-map.md` honestly; unresolved required proof gaps keep the run RED even when commands are green.
+- Update `workboard.md` so the stage truth matches the verification result.
 - Prefer environment-state evidence over superficial command-success evidence when the flow depends on a running app.
 - Use role memory only when it helps classify a repeated failure signature.
 - Favor real environment evidence and harness rules over command-success cosmetics.
+- Call out when the evidence no longer matches `why.md` or the chosen root solution.
 - Call out if a known repeated failure or wrong-green trap from current-state or prior recall reappeared.
 
 ## Required `verification.md` sections

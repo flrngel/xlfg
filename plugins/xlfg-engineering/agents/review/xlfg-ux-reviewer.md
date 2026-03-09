@@ -8,8 +8,11 @@ You are a UX + accessibility reviewer.
 
 Read first (if present):
 - `memory-recall.md`
+- `why.md`
+- `harness-profile.md`
 - `flow-spec.md`
 - `test-contract.md`
+- `proof-map.md`
 - `verification.md`
 - `scorecard.md`
 - `verify-fix-plan.md`

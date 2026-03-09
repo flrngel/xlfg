@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from .util import append_unique_line, ensure_dir, safe_write
 
-SCAFFOLD_SCHEMA_VERSION = 4
+SCAFFOLD_SCHEMA_VERSION = 6
 
 INDEX_MD = """# xlfg
 
@@ -22,7 +22,7 @@ Tracked durable knowledge:
 
 Local run evidence (do not commit by default):
 
-- `runs/` — one folder per run containing diagnosis, solution decisions, contracts, plans, reviews, scorecards, and summaries
+- `runs/` — one folder per run containing why, diagnosis, solution decisions, harness profiles, contracts, plans, workboards, proof maps, reviews, scorecards, and summaries
 - `.xlfg/runs/` — raw command outputs, screenshots, traces, doctor reports
 
 ## Why `runs/` is local-only by default
@@ -37,14 +37,18 @@ Promote only the reusable lesson, not the entire run.
 
 ## Core workflow contract
 
-Define **what the real problem is** and **what to build / test** *before* implementation:
+Define **why this work matters**, **what the real problem is**, and **what to build / test** *before* implementation:
 
-1. `diagnosis.md` — root problem or missing capability
-2. `solution-decision.md` — chosen solution and rejected shortcuts
-3. `flow-spec.md` — UX / behavior contract
-4. `test-contract.md` — F2P + P2P test mapping
-5. `env-plan.md` — exact harness and dev-server plan
-6. `scorecard.md` — step-level status for requirements and regressions
+1. `why.md` — user / operator reason, non-goals, and quality bar for the run
+2. `diagnosis.md` — root problem or missing capability
+3. `solution-decision.md` — chosen solution and rejected shortcuts
+4. `harness-profile.md` — the minimum harness intensity that still gives honest proof
+5. `flow-spec.md` — UX / behavior contract
+6. `test-contract.md` — F2P + P2P test mapping
+7. `env-plan.md` — exact harness and dev-server plan
+8. `workboard.md` — run-level stage + task ledger
+9. `proof-map.md` — scenario-to-evidence map
+10. `scorecard.md` — step-level status for requirements and regressions
 
 ## Agent memory model
 
@@ -62,15 +66,19 @@ QUALITY_BAR_MD = """# xlfg quality bar
 
 Nothing is "done" unless:
 
+- **Why is explicit** (`why.md` exists and the run still serves it)
 - **Diagnosis is explicit** (`diagnosis.md` exists)
 - **The root solution is explicit** (`solution-decision.md` exists and records rejected shortcuts)
 - **Behavior is contracted first** (`flow-spec.md` exists)
 - **Test intent is shared** (`test-contract.md` exists and maps scenarios to checks)
+- **Harness profile is explicit** (`harness-profile.md` exists and is appropriate for the risk)
 - **Environment is controlled** (`env-plan.md` explains ports, healthchecks, and cleanup)
 - **New behavior is proven** (Fail → Pass)
 - **Existing behavior is preserved** (Pass → Pass)
 - **Lint / typecheck / build** pass when applicable
 - **User-facing flows are validated** (happy path, alternates, failure path, a11y)
+- **Workboard is current** (`workboard.md` reflects stage / task truth)
+- **Proof map is concrete** (`proof-map.md` links required scenarios to evidence or an explicit proof gap)
 - **Unexpected failures are compounded** into failure memory / harness rules / role memory when warranted
 - **Operational plan exists** (monitoring + rollback notes)
 
@@ -327,7 +335,9 @@ Only compound something into role memory when it is:
 
 ## Files
 
+- `why-analyst.md`
 - `root-cause-analyst.md`
+- `harness-profiler.md`
 - `solution-architect.md`
 - `test-strategist.md`
 - `env-doctor.md`
@@ -339,6 +349,34 @@ Only compound something into role memory when it is:
 - `architecture-reviewer.md`
 - `security-reviewer.md`
 - `performance-reviewer.md`
+"""
+
+WHY_ANALYST_MEMORY_MD = """# Agent memory: why-analyst
+
+Store reusable product-intent patterns that keep runs anchored to the real user or operator value.
+
+## Entry template
+
+## Why pattern: <name>
+- **Request shape**:
+- **Real stakeholder / user**:
+- **What false success looks like**:
+- **Quality bar that matters**:
+- **Links**:
+"""
+
+HARNESS_PROFILER_MEMORY_MD = """# Agent memory: harness-profiler
+
+Store rules for choosing the minimum harness intensity that still gives honest proof.
+
+## Entry template
+
+## Profile rule: <name>
+- **Problem / repo shape**:
+- **Choose profile**: quick | standard | deep
+- **Why this profile is sufficient**:
+- **Escalation trigger**:
+- **Links**:
 """
 
 ROOT_CAUSE_MEMORY_MD = """# Agent memory: root-cause-analyst
@@ -549,6 +587,11 @@ If you intentionally want to share a specific run, copy or export the relevant f
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
+    "2.0.5": [
+        "Added `why.md`, `harness-profile.md`, `workboard.md`, and `proof-map.md` to every run scaffold.",
+        "`/xlfg` now selects verification depth from the run’s harness profile instead of always assuming a full run.",
+        "Added `why-analyst` and `harness-profiler` role memory plus the bundle-level DeerFlow harness review notes.",
+    ],
     "2.0.4": [
         "`/xlfg` now requires deterministic recall before planning.",
         "Added `docs/xlfg/knowledge/current-state.md` as the tracked handoff document for the next agent.",
@@ -582,6 +625,10 @@ def _manifest(tool_version: str) -> Dict[str, Any]:
         "agent_memory": "enabled",
         "recall": "deterministic-lexical",
         "memory_ledger": "append-only-jsonl",
+        "why_file": "required",
+        "harness_profiles": "quick-standard-deep",
+        "workboard": "required",
+        "proof_map": "required",
     }
 
 
@@ -741,7 +788,9 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
         "docs/xlfg/knowledge/queries.md": QUERIES_MD,
         "docs/xlfg/knowledge/commands.json": COMMANDS_JSON,
         "docs/xlfg/knowledge/agent-memory/README.md": AGENT_MEMORY_INDEX_MD,
+        "docs/xlfg/knowledge/agent-memory/why-analyst.md": WHY_ANALYST_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/root-cause-analyst.md": ROOT_CAUSE_MEMORY_MD,
+        "docs/xlfg/knowledge/agent-memory/harness-profiler.md": HARNESS_PROFILER_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/solution-architect.md": SOLUTION_ARCHITECT_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/test-strategist.md": TEST_STRATEGIST_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/env-doctor.md": ENV_DOCTOR_MEMORY_MD,

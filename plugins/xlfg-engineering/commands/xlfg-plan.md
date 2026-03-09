@@ -1,6 +1,6 @@
 ---
 name: xlfg:plan
-description: Recall first, diagnose the real problem, reject shortcut fixes, and write the shared contracts before coding.
+description: Start from why, load the right memory, diagnose the root problem, pick the minimum honest harness profile, and write the shared contracts before coding.
 argument-hint: "[feature description, bugfix, or product request]"
 ---
 
@@ -16,10 +16,12 @@ If the request is empty, ask the user what they want to build or fix and stop un
 
 1. **No coding in this command.** Planning only.
 2. **Recall is mandatory.** Do not broad-scan the repo until `memory-recall.md` exists.
-3. **No late-thinking shortcuts.** The goal is the root solution, not the fastest patch.
-4. **Do not hide behind “run the full suite later.”** The test contract must be scenario-based and explicit.
-5. **Ask the user only blocking questions.** If a safe default exists, record it and proceed.
-6. **Disconfirm yourself.** Every chosen solution must record what evidence would prove it wrong.
+3. **Start with why.** If `why.md` is weak, every later artifact becomes shallow.
+4. **No late-thinking shortcuts.** The goal is the root solution, not the fastest patch.
+5. **Do not hide behind “run the full suite later.”** The test contract must be scenario-based and explicit.
+6. **Pick the minimum honest harness profile.** Do not over-fan-out by default.
+7. **Ask the user only blocking questions.** If a safe default exists, record it and proceed.
+8. **Disconfirm yourself.** Every chosen solution must record what evidence would prove it wrong.
 
 ## Phase 0 — Fast scaffold check + create run
 
@@ -33,14 +35,18 @@ Create a new `RUN_ID=<YYYYMMDD-HHMMSS>-<slug>` and these paths:
 Ensure the run contains at least:
 
 - `context.md`
+- `why.md`
 - `memory-recall.md`
 - `diagnosis.md`
 - `solution-decision.md`
+- `harness-profile.md`
 - `flow-spec.md`
 - `spec.md`
 - `plan.md`
 - `test-contract.md`
 - `env-plan.md`
+- `workboard.md`
+- `proof-map.md`
 - `scorecard.md`
 - `tasks/`
 
@@ -84,37 +90,74 @@ Write `memory-recall.md` with all of these sections filled:
 
 You may not proceed to repo fan-out until `memory-recall.md` is non-placeholder.
 
-## Phase 2 — Map the repo and hidden requirements
+## Phase 2 — Write the why before the what
 
-Run these agents in parallel. Each agent must write to its owned file.
+Run `xlfg-why-analyst` → `why.md`
+
+`why.md` must make these concrete:
+- who is affected
+- what failure / friction / missed capability matters now
+- what false success would look like
+- the non-negotiable quality bar for this run
+- non-goals
+
+If the why is still mushy after one pass, stop and ask a blocking question instead of pretending the goal is clear.
+
+## Phase 3 — Minimum mapping and core diagnosis
+
+Do the smallest repo fan-out that can support an honest diagnosis.
+
+### Required core agents
+
+Run these agents. Each agent must write to its owned file.
 
 - `xlfg-repo-mapper` → `repo-map.md`
-- `xlfg-context-adjacent-investigator` → `context/adjacent.md`
-- `xlfg-context-constraints-investigator` → `context/constraints.md`
-- `xlfg-context-unknowns-investigator` → `context/unknowns.md`
-- `xlfg-brainstorm` → `brainstorm.md` only if the request is materially ambiguous
-- `xlfg-researcher` → `research.md` only if the stack or domain is unfamiliar / high-risk
-
-## Phase 3 — Diagnose before solutioning
-
-Run these agents next:
-
 - `xlfg-root-cause-analyst` → `diagnosis.md`
 - `xlfg-spec-author` → `flow-spec.md`
 - `xlfg-test-strategist` → `test-contract.md`
 - `xlfg-env-doctor` → `env-plan.md`
 - `xlfg-solution-architect` → `solution-decision.md`
+- `xlfg-harness-profiler` → `harness-profile.md`
+
+### Optional agents — only when triggered
+
+Run optional agents **only** if the core diagnosis shows a real need:
+
+- `xlfg-context-adjacent-investigator` → `context/adjacent.md` when nearby systems or sibling flows materially affect the change
+- `xlfg-context-constraints-investigator` → `context/constraints.md` when infra / policy / API / deployment constraints meaningfully shape the solution
+- `xlfg-context-unknowns-investigator` → `context/unknowns.md` when unknowns are blocking or high-risk
+- `xlfg-brainstorm` → `brainstorm.md` only if the request is materially ambiguous after `why.md`
+- `xlfg-researcher` → `research.md` only if the stack or domain is unfamiliar / high-risk
 - `xlfg-risk-assessor` → `risk.md` when auth, money, destructive data, or reliability risk is present
 
-Every specialist should prefer `current-state.md`, `memory-recall.md`, and exact role memory over broad vague recollection.
+Do **not** fan out to optional agents just because they exist.
 
-## Phase 4 — Reduce into canonical planning files
+## Phase 4 — Choose the harness profile
+
+`harness-profile.md` must choose the smallest honest profile:
+
+- `quick` — tight bugfix / local change / low risk / limited scope
+- `standard` — normal product work with moderate scope or one user-facing flow
+- `deep` — auth, money, destructive data, migrations, high reliability risk, or large unknowns
+
+The profile must define:
+- max ordered tasks
+- max checker loops per task
+- max parallel subagents
+- recommended verify mode (`fast` or `full`)
+- required review lenses
+- escalation triggers that force stepping up to a deeper profile
+
+If the request is risky but the profile stays `quick`, explain why that is still honest. Otherwise escalate.
+
+## Phase 5 — Reduce into canonical planning files
 
 Write `spec.md` and `plan.md` yourself by reducing the agent outputs.
 
 ### `spec.md` must include
 
 - the problem in plain language
+- the why behind the work
 - the actual root cause / missing capability
 - the chosen solution
 - rejected shortcut solutions and why they are not acceptable
@@ -124,7 +167,7 @@ Write `spec.md` and `plan.md` yourself by reducing the agent outputs.
 
 ### `plan.md` must include
 
-Keep the plan coarse. Aim for **3–7 tasks**, not a task explosion.
+Keep the plan coarse. Aim for **3–6 tasks**, not a task explosion.
 
 For each task include:
 
@@ -138,7 +181,22 @@ For each task include:
 - stop conditions / blockers
 - any recall-derived rule that must not be violated
 
-The plan must align to `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, and `memory-recall.md`.
+The plan must align to `why.md`, `diagnosis.md`, `solution-decision.md`, `harness-profile.md`, `flow-spec.md`, and `memory-recall.md`.
+
+### `workboard.md` must include
+
+- stage status for recall / plan / implement / verify / review / compound
+- one row per planned task with status, owner, scenario IDs, checks, and notes
+- current next action
+- blockers / escalations
+
+### `proof-map.md` must include
+
+- every required F2P scenario
+- every relevant P2P regression guard
+- the planned proof type for each item
+- the exact command / artifact / log expected when verification runs
+- initial status set to `UNASSESSED`
 
 ### `scorecard.md` must include
 
@@ -152,11 +210,15 @@ The plan must align to `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, a
 Do **not** continue to implementation until all are true:
 
 - `memory-recall.md` exists and is specific
+- `why.md` exists and explains the real value of the work
 - `diagnosis.md` exists and identifies the real problem or capability gap
 - `solution-decision.md` exists and records rejected shortcuts
+- `harness-profile.md` exists and is justified
 - `flow-spec.md` is concrete enough to test from
 - `test-contract.md` maps scenarios to explicit checks
-- `env-plan.md` explains how local verification will avoid server/harness traps
+- `env-plan.md` explains how local verification will avoid server / harness traps
+- `workboard.md` reflects the chosen tasks and current next action
+- `proof-map.md` names the proof expected for each required scenario
 - `plan.md` has bounded tasks with file scope and targeted checks
 - at least one disconfirming probe exists in `solution-decision.md` or `plan.md`
 
@@ -166,5 +228,7 @@ Print:
 
 - `RUN_ID`
 - the run folder path
+- the selected harness profile
+- the recommended verify mode
 - any blocking user questions (if truly blocking)
 - a one-paragraph planning summary
