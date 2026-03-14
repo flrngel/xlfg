@@ -22,15 +22,18 @@ The user's request is ambiguous — they know roughly WHAT they want but not exa
 
 1. **Read the request** from `DOCS_RUN_DIR/context.md`.
 2. **Inspect the codebase** to understand current state, patterns, and constraints.
-3. **Read `docs/xlfg/knowledge/`** for relevant past decisions and patterns.
+3. **Read xlfg knowledge** in this order when available:
+   - `docs/xlfg/knowledge/_views/current-state.md`
+   - relevant generated views under `docs/xlfg/knowledge/_views/`
+   - exact source cards/events only when you need more precision
 4. **Propose 2–3 concrete approaches**, each with:
-   - One-sentence summary
-   - How it works (concretely — reference files/functions, not abstract descriptions)
-   - Pros (what it gets right)
-   - Cons (what it trades away)
-   - Effort estimate (S/M/L)
+   - one-sentence summary
+   - how it works (concretely — reference files/functions, not abstract descriptions)
+   - pros (what it gets right)
+   - cons (what it trades away)
+   - effort estimate (S/M/L)
 5. **Recommend one approach** with a clear rationale.
-6. **Flag blocking questions** — only if no safe default exists.
+6. **Flag blocking questions** only if no safe default exists.
 
 ## Output format
 

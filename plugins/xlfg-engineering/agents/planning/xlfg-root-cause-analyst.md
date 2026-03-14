@@ -14,9 +14,9 @@ You are the diagnosis specialist for `/xlfg`.
 - `DOCS_RUN_DIR/context/*.md` if present
 - `DOCS_RUN_DIR/brainstorm.md` if present
 - `DOCS_RUN_DIR/memory-recall.md` if present
-- `docs/xlfg/knowledge/current-state.md` if present
-- `docs/xlfg/knowledge/agent-memory/root-cause-analyst.md` if present
-- `docs/xlfg/knowledge/ledger.jsonl` if present
+- `docs/xlfg/knowledge/_views/current-state.md` if present
+- `docs/xlfg/knowledge/_views/agent-memory/root-cause-analyst.md` if present
+- `docs/xlfg/knowledge/_views/ledger.jsonl` if present
 - relevant repository files
 - verification or failure logs if this is a bugfix
 

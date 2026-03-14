@@ -17,7 +17,7 @@ Normal evolution should bump **patch** only.
 ## Read order for future agents
 
 1. `NEXT_AGENT_CONTEXT.md`
-2. `docs/deer-flow-harness-review.md`
+2. `docs/branch-safe-knowledge.md`
 3. `README.md`
 4. the command files under `commands/`
 5. scaffold + tests
@@ -52,13 +52,31 @@ Put examples and long guidance in the body (loads on invocation).
 - `/xlfg:plan` must finish before `/xlfg:implement` starts.
 - `/xlfg` must never claim success unless verification evidence exists and the proof map is honest.
 - Review is a confirmation gate, not a cleanup crew.
+- `/xlfg:compound` must write immutable cards/event files, not edit shared generated views.
 
 ## Docs
 
-Tracked durable artifacts should live under `docs/xlfg/knowledge/` and `docs/xlfg/meta.json` in the target repo.
+### Tracked durable artifacts in target repos
 
-The single tracked handoff document in a target repo should be `docs/xlfg/knowledge/current-state.md`.
+- `docs/xlfg/meta.json`
+- `docs/xlfg/index.md`
+- `docs/xlfg/knowledge/service-context.md`
+- `docs/xlfg/knowledge/write-model.md`
+- `docs/xlfg/knowledge/commands.json`
+- `docs/xlfg/knowledge/cards/`
+- `docs/xlfg/knowledge/events/`
+- `docs/xlfg/knowledge/agent-memory/<role>/cards/`
+- `docs/xlfg/migrations/`
 
-Local episodic run evidence should live under `docs/xlfg/runs/`.
+### Local generated read models in target repos
 
-Ephemeral logs should live under `.xlfg/` and should be safe to delete.
+- `docs/xlfg/knowledge/_views/current-state.md`
+- `docs/xlfg/knowledge/_views/*.md`
+- `docs/xlfg/knowledge/_views/agent-memory/*.md`
+- `docs/xlfg/knowledge/_views/ledger.jsonl`
+- `docs/xlfg/knowledge/_views/worktree.md`
+
+### Local run evidence
+
+- `docs/xlfg/runs/`
+- `.xlfg/`

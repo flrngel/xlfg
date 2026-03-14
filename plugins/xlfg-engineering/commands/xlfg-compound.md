@@ -1,32 +1,35 @@
 ---
 name: xlfg:compound
-description: Convert an xlfg run into durable knowledge, role memory, and a next-agent handoff that captures why, proof, and harness lessons.
+description: Convert an xlfg run into immutable durable knowledge, role memory, and rebuilt local read models.
 argument-hint: "[run-id | latest]"
 ---
 
 # /xlfg:compound
 
-Turn a completed run into durable knowledge that improves future runs.
+Turn a completed run into durable knowledge that improves future runs **without forcing branches to edit the same shared rollup files**.
 
 <input>#$ARGUMENTS</input>
 
 ## 1) Select run
 
-- If `latest` or empty: newest folder under `docs/xlfg/runs/`
-- Otherwise: treat argument as run id
+- if `latest` or empty: newest folder under `docs/xlfg/runs/`
+- otherwise: treat argument as run id
 
 Paths:
 
 - `DOCS_RUN_DIR=docs/xlfg/runs/<run-id>`
-- `KB_DIR=docs/xlfg/knowledge`
-- `AGENT_MEMORY_DIR=docs/xlfg/knowledge/agent-memory`
-- `LEDGER=docs/xlfg/knowledge/ledger.jsonl`
+- `KB_ROOT=docs/xlfg/knowledge`
+- `KB_CARDS=docs/xlfg/knowledge/cards`
+- `KB_EVENTS=docs/xlfg/knowledge/events`
+- `KB_VIEWS=docs/xlfg/knowledge/_views`
+- `AGENT_MEMORY=docs/xlfg/knowledge/agent-memory`
+- `WORKTREE_CTX=.xlfg/worktree.json`
 
-Ensure all knowledge paths exist.
+Ensure the scaffold exists. If `WORKTREE_CTX` is missing, regenerate or infer the current git/worktree context before writing durable memory.
 
-## 2) Read run artifacts
+## 2) Read run artifacts and knowledge context
 
-Read (if present):
+Read from the run if present:
 
 - `memory-recall.md`
 - `why.md`
@@ -46,51 +49,92 @@ Read (if present):
 - `verify-fix-plan.md`
 - `review-summary.md`
 - `run-summary.md`
-- `docs/xlfg/knowledge/current-state.md`
 
-## 3) Extract only reusable, verified lessons
+Also read if present:
 
-Append small, specific entries to the right knowledge files, and append structured durable events to `ledger.jsonl`:
+- `docs/xlfg/knowledge/service-context.md`
+- `docs/xlfg/knowledge/write-model.md`
+- `docs/xlfg/knowledge/commands.json`
+- `docs/xlfg/knowledge/_views/current-state.md`
+- `docs/xlfg/knowledge/_views/failure-memory.md`
+- `docs/xlfg/knowledge/_views/harness-rules.md`
+- `docs/xlfg/knowledge/_views/worktree.md`
+- relevant role-memory views under `docs/xlfg/knowledge/_views/agent-memory/`
 
-Shared memory:
-- `current-state.md` — short tracked handoff for the next agent
-- `patterns.md` — durable implementation or design patterns
-- `decision-log.md` — durable decisions and rejected shortcuts worth remembering
-- `testing.md` — scenario-level testing lessons
-- `ux-flows.md` — durable UX / keyboard / failure-path expectations
-- `failure-memory.md` — repeated unexpected failures and proven fixes
-- `harness-rules.md` — dev-server, watch-mode, port, readiness, cleanup rules
-- `quality-bar.md` — missing gate discovered by this run
+## 3) Choose the write namespace
 
-Role memory (only when role-specific and compact):
-- `agent-memory/why-analyst.md`
-- `agent-memory/root-cause-analyst.md`
-- `agent-memory/harness-profiler.md`
-- `agent-memory/solution-architect.md`
-- `agent-memory/test-strategist.md`
-- `agent-memory/env-doctor.md`
-- `agent-memory/test-implementer.md`
-- `agent-memory/task-implementer.md`
-- `agent-memory/task-checker.md`
-- `agent-memory/verify-reducer.md`
-- `agent-memory/ux-reviewer.md`
-- `agent-memory/architecture-reviewer.md`
-- `agent-memory/security-reviewer.md`
-- `agent-memory/performance-reviewer.md`
+Use the current git/worktree context to choose the namespace:
 
-### What to prefer
+- `branch-slug`
+- `worktree name`
+- `default branch`
+- `knowledge write namespace`
 
-Prefer lessons that answer one of these:
+Every durable lesson written by this run must go into a **new immutable file** under the active branch slug. Do not edit an existing card unless you are intentionally repairing a mistaken file from the same branch and run.
 
-- why this class of request matters and what false success looks like
-- which harness profile was actually honest for this problem shape
-- which UX flow or proof obligation repeatedly matters
-- which harness failure signature should be detected first next time
-- which shortcut should be rejected immediately next time
+## 4) Admission rule
 
-### Ledger event rule
+Do **not** compound vague summaries.
 
-For each lesson that survives the admission gate, append **one JSON object per line** to `ledger.jsonl`.
+Only admit lessons that are:
+
+- tied to a concrete symptom, decision, proof gap, or contract gap
+- backed by verification, review, or a repeated real failure
+- likely to help the next run directly
+- small enough that the role can retrieve them without prompt bloat
+
+Prefer shared memory unless the lesson is clearly role-specific.
+
+## 5) Write immutable shared cards
+
+For each admitted shared lesson, write one markdown card under the matching kind:
+
+- `cards/current-state/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+- `cards/patterns/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+- `cards/decision-log/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+- `cards/testing/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+- `cards/ux-flows/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+- `cards/failure-memory/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+- `cards/harness-rules/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+- `cards/quality-bar/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+
+Card guidance:
+
+- one lesson per card
+- include a clear heading
+- include the run id
+- include the concrete symptom / rule / proof / rejection
+- keep it small and specific
+
+## 6) Write immutable role-memory cards
+
+Only when a lesson is clearly specialist-specific, write one markdown card under:
+
+- `agent-memory/<role>/cards/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+
+Roles that may receive cards:
+
+- `why-analyst`
+- `root-cause-analyst`
+- `harness-profiler`
+- `solution-architect`
+- `test-strategist`
+- `env-doctor`
+- `test-implementer`
+- `task-implementer`
+- `task-checker`
+- `verify-reducer`
+- `ux-reviewer`
+- `architecture-reviewer`
+- `security-reviewer`
+- `performance-reviewer`
+
+## 7) Write immutable event files
+
+For each admitted lesson, also write one structured event JSON file under:
+
+- `events/<branch-slug>/<timestamp>--<run-id>--<slug>.json`
+
 Prefer `event: "memory.added"`.
 
 Required fields:
@@ -114,62 +158,54 @@ Optional but recommended:
 - `tags`
 - `status`
 
-Do not rewrite old ledger lines in place. If a memory is superseded, append a new event explaining that.
+Do not rewrite old events in place. If a memory is superseded, write a new event that says so.
 
-### Admission rule
+## 8) Rebuild local views
 
-Do **not** compound vague summaries.
+After cards/events are written, rebuild the local read models.
 
-Only write entries that are:
+Preferred path if the helper CLI is available:
 
-- tied to a concrete symptom, decision, proof gap, or contract gap
-- backed by verification, review, or a repeated real failure
-- likely to help the next run directly
-- small enough that the role can retrieve them without prompt bloat
+```bash
+xlfg knowledge rebuild
+```
 
-Prefer shared memory unless the lesson is clearly role-specific.
+If the helper CLI is not available, regenerate the `_views/` files with the same rules:
 
-## 4) Refresh `current-state.md`
+- `current-state.md` is a concise local handoff synthesized from service-context plus the highest-priority cards
+- `<kind>.md` views roll up tracked cards
+- `agent-memory/<role>.md` views roll up tracked role cards
+- `ledger.jsonl` is generated from immutable event files
+- `worktree.md` reflects the active git/worktree context
 
-Update `docs/xlfg/knowledge/current-state.md` so the next agent has one tracked document to read first.
+Never hand-edit the generated `_views/` files as the durable source of truth.
 
-Keep it short and current. It should contain only the highest-signal truths that remain useful after this run, such as:
-
-- the current service / product context if it materially changed
-- the most important why / quality-bar truths now in force
-- the most important UX / behavior contracts now in force
-- the harness profile rules that should shape the next similar run immediately
-- repeated failure signatures and the proven first response
-- open risks / debts worth carrying forward
-- one or two strong starting recall queries
-
-Do not paste the whole run into `current-state.md`.
-
-## 5) Write run-level compounding summary
+## 9) Write run-level compounding summary
 
 Write `DOCS_RUN_DIR/compound-summary.md` with:
 
 - what was learned
-- what was added to each knowledge file
-- what was appended to `ledger.jsonl`
-- what was added to role memory and why
-- how `current-state.md` changed
-- how the why / proof / harness profile shaped the final lessons
+- which cards were written
+- which event files were written
+- which role-memory cards were written and why
+- whether views were rebuilt
+- how the worktree namespace shaped the writes
 - what shortcuts were rejected and why
 - what was intentionally not added and why
 - what the next similar run should do first
 
-## 6) Update the workboard
+## 10) Update the workboard
 
 Mark in `workboard.md`:
 - `compound: DONE`
 - current next action: `none` or the real follow-up debt
 
-## 7) Completion
+## 11) Completion
 
 Print:
 
 - what knowledge was added
-- where it was written
-- path to `current-state.md`
-- path to `compound-summary.md`
+- which tracked card/event paths were written
+- whether local views were rebuilt
+- path to `docs/xlfg/knowledge/_views/current-state.md`
+- path to `DOCS_RUN_DIR/compound-summary.md`

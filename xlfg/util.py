@@ -38,6 +38,22 @@ def safe_write(path: Path, content: str) -> bool:
     return True
 
 
+def write_text_if_changed(path: Path, content: str) -> bool:
+    """Write content when the path is missing or the content changed.
+
+    Returns True when a write happened.
+    """
+    ensure_dir(path.parent)
+    try:
+        existing = path.read_text(encoding="utf-8")
+    except Exception:
+        existing = None
+    if existing == content:
+        return False
+    path.write_text(content, encoding="utf-8")
+    return True
+
+
 def append_unique_line(file_path: Path, line: str) -> bool:
     """Append a line to a file if it is not already present.
 

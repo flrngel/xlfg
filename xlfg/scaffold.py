@@ -4,271 +4,159 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .util import append_unique_line, ensure_dir, safe_write
+from .gitmeta import write_worktree_context
+from .knowledge import AGENT_MEMORY_ROLES, SHARED_CARD_KINDS, ensure_knowledge_layout, rebuild_views
+from .util import append_unique_line, ensure_dir, safe_write, write_text_if_changed
 
-SCAFFOLD_SCHEMA_VERSION = 6
+SCAFFOLD_SCHEMA_VERSION = 7
 
 INDEX_MD = """# xlfg
 
 This folder is the **file-based context** system-of-record for `/xlfg` work.
 
+## Why the knowledge model changed
+
+Concurrent xlfg runs across multiple git branches or linked worktrees were fighting over the same tracked rollup files (`current-state.md`, `patterns.md`, `ledger.jsonl`, role memory docs). That created avoidable merge conflicts and turned compounding into a git tax.
+
+xlfg now uses a **branch-safe write model**:
+
+- tracked immutable knowledge cards under `knowledge/cards/`
+- tracked immutable event files under `knowledge/events/`
+- tracked immutable role-memory cards under `knowledge/agent-memory/<role>/cards/`
+- local generated read models under `knowledge/_views/`
+
+This is a CQRS / event-sourcing style split: **write immutable facts, project local views**.
+
 ## Structure
 
 Tracked durable knowledge:
 
-- `knowledge/` — current state, patterns, decisions, testing knowledge, UX flows, harness rules, role-specific memories, and an append-only memory ledger (commit this)
-- `meta.json` — scaffold version + migration state (commit this)
-- `migrations/` — migration notes when the xlfg version changes (commit this)
+- `knowledge/service-context.md` — stable human-owned repo / product context
+- `knowledge/write-model.md` — branch-safe knowledge rules
+- `knowledge/cards/<kind>/<branch-slug>/...` — immutable shared knowledge cards
+- `knowledge/events/<branch-slug>/...json` — immutable durable memory events
+- `knowledge/agent-memory/<role>/cards/<branch-slug>/...` — immutable role memory cards
+- `knowledge/queries.md` — deterministic recall query syntax
+- `knowledge/commands.json` — canonical verification and dev-server commands
+- `meta.json` — scaffold version + migration state
+- `migrations/` — migration notes when the xlfg version changes
 
-Local run evidence (do not commit by default):
+Local generated views (gitignored):
 
-- `runs/` — one folder per run containing why, diagnosis, solution decisions, harness profiles, contracts, plans, workboards, proof maps, reviews, scorecards, and summaries
+- `knowledge/_views/current-state.md` — concise next-agent handoff for this worktree
+- `knowledge/_views/*.md` — local projections of shared knowledge cards
+- `knowledge/_views/agent-memory/*.md` — local projections of role memory cards
+- `knowledge/_views/ledger.jsonl` — generated ledger view from immutable event files
+- `knowledge/_views/worktree.md` — branch / worktree context for this checkout
+
+Local run evidence (gitignored by default):
+
+- `runs/` — one folder per run containing why, diagnosis, solution decisions, harness profiles, contracts, plans, workboards, proof maps, reviews, and summaries
 - `.xlfg/runs/` — raw command outputs, screenshots, traces, doctor reports
+- `.xlfg/worktree.json` — local git worktree context cache
 
-## Why `runs/` is local-only by default
+## The important rule
 
-Run folders are valuable as **episodic memory** and debugging evidence, but they create high-churn git noise, often include machine-local paths and transient failures, and are usually too verbose to serve as durable knowledge. xlfg therefore keeps:
+**Do not hand-edit generated views on feature branches.**
 
-- `docs/xlfg/runs/` — **local by default** (gitignored, except placeholders)
-- `docs/xlfg/knowledge/` — **tracked** and curated
-- `.xlfg/` — **ephemeral** and gitignored
-
-Promote only the reusable lesson, not the entire run.
-
-## Core workflow contract
-
-Define **why this work matters**, **what the real problem is**, and **what to build / test** *before* implementation:
-
-1. `why.md` — user / operator reason, non-goals, and quality bar for the run
-2. `diagnosis.md` — root problem or missing capability
-3. `solution-decision.md` — chosen solution and rejected shortcuts
-4. `harness-profile.md` — the minimum harness intensity that still gives honest proof
-5. `flow-spec.md` — UX / behavior contract
-6. `test-contract.md` — F2P + P2P test mapping
-7. `env-plan.md` — exact harness and dev-server plan
-8. `workboard.md` — run-level stage + task ledger
-9. `proof-map.md` — scenario-to-evidence map
-10. `scorecard.md` — step-level status for requirements and regressions
-
-## Agent memory model
-
-xlfg compounds in two layers:
-
-1. **`current-state.md`** as the shortest tracked handoff for the next agent
-2. **Shared memory** in `knowledge/` for repo-wide rules and patterns
-3. **Role memory** in `knowledge/agent-memory/` for agents that repeatedly need the same lessons
-4. **Memory ledger** in `knowledge/ledger.jsonl` for append-only, structured durable memory events
-
-Keep `current-state.md` short and current. Role memory must stay small, typed, and admission-gated. Do not dump raw run summaries there. The ledger is append-only; corrections should supersede old entries rather than silently rewriting them.
+Create or update immutable cards / events, then regenerate `_views/`. This keeps the read interface friendly while making the write path conflict-resistant.
 """
 
-QUALITY_BAR_MD = """# xlfg quality bar
+SERVICE_CONTEXT_MD = """# service context
 
-Nothing is "done" unless:
+This is the small tracked document humans or lead agents may edit when the enduring product / service context changes.
 
-- **Why is explicit** (`why.md` exists and the run still serves it)
-- **Diagnosis is explicit** (`diagnosis.md` exists)
-- **The root solution is explicit** (`solution-decision.md` exists and records rejected shortcuts)
-- **Behavior is contracted first** (`flow-spec.md` exists)
-- **Test intent is shared** (`test-contract.md` exists and maps scenarios to checks)
-- **Harness profile is explicit** (`harness-profile.md` exists and is appropriate for the risk)
-- **Environment is controlled** (`env-plan.md` explains ports, healthchecks, and cleanup)
-- **New behavior is proven** (Fail → Pass)
-- **Existing behavior is preserved** (Pass → Pass)
-- **Lint / typecheck / build** pass when applicable
-- **User-facing flows are validated** (happy path, alternates, failure path, a11y)
-- **Workboard is current** (`workboard.md` reflects stage / task truth)
-- **Proof map is concrete** (`proof-map.md` links required scenarios to evidence or an explicit proof gap)
-- **Unexpected failures are compounded** into failure memory / harness rules / role memory when warranted
-- **Operational plan exists** (monitoring + rollback notes)
+Keep it stable and high-signal:
 
-Evidence should be recorded in each run's `verification.md` and `scorecard.md`.
+- what the service does
+- who the key users / operators are
+- high-level constraints that survive across many runs
+- major non-goals / invariants
+
+Do **not** dump per-run lessons here. Those belong in cards and events.
 """
 
-CURRENT_STATE_MD = """# xlfg current state
+WRITE_MODEL_MD = """# xlfg knowledge write model
 
-Read this file first when entering a repo that uses xlfg. It is the shortest tracked handoff for the next agent.
+xlfg uses a **branch-safe write path** to avoid merge conflicts when multiple branches or git worktrees compound knowledge at the same time.
 
-## Service / product context
-- What is this repo / service trying to do right now?
+## Write path (tracked)
 
-## Current high-signal truths
-- The most important facts that should shape new work immediately
+### Shared knowledge cards
 
-## Active UX / behavior contracts
-- Flows or invariants that repeatedly matter
+Create immutable markdown cards under:
 
-## Current harness / verification rules
-- Ports, healthchecks, non-interactive rules, dev-server reuse rules
+- `docs/xlfg/knowledge/cards/current-state/<branch-slug>/...`
+- `docs/xlfg/knowledge/cards/patterns/<branch-slug>/...`
+- `docs/xlfg/knowledge/cards/decision-log/<branch-slug>/...`
+- `docs/xlfg/knowledge/cards/testing/<branch-slug>/...`
+- `docs/xlfg/knowledge/cards/ux-flows/<branch-slug>/...`
+- `docs/xlfg/knowledge/cards/failure-memory/<branch-slug>/...`
+- `docs/xlfg/knowledge/cards/harness-rules/<branch-slug>/...`
+- `docs/xlfg/knowledge/cards/quality-bar/<branch-slug>/...`
 
-## Repeated failures to avoid
-- The recurring failure signatures and the proven first response
+### Role memory cards
 
-## Open risks / debts
-- Things the next agent should keep in mind before touching risky areas
+Create immutable role cards under:
 
-## Best starting recall queries
-- One or two exact lexical or typed queries that load the right memory fast
+- `docs/xlfg/knowledge/agent-memory/<role>/cards/<branch-slug>/...`
 
-Keep this document short, current, and biased toward actionable truths. Historical detail belongs in the ledger, shared knowledge files, or local runs.
-"""
+### Durable event files
 
-DECISION_LOG_MD = """# xlfg decision log
+Create one JSON file per admitted lesson under:
 
-Record durable architectural and product decisions made during `/xlfg` runs.
+- `docs/xlfg/knowledge/events/<branch-slug>/...json`
 
-## Template
+## Read path (local only)
 
-- **Date**:
-- **Decision**:
-- **Context**:
-- **Alternatives considered**:
-- **Rejected shortcut**:
-- **Consequences**:
-- **Links**: (run folder, PR, issues)
-"""
+Never treat the tracked cards as the only human-facing interface. Regenerate local projections under:
 
-PATTERNS_MD = """# xlfg patterns
+- `docs/xlfg/knowledge/_views/current-state.md`
+- `docs/xlfg/knowledge/_views/*.md`
+- `docs/xlfg/knowledge/_views/agent-memory/*.md`
+- `docs/xlfg/knowledge/_views/ledger.jsonl`
 
-Reusable patterns discovered while shipping.
+`/xlfg:prepare` and `xlfg knowledge rebuild` refresh these views.
 
-## Template
+## Filename convention
 
-## Pattern: <name>
+Prefer:
 
-- **When to use**:
-- **Why it works**:
-- **Implementation notes**:
-- **What shortcut it replaces**:
-- **Pitfalls**:
-- **Examples / links**:
-"""
+`<UTC timestamp>--<run-id>--<slug>.md`
 
-TESTING_MD = """# xlfg testing knowledge
+or for events:
 
-Durable testing learnings captured from `/xlfg` runs.
+`<UTC timestamp>--<run-id>--<slug>.json`
 
-## Template
+Put the file inside the current branch slug directory so independent branches almost never touch the same path.
 
-## Scenario: <id> <name>
+## Admission rule
 
-- **Requirement kind**: F2P | P2P
-- **Failure that escaped**:
-- **Why it escaped**:
-- **Fastest check that catches it**:
-- **Real-flow / integration check**:
-- **Regression suite that must stay green**:
-- **Root-cause proof note**:
-- **Stabilization notes**:
-- **Links**: (run folder, PR, issue)
-"""
+Only promote lessons that are:
 
-UX_FLOWS_MD = """# xlfg ux flows
-
-Durable user-flow contracts that repeatedly matter across runs.
-
-## Template
-
-## Flow: <name>
-
-- **Actor**:
-- **Preconditions**:
-- **Primary steps**:
-- **Alternate steps**:
-- **Failure path**:
-- **Assertions**:
-- **Accessibility / keyboard notes**:
-- **Links**:
-"""
-
-FAILURE_MEMORY_MD = """# xlfg failure memory
-
-Recurring unexpected failures and proven responses.
-
-## Template
-
-## Failure signature: <short name>
-
-- **Observed symptom**:
-- **Detection signal**:
-- **Likely root cause**:
-- **Immediate fix**:
-- **Prevention rule**:
-- **Verification after fix**:
-- **Links**:
-"""
-
-HARNESS_RULES_MD = """# xlfg harness rules
-
-Rules for running reliable local verification.
-
-## Template
-
-## Rule: <name>
-
-- **Applies to**:
-- **Why**:
-- **Required command / flag**:
-- **Healthcheck / readiness rule**:
-- **Cleanup rule**:
-- **Wrong-green trap to avoid**:
-- **Links**:
-"""
-
-MEMORY_LEDGER_MD = """# xlfg memory ledger
-
-`ledger.jsonl` is the machine-readable durable memory store for xlfg.
-
-Why it exists:
-- append-only audit trail for compounded lessons
-- stage- and role-aligned retrieval without prompt bloat
-- deterministic recall over exact text, tags, and filters
-
-## Event shape
-
-One JSON object per line. Preferred event types:
-- `memory.added`
-- `memory.superseded`
-- `memory.invalidated`
-
-Recommended fields for `memory.added`:
-
-```json
-{
-  "id": "mem-20260306-01",
-  "event": "memory.added",
-  "created_at": "2026-03-06T12:34:56Z",
-  "run_id": "20260306-123456-login-flow",
-  "kind": "harness-rule",
-  "stage": "verify",
-  "role": "env-doctor",
-  "title": "Reuse healthy dev server before starting another one",
-  "summary": "Check the configured health endpoint first and reuse a healthy process.",
-  "symptom": "`yarn dev` started twice and the second process failed with EADDRINUSE.",
-  "root_cause": "The harness assumed no existing server and skipped readiness reuse.",
-  "action": "Probe health, reuse if healthy, otherwise kill stale PID and restart once.",
-  "prevention": "Never spawn a second dev server without a health check.",
-  "lex": "yarn dev EADDRINUSE duplicate server port already in use healthcheck reuse",
-  "tags": ["yarn", "dev-server", "port", "healthcheck"],
-  "evidence": ["docs/xlfg/runs/<run-id>/verification.md"],
-  "status": "active"
-}
-```
-
-## Admission rules
-
-Only append a memory event when the lesson is:
 - concrete
 - reusable
 - evidenced by verification, review, or repeated real failure
 - small enough to retrieve directly
 
-Do not store vague summaries or speculative advice.
+## Things not to do
+
+- do not append to shared tracked rollup docs on feature branches
+- do not keep a single tracked `ledger.jsonl` as the source of truth
+- do not overwrite old cards in place; supersede them with a new event / card
+- do not store noisy raw run output in tracked knowledge
+"""
+
+QUALITY_BAR_SEED = """# quality bar seed
+
+Quality gates are ultimately enforced through run files (`flow-spec.md`, `test-contract.md`, `proof-map.md`, `scorecard.md`) and promoted via quality-bar cards.
+
+Use cards under `docs/xlfg/knowledge/cards/quality-bar/` when a run discovers a missing gate that should persist.
 """
 
 QUERIES_MD = """# xlfg recall query syntax
 
-xlfg recall uses deterministic typed query documents inspired by QMD's query documents, but **without vector search, HyDE, or LLM expansion**. Always read `current-state.md` first.
+xlfg recall is deterministic and lexical. It reads the local `_views/` projections, tracked cards, immutable event files, and local runs.
 
 ## Plain query
 
@@ -293,7 +181,7 @@ Each non-empty line is `type: value`. Supported types:
 - `kind:` filter memory kind(s)
 - `stage:` filter SDLC stage(s)
 - `role:` filter role memory
-- `scope:` filter `knowledge`, `agent-memory`, `ledger`, `runs`, `migrations`, `memory`, or `all` (with `current-state.md` living under `knowledge`)
+- `scope:` filter `knowledge`, `agent-memory`, `ledger`, `runs`, `migrations`, `memory`, or `all`
 - `path:` substring filter on relative path
 - `when:` temporal filter (`today`, `yesterday`, `last week`, `YYYY-MM-DD`, `last 7 days`)
 
@@ -308,253 +196,15 @@ scope: memory runs
 when: last 14 days
 ```
 
-## Lex rules
+## Query order of operations
 
-- `word` → exact token / prefix-like lexical match
-- `"phrase"` → exact phrase
-- `-word` → exclude results containing the word
-- `-"phrase"` → exclude results containing the phrase
+1. Read `docs/xlfg/knowledge/_views/current-state.md` if present
+2. Search `_views/` for concise read models
+3. Fall back to tracked cards / event files for exact provenance
+4. Search local runs only when durable memory was not enough
 
 This mode is intentionally precision-first and auditable.
 """
-
-LEDGER_JSONL = """"""
-
-AGENT_MEMORY_INDEX_MD = """# xlfg agent memory
-
-Role memory exists for agents that repeatedly hit the same failure classes.
-
-## Admission rules
-
-Only compound something into role memory when it is:
-
-- specific to the role's job
-- validated by verification, review, or repeated successful reuse
-- short enough to retrieve quickly
-- better expressed as a rule / checklist / anti-pattern than a full summary
-
-## Files
-
-- `why-analyst.md`
-- `root-cause-analyst.md`
-- `harness-profiler.md`
-- `solution-architect.md`
-- `test-strategist.md`
-- `env-doctor.md`
-- `test-implementer.md`
-- `task-implementer.md`
-- `task-checker.md`
-- `verify-reducer.md`
-- `ux-reviewer.md`
-- `architecture-reviewer.md`
-- `security-reviewer.md`
-- `performance-reviewer.md`
-"""
-
-WHY_ANALYST_MEMORY_MD = """# Agent memory: why-analyst
-
-Store reusable product-intent patterns that keep runs anchored to the real user or operator value.
-
-## Entry template
-
-## Why pattern: <name>
-- **Request shape**:
-- **Real stakeholder / user**:
-- **What false success looks like**:
-- **Quality bar that matters**:
-- **Links**:
-"""
-
-HARNESS_PROFILER_MEMORY_MD = """# Agent memory: harness-profiler
-
-Store rules for choosing the minimum harness intensity that still gives honest proof.
-
-## Entry template
-
-## Profile rule: <name>
-- **Problem / repo shape**:
-- **Choose profile**: quick | standard | deep
-- **Why this profile is sufficient**:
-- **Escalation trigger**:
-- **Links**:
-"""
-
-ROOT_CAUSE_MEMORY_MD = """# Agent memory: root-cause-analyst
-
-Store reusable diagnosis lessons that help avoid symptom patches.
-
-## Entry template
-
-## Pattern: <name>
-- **Symptom signature**:
-- **Likely true cause**:
-- **Common wrong shortcut**:
-- **Disproof probe**:
-- **Evidence threshold before reuse**:
-- **Links**:
-"""
-
-SOLUTION_ARCHITECT_MEMORY_MD = """# Agent memory: solution-architect
-
-Store solution-selection rules that repeatedly pick the right layer and reject the wrong shortcut.
-
-## Entry template
-
-## Decision pattern: <name>
-- **Problem shape**:
-- **Correct layer for the fix**:
-- **Shortcut to reject**:
-- **Tradeoff notes**:
-- **Disconfirming signal**:
-- **Links**:
-"""
-
-
-TEST_STRATEGIST_MEMORY_MD = """# Agent memory: test-strategist
-
-Store scenario-design lessons for defining what to test.
-
-## Entry template
-
-## Flow pattern: <name>
-- **Scenario shape**:
-- **Fastest proving check**:
-- **Real-flow check still required**:
-- **Regression guard**:
-- **Wrong-green trap**:
-- **Links**:
-"""
-
-ENV_DOCTOR_MEMORY_MD = """# Agent memory: env-doctor
-
-Store durable harness and environment lessons.
-
-## Entry template
-
-## Harness issue: <name>
-- **Symptoms**:
-- **Likely cause**:
-- **Safe detection order**:
-- **Preferred reuse / cleanup rule**:
-- **Stack-specific notes**:
-- **Links**:
-"""
-
-TEST_IMPLEMENTER_MEMORY_MD = """# Agent memory: test-implementer
-
-Store tactical testing patterns for proving scenario contracts honestly.
-
-## Entry template
-
-## Test pattern: <name>
-- **Scenario shape**:
-- **Fast honest proof**:
-- **When smoke / e2e is still required**:
-- **Wrong-green trap**:
-- **Links**:
-"""
-
-
-TASK_IMPLEMENTER_MEMORY_MD = """# Agent memory: task-implementer
-
-Store implementation patterns that repeatedly land the root fix cleanly.
-
-## Entry template
-
-## Pattern: <name>
-- **When it applies**:
-- **Correct layer to edit**:
-- **Files that usually move together**:
-- **Shortcut to avoid**:
-- **Minimal proving change**:
-- **Links**:
-"""
-
-TASK_CHECKER_MEMORY_MD = """# Agent memory: task-checker
-
-Store recurring acceptance / rejection rules for scoped task reviews.
-
-## Entry template
-
-## Review pattern: <name>
-- **Task shape**:
-- **Most common hidden drift**:
-- **Acceptance evidence required**:
-- **Common false green**:
-- **Links**:
-"""
-
-
-VERIFY_REDUCER_MEMORY_MD = """# Agent memory: verify-reducer
-
-Store lessons for identifying the first actionable failure and updating scorecards honestly.
-
-## Entry template
-
-## Failure reduction pattern: <name>
-- **Failure signature**:
-- **How to isolate first actionable failure**:
-- **Common misclassification to avoid**:
-- **Scorecard update rule**:
-- **Links**:
-"""
-
-UX_REVIEWER_MEMORY_MD = """# Agent memory: ux-reviewer
-
-Store UX issues verification commonly misses.
-
-## Entry template
-
-## UX trap: <name>
-- **Flow / component type**:
-- **What usually gets missed**:
-- **Why automation misses it**:
-- **Review prompt / checklist**:
-- **Links**:
-"""
-
-ARCHITECTURE_REVIEWER_MEMORY_MD = """# Agent memory: architecture-reviewer
-
-Store recurring architecture drift patterns that deserve fast review attention.
-
-## Entry template
-
-## Drift pattern: <name>
-- **System shape**:
-- **What tends to drift**:
-- **Correct boundary / layering rule**:
-- **Why verification often misses it**:
-- **Links**:
-"""
-
-SECURITY_REVIEWER_MEMORY_MD = """# Agent memory: security-reviewer
-
-Store recurring security review traps that are easy to miss during fast implementation.
-
-## Entry template
-
-## Security trap: <name>
-- **Flow type**:
-- **Sensitive boundary**:
-- **What often slips through**:
-- **Required review question**:
-- **Links**:
-"""
-
-PERFORMANCE_REVIEWER_MEMORY_MD = """# Agent memory: performance-reviewer
-
-Store recurring performance or iteration-speed traps worth checking quickly.
-
-## Entry template
-
-## Performance trap: <name>
-- **Path / system type**:
-- **What usually gets slow**:
-- **Fast signal to inspect**:
-- **Why it matters to iteration or production**:
-- **Links**:
-"""
-
 
 COMMANDS_JSON = """{
   "install": null,
@@ -574,6 +224,47 @@ COMMANDS_JSON = """{
 }
 """
 
+CARDS_README_MD = """# knowledge cards
+
+Each directory under here is a **kind** of durable knowledge card.
+
+Write rules:
+- create immutable cards
+- namespace by branch slug
+- never hand-edit generated `_views/` files
+- supersede stale cards with a new card + event instead of rewriting history
+"""
+
+EVENTS_README_MD = """# knowledge events
+
+This directory stores immutable JSON event files that back the generated ledger view.
+
+One file per event keeps the write path branch-safe and easier to merge than a single append-only tracked JSONL file.
+"""
+
+AGENT_MEMORY_INDEX_MD = """# xlfg agent memory
+
+Role memory exists for agents that repeatedly hit the same failure classes.
+
+Role memory now follows the same conflict-resistant pattern as shared knowledge:
+
+- tracked cards under `docs/xlfg/knowledge/agent-memory/<role>/cards/<branch-slug>/...`
+- local generated views under `docs/xlfg/knowledge/_views/agent-memory/<role>.md`
+
+Admission rules:
+- specific to the role's job
+- validated by verification, review, or repeated successful reuse
+- short enough to retrieve quickly
+- better expressed as a rule / checklist / anti-pattern than a full summary
+"""
+
+ROLE_README_TEMPLATE = """# agent memory: {role}
+
+Write immutable cards under `cards/<branch-slug>/...` when a lesson is clearly role-specific.
+
+Do not edit local generated views by hand.
+"""
+
 RUNS_README_MD = """# Local runs
 
 This directory stores **episodic run artifacts** for xlfg.
@@ -581,12 +272,17 @@ This directory stores **episodic run artifacts** for xlfg.
 Default policy:
 - keep locally
 - do not commit by default
-- promote reusable lessons into `docs/xlfg/knowledge/` via `/xlfg:compound`
+- promote reusable lessons into `docs/xlfg/knowledge/cards/` and `docs/xlfg/knowledge/events/` via `/xlfg:compound`
 
 If you intentionally want to share a specific run, copy or export the relevant files instead of flipping the whole directory to tracked mode.
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
+    "2.0.6": [
+        "Shared knowledge and role memory now write to immutable branch-scoped cards instead of hot tracked rollup files.",
+        "Immutable event files now replace the single tracked ledger.jsonl as the source of truth; `knowledge/_views/ledger.jsonl` is generated locally.",
+        "Prepare now records git worktree context and rebuilds local knowledge views under `docs/xlfg/knowledge/_views/`.",
+    ],
     "2.0.5": [
         "Added `why.md`, `harness-profile.md`, `workboard.md`, and `proof-map.md` to every run scaffold.",
         "`/xlfg` now selects verification depth from the run’s harness profile instead of always assuming a full run.",
@@ -611,7 +307,7 @@ MIGRATION_NOTES: Dict[str, List[str]] = {
         "`/xlfg` now treats scaffold bootstrap as a fast prepare/migrate check instead of mandatory init.",
         "`docs/xlfg/runs/` is now gitignored by default; durable knowledge remains tracked.",
         "Added `docs/xlfg/knowledge/agent-memory/` for role-specific compounded memory.",
-    ]
+    ],
 }
 
 
@@ -620,15 +316,18 @@ def _manifest(tool_version: str) -> Dict[str, Any]:
         "tool_version": tool_version,
         "scaffold_schema_version": SCAFFOLD_SCHEMA_VERSION,
         "run_tracking": "local-only",
-        "knowledge_tracking": "tracked",
-        "current_state": "tracked-brief",
-        "agent_memory": "enabled",
+        "knowledge_write_model": "branch-safe-cards",
+        "knowledge_read_model": "generated-local-views",
+        "current_state": "local-view",
+        "service_context": "tracked-seed",
+        "agent_memory": "branch-safe-cards+views",
         "recall": "deterministic-lexical",
-        "memory_ledger": "append-only-jsonl",
+        "memory_events": "sharded-json-files",
         "why_file": "required",
         "harness_profiles": "quick-standard-deep",
         "workboard": "required",
         "proof_map": "required",
+        "worktree_awareness": "enabled",
     }
 
 
@@ -739,17 +438,13 @@ def _write_migration_note(root: Path, from_version: str, to_version: str) -> Opt
         "Manual follow-up:",
         "",
         "- Review the plugin CHANGELOG in `plugins/xlfg-engineering/CHANGELOG.md`.",
+        "- If this repo still edits tracked rollup docs directly, move future knowledge writes into cards / events and let prepare rebuild local views.",
     ])
     note_path.write_text("\n".join(content) + "\n", encoding="utf-8")
     return str(note_path.relative_to(root))
 
 
 def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
-    """Create or migrate xlfg scaffolding under root.
-
-    Idempotent for unchanged versions. Does not overwrite user-authored files.
-    """
-
     created: List[str] = []
     updated: List[str] = []
     notes: List[str] = []
@@ -758,7 +453,6 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
     previous_version = status.get("repo_scaffold_version") or None
 
     ensure_dir(root / "docs" / "xlfg" / "knowledge")
-    ensure_dir(root / "docs" / "xlfg" / "knowledge" / "agent-memory")
     ensure_dir(root / "docs" / "xlfg" / "migrations")
     ensure_dir(root / "docs" / "xlfg" / "runs")
     ensure_dir(root / ".xlfg" / "runs")
@@ -769,42 +463,28 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
         "docs/xlfg/runs/*",
         "!docs/xlfg/runs/.gitkeep",
         "!docs/xlfg/runs/README.md",
+        "docs/xlfg/knowledge/_views/",
     ):
         if append_unique_line(gitignore_path, line):
             updated.append(str(gitignore_path.relative_to(root)))
 
     files = {
         "docs/xlfg/index.md": INDEX_MD,
-        "docs/xlfg/knowledge/current-state.md": CURRENT_STATE_MD,
-        "docs/xlfg/knowledge/quality-bar.md": QUALITY_BAR_MD,
-        "docs/xlfg/knowledge/decision-log.md": DECISION_LOG_MD,
-        "docs/xlfg/knowledge/patterns.md": PATTERNS_MD,
-        "docs/xlfg/knowledge/testing.md": TESTING_MD,
-        "docs/xlfg/knowledge/ux-flows.md": UX_FLOWS_MD,
-        "docs/xlfg/knowledge/failure-memory.md": FAILURE_MEMORY_MD,
-        "docs/xlfg/knowledge/harness-rules.md": HARNESS_RULES_MD,
-        "docs/xlfg/knowledge/ledger.md": MEMORY_LEDGER_MD,
-        "docs/xlfg/knowledge/ledger.jsonl": LEDGER_JSONL,
+        "docs/xlfg/knowledge/service-context.md": SERVICE_CONTEXT_MD,
+        "docs/xlfg/knowledge/write-model.md": WRITE_MODEL_MD,
+        "docs/xlfg/knowledge/quality-bar-seed.md": QUALITY_BAR_SEED,
         "docs/xlfg/knowledge/queries.md": QUERIES_MD,
         "docs/xlfg/knowledge/commands.json": COMMANDS_JSON,
+        "docs/xlfg/knowledge/cards/README.md": CARDS_README_MD,
+        "docs/xlfg/knowledge/events/README.md": EVENTS_README_MD,
         "docs/xlfg/knowledge/agent-memory/README.md": AGENT_MEMORY_INDEX_MD,
-        "docs/xlfg/knowledge/agent-memory/why-analyst.md": WHY_ANALYST_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/root-cause-analyst.md": ROOT_CAUSE_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/harness-profiler.md": HARNESS_PROFILER_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/solution-architect.md": SOLUTION_ARCHITECT_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/test-strategist.md": TEST_STRATEGIST_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/env-doctor.md": ENV_DOCTOR_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/test-implementer.md": TEST_IMPLEMENTER_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/task-implementer.md": TASK_IMPLEMENTER_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/task-checker.md": TASK_CHECKER_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/verify-reducer.md": VERIFY_REDUCER_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/ux-reviewer.md": UX_REVIEWER_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/architecture-reviewer.md": ARCHITECTURE_REVIEWER_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/security-reviewer.md": SECURITY_REVIEWER_MEMORY_MD,
-        "docs/xlfg/knowledge/agent-memory/performance-reviewer.md": PERFORMANCE_REVIEWER_MEMORY_MD,
         "docs/xlfg/runs/.gitkeep": "",
         "docs/xlfg/runs/README.md": RUNS_README_MD,
     }
+    for role in AGENT_MEMORY_ROLES:
+        files[f"docs/xlfg/knowledge/agent-memory/{role}/README.md"] = ROLE_README_TEMPLATE.format(role=role)
+
+    ensure_knowledge_layout(root)
 
     for rel_path, content in files.items():
         if safe_write(root / rel_path, content):
@@ -837,6 +517,13 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
             updated.append(str(legacy_meta_path.relative_to(root)))
             notes.append("Normalized legacy docs/xlfg/metadata.json to mirror docs/xlfg/meta.json.")
 
+    worktree_info = write_worktree_context(root)
+    if worktree_info.get("changed"):
+        updated.append(worktree_info["path"])
+
+    views = rebuild_views(root)
+    updated.extend(views.get("updated", []))
+
     if status["needs_bootstrap"]:
         notes.append("Bootstrapped xlfg scaffold.")
     elif status["needs_migration"]:
@@ -845,6 +532,8 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
         notes.append("Synchronized scaffold metadata to the canonical docs/xlfg/meta.json format.")
     else:
         notes.append("Scaffold already current; prepare check passed with no migration.")
+
+    notes.append("Rebuilt local knowledge views from tracked cards and event files.")
 
     return {
         "created": created,
@@ -858,10 +547,11 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
         "repo_scaffold_version": tool_version,
         "tool_version": tool_version,
         "migration_note": migration_note,
+        "worktree": worktree_info["data"],
+        "views_updated": views.get("updated", []),
         "notes": notes,
     }
 
 
 def init_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
-    """Backward-compatible alias for ensure_scaffold."""
     return ensure_scaffold(root, tool_version)

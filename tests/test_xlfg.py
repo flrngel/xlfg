@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -10,6 +11,7 @@ from pathlib import Path
 from xlfg import __version__
 from xlfg.detect import detect_commands
 from xlfg.doctor import ensure_dev_server
+from xlfg.knowledge import rebuild_views
 from xlfg.runs import create_run
 from xlfg.recall import recall
 from xlfg.scaffold import ensure_scaffold, scaffold_status
@@ -34,18 +36,19 @@ class TestXLFG(unittest.TestCase):
             result = ensure_scaffold(root, __version__)
             self.assertTrue((root / "docs" / "xlfg" / "index.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "meta.json").exists())
-            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "current-state.md").exists())
-            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "why-analyst.md").exists())
-            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "harness-profiler.md").exists())
-            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "env-doctor.md").exists())
-            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "solution-architect.md").exists())
-            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "test-implementer.md").exists())
-            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "task-checker.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "service-context.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "write-model.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "cards" / "current-state" / ".gitkeep").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "why-analyst" / "cards" / ".gitkeep").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "_views" / "current-state.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "_views" / "agent-memory" / "env-doctor.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "_views" / "worktree.md").exists())
             self.assertTrue((root / ".xlfg" / "runs").exists())
+            self.assertTrue((root / ".xlfg" / "worktree.json").exists())
             gi = (root / ".gitignore").read_text(encoding="utf-8")
             self.assertIn(".xlfg/", gi)
             self.assertIn("docs/xlfg/runs/*", gi)
-            self.assertIn("!docs/xlfg/runs/.gitkeep", gi)
+            self.assertIn("docs/xlfg/knowledge/_views/", gi)
             self.assertIn("docs/xlfg/meta.json", result["updated"])
             result2 = ensure_scaffold(root, __version__)
             self.assertEqual(result2["created"], [])
@@ -112,13 +115,14 @@ class TestXLFG(unittest.TestCase):
             self.assertTrue((run_dir / "proof-map.md").exists())
             self.assertTrue((run_dir / "tasks").exists())
 
-    def test_prepare_scaffold_creates_recall_files(self) -> None:
+    def test_prepare_scaffold_creates_recall_views_and_sources(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / ".git").mkdir()
             ensure_scaffold(root, __version__)
-            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "ledger.jsonl").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "events" / "README.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "queries.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "_views" / "ledger.jsonl").exists())
 
     def test_create_run_seeds_memory_recall_file(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -129,47 +133,45 @@ class TestXLFG(unittest.TestCase):
             run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
             self.assertTrue((run_dir / "memory-recall.md").exists())
 
-    def test_recall_searches_ledger_and_agent_memory_with_filters(self) -> None:
+    def test_recall_searches_events_and_agent_memory_cards_with_filters(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / ".git").mkdir()
             ensure_scaffold(root, __version__)
-            ledger = root / "docs" / "xlfg" / "knowledge" / "ledger.jsonl"
-            ledger.write_text(
-                "\n".join(
-                    [
-                        json.dumps(
-                            {
-                                "id": "mem-1",
-                                "event": "memory.added",
-                                "created_at": "2026-03-06T12:00:00",
-                                "run_id": "20260306-120000-login",
-                                "kind": "failure",
-                                "stage": "verify",
-                                "role": "env-doctor",
-                                "title": "Port already in use from duplicate yarn dev",
-                                "summary": "Reuse the healthy server instead of starting another yarn dev.",
-                                "lex": "port already in use yarn dev healthcheck",
-                                "evidence": ["verification.md", "doctor.log"],
-                            }
-                        )
-                    ]
-                )
-                + "\n",
+            event_dir = root / "docs" / "xlfg" / "knowledge" / "events" / "feature-login"
+            event_dir.mkdir(parents=True, exist_ok=True)
+            (event_dir / "20260306-120000--login-port.json").write_text(
+                json.dumps(
+                    {
+                        "id": "mem-1",
+                        "event": "memory.added",
+                        "created_at": "2026-03-06T12:00:00",
+                        "run_id": "20260306-120000-login",
+                        "kind": "failure-memory",
+                        "stage": "verify",
+                        "role": "env-doctor",
+                        "title": "Port already in use from duplicate yarn dev",
+                        "summary": "Reuse the healthy server instead of starting another yarn dev.",
+                        "lex": "port already in use yarn dev healthcheck",
+                        "evidence": ["verification.md", "doctor.log"],
+                    }
+                ),
                 encoding="utf-8",
             )
-            agent_mem = root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "env-doctor.md"
-            agent_mem.write_text(
-                "# env-doctor memory\n\n- Reuse healthy dev servers before spawning another `yarn dev`.\n",
+            card_dir = root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "env-doctor" / "cards" / "feature-login"
+            card_dir.mkdir(parents=True, exist_ok=True)
+            (card_dir / "20260306-120000--reuse-dev-server.md").write_text(
+                "# Reuse healthy dev servers\n\n- Reuse healthy dev servers before spawning another `yarn dev`.\n",
                 encoding="utf-8",
             )
+            rebuild_views(root)
             result = recall(
                 root,
                 "\n".join(
                     [
                         'lex: "port already in use" yarn dev',
                         "stage: verify",
-                        "kind: failure agent-memory",
+                        "kind: failure-memory agent-memory",
                         "role: env-doctor",
                         "scope: memory",
                     ]
@@ -192,6 +194,44 @@ class TestXLFG(unittest.TestCase):
             self.assertEqual(result["mode"], "temporal")
             self.assertEqual(len(result["results"]), 2)
             self.assertEqual(result["results"][0]["run_id"], "20260306-130000-search")
+
+    def test_rebuild_views_renders_cards_without_touching_tracked_rollups(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            ensure_scaffold(root, __version__)
+            card_dir = root / "docs" / "xlfg" / "knowledge" / "cards" / "current-state" / "feature-login"
+            card_dir.mkdir(parents=True, exist_ok=True)
+            card = card_dir / "20260306-123000--login-flow.md"
+            card.write_text("# Login flow state\n\n- Login now requires keyboard submit parity.\n", encoding="utf-8")
+            result = rebuild_views(root)
+            self.assertIn("docs/xlfg/knowledge/_views/current-state.md", result["updated"])
+            view = (root / "docs" / "xlfg" / "knowledge" / "_views" / "current-state.md").read_text(encoding="utf-8")
+            self.assertIn("Login flow state", view)
+            self.assertIn("docs/xlfg/knowledge/cards/current-state/feature-login/20260306-123000--login-flow.md", view)
+
+
+    def test_rebuild_views_prioritizes_current_branch_cards(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True)
+            subprocess.run(["git", "checkout", "-q", "-b", "feature-login"], cwd=root, check=True)
+            ensure_scaffold(root, __version__)
+            main_dir = root / "docs" / "xlfg" / "knowledge" / "cards" / "current-state" / "main"
+            feature_dir = root / "docs" / "xlfg" / "knowledge" / "cards" / "current-state" / "feature-login"
+            main_dir.mkdir(parents=True, exist_ok=True)
+            feature_dir.mkdir(parents=True, exist_ok=True)
+            (main_dir / "20260314-120000--shared.md").write_text(
+                "# Main branch state\n\n- Stable shared lesson.\n", encoding="utf-8"
+            )
+            (feature_dir / "20260314-120001--feature.md").write_text(
+                "# Feature branch state\n\n- Branch-specific lesson.\n", encoding="utf-8"
+            )
+            rebuild_views(root)
+            view = (root / "docs" / "xlfg" / "knowledge" / "_views" / "current-state.md").read_text(encoding="utf-8")
+            self.assertLess(view.index("Feature branch state"), view.index("Main branch state"))
+            worktree = (root / "docs" / "xlfg" / "knowledge" / "_views" / "worktree.md").read_text(encoding="utf-8")
+            self.assertIn("feature-login", worktree)
 
     def test_detect_node_package_json_and_dev(self) -> None:
         with tempfile.TemporaryDirectory() as td:

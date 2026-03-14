@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.0.6 - 2026-03-14
+
+### Added
+- New git/worktree detection module `xlfg/gitmeta.py` and `.xlfg/worktree.json` output.
+- New knowledge layout module `xlfg/knowledge.py` for tracked cards/events and generated local `_views/`.
+- New tracked knowledge docs: `service-context.md`, `write-model.md`, card READMEs, event README, and role-memory README scaffolds.
+- New CLI commands: `xlfg worktree` and `xlfg knowledge rebuild`.
+- New bundle design note `docs/branch-safe-knowledge.md`.
+
+### Changed
+- Shared knowledge and role memory now write to immutable branch-scoped cards instead of hot tracked rollup files.
+- Immutable event files now replace the single tracked `ledger.jsonl` as the durable source of truth.
+- `docs/xlfg/knowledge/_views/` is now a local generated read model and gitignored by default.
+- git/worktree detection now handles unborn branches more gracefully so local branch-scoped views still prioritize the active branch before the first commit.
+- `/xlfg:prepare` now records git/worktree context and rebuilds local views.
+- `/xlfg:compound` now writes immutable cards/events and rebuilds views instead of asking branches to edit the same shared markdown files.
+- Recall now reads generated views, tracked cards, tracked role cards, immutable events, and local runs.
+- Docs, command prompts, skills, and tests were rewritten around the branch-safe knowledge model.
+
+### Why
+- multiple branches and linked worktrees were causing avoidable PR conflicts because they edited the same shared knowledge files
+- generated rollups are useful for reading but are the wrong write target under concurrent branch workflows
+- xlfg needs durable learning without turning compounding into a git tax
+
 ## 2.0.5 - 2026-03-09
 
 ### Added
@@ -26,7 +50,7 @@
 ## 2.0.4 - 2026-03-06
 
 ### Added
-- New tracked `docs/xlfg/knowledge/current-state.md` scaffolded in target repos as the single handoff document a next agent should read first.
+- New tracked `docs/xlfg/knowledge/_views/current-state.md` scaffolded in target repos as the single handoff document a next agent should read first.
 - New role-memory scaffolds for `solution-architect`, `test-implementer`, `task-checker`, `architecture-reviewer`, `security-reviewer`, and `performance-reviewer`.
 - New bundle-level `NEXT_AGENT_CONTEXT.md` so future agents can continue this repo without extra explanation.
 
@@ -47,7 +71,7 @@
 ### Added
 - Deterministic `xlfg recall` CLI command over shared knowledge, role memory, the append-only ledger, migrations, and local runs.
 - New `/xlfg:recall` plugin command and `xlfg-recall` skill.
-- New scaffolded durable memory files: `docs/xlfg/knowledge/ledger.jsonl`, `docs/xlfg/knowledge/ledger.md`, and `docs/xlfg/knowledge/queries.md`.
+- New scaffolded durable memory files: `docs/xlfg/knowledge/_views/ledger.jsonl`, `docs/xlfg/knowledge/ledger.md`, and `docs/xlfg/knowledge/queries.md`.
 - New `memory-recall.md` run artifact seeded for every run.
 
 ### Changed
@@ -58,7 +82,6 @@
 
 ### Intentionally omitted
 - Vector search, HyDE, LLM query expansion, and reranker-driven recall were kept out of xlfg's core path to preserve determinism and auditability.
-
 
 ## 2.0.2 - 2026-03-03
 

@@ -2,7 +2,7 @@
 
 ## Command architecture
 
-`/xlfg` is intentionally a **macro**. It should not hide the workflow in one giant prompt.
+`/xlfg` is intentionally a **macro**.
 
 ```text
 /xlfg
@@ -15,11 +15,9 @@
   └─ /xlfg:compound
 ```
 
-`/xlfg:init` remains available as a manual bootstrap / repair command, but the main workflow should prefer the fast prepare/migrate check.
+`/xlfg:init` remains a manual bootstrap / repair command.
 
-This keeps the workflow debuggable, composable, and easy to re-run from any intermediate stage.
-
-## Shared file protocol
+## Shared run protocol
 
 Every serious run writes:
 
@@ -46,44 +44,54 @@ The harness profile chooses the minimum honest intensity for the run:
 - `standard`
 - `deep`
 
-The profile controls:
+It controls fan-out, checker-loop budget, verify depth, and required review lenses.
 
-- max ordered tasks
-- max checker loops per task
-- max parallel subagents
-- recommended verify mode
-- required review lenses
-- escalation triggers
+## Knowledge architecture (2.0.6)
 
-This is xlfg’s lightweight answer to “execution modes” in larger harness systems.
+### Write model (tracked)
 
-## Memory split
+- `knowledge/service-context.md`
+- `knowledge/write-model.md`
+- `knowledge/commands.json`
+- `knowledge/cards/<kind>/<branch-slug>/...`
+- `knowledge/events/<branch-slug>/...json`
+- `knowledge/agent-memory/<role>/cards/<branch-slug>/...`
 
-- `docs/xlfg/knowledge/` → tracked durable knowledge
-- `docs/xlfg/knowledge/agent-memory/` → tracked role-specific memory
+### Read model (local generated)
+
+- `knowledge/_views/current-state.md`
+- `knowledge/_views/<kind>.md`
+- `knowledge/_views/agent-memory/<role>.md`
+- `knowledge/_views/ledger.jsonl`
+- `knowledge/_views/worktree.md`
+
+### Evidence
+
 - `docs/xlfg/runs/` → local episodic evidence
 - `.xlfg/` → ephemeral raw logs
 
+The main rule is: **write immutable tracked units, read generated local rollups**.
+
 ## Workboard and proof map
 
-Two files became central in 2.0.5:
+Two files are central to honest execution:
 
-- `workboard.md` → stage / task truth for the run
-- `proof-map.md` → requirement-to-evidence truth for the run
+- `workboard.md` → stage / task truth
+- `proof-map.md` → requirement-to-evidence truth
 
 The workboard answers: *where are we and what is next?*
 
-The proof map answers: *what would count as honest proof, and do we have it yet?*
+The proof map answers: *what exactly would count as proof?*
 
 ## Quality placement
 
 Quality is not deferred to the end.
 
-- **Planning** prevents bad direction.
-- **Implementation** prevents bad code from spreading.
-- **Verification** proves the contract.
-- **Review** confirms there are no blind spots.
-- **Compounding** upgrades future runs.
+- planning prevents bad direction
+- implementation prevents bad code from spreading
+- verification proves the contract
+- review confirms there are no blind spots
+- compounding improves the next run
 
 ## Progressive agent loading
 
@@ -99,7 +107,7 @@ The core planning agents always run:
 - solution architect
 - harness profiler
 
-Optional agents should load only when the diagnosis justifies them. This keeps context and runtime cost under control.
+Optional agents load only when the diagnosis justifies them.
 
 ## Implementation loop
 
@@ -110,4 +118,4 @@ For each task:
 3. targeted proof
 4. `xlfg-task-checker`
 
-If the checker rejects the task up to the profile budget without a new diagnosis, stop and update the plan.
+If the checker keeps rejecting within the profile budget and the diagnosis changes, go back to planning.

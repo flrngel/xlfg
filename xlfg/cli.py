@@ -8,6 +8,8 @@ from typing import Any
 from . import __version__
 from .detect import detect_commands
 from .doctor import cleanup_dev_server, ensure_dev_server
+from .gitmeta import detect_git_context
+from .knowledge import rebuild_views
 from .runs import create_run
 from .recall import recall
 from .scaffold import ensure_scaffold, scaffold_status
@@ -60,6 +62,14 @@ def main(argv: list[str] | None = None) -> int:
     p_verify.add_argument("--run", dest="run_id", default=None, help="Run id (default: latest)")
     p_verify.add_argument("--mode", choices=["auto", "fast", "full"], default="auto")
 
+    p_knowledge = subparsers.add_parser("knowledge", help="Knowledge-store maintenance commands")
+    knowledge_sub = p_knowledge.add_subparsers(dest="knowledge_command")
+    p_knowledge_rebuild = knowledge_sub.add_parser("rebuild", help="Rebuild local knowledge views from tracked cards and event files")
+    p_knowledge_rebuild.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
+
+    p_worktree = subparsers.add_parser("worktree", help="Show current git worktree / branch context for xlfg")
+    p_worktree.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
+
     args = parser.parse_args(argv)
 
     if args.version:
@@ -73,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(args.root).resolve() if getattr(args, "root", None) else repo_root()
 
     if args.command == "status":
-        _print_json({"root": str(root), **scaffold_status(root, __version__)})
+        _print_json({"root": str(root), **scaffold_status(root, __version__), "git_context": detect_git_context(root)})
         return 0
 
     if args.command in {"prepare", "init"}:
@@ -129,6 +139,20 @@ def main(argv: list[str] | None = None) -> int:
         result = verify(root, run_id=args.run_id, mode=mode)
         _print_json({"root": str(root), **result})
         return 0 if result.get("ok") else 2
+
+    if args.command == "knowledge":
+        if args.knowledge_command == "rebuild":
+            ensure_scaffold(root, __version__)
+            result = rebuild_views(root)
+            _print_json({"root": str(root), **result})
+            return 0
+        p_knowledge.print_help()
+        return 1
+
+    if args.command == "worktree":
+        ensure_scaffold(root, __version__)
+        _print_json({"root": str(root), **detect_git_context(root)})
+        return 0
 
     parser.print_help()
     return 1

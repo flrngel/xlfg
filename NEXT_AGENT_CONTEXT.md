@@ -1,160 +1,179 @@
 # NEXT_AGENT_CONTEXT
 
-Read this before touching the repo. This document is the bundle-level handoff so the next intelligent agent can continue without extra explanation.
+Version: **2.0.6**
+
+This file is the bundle-level handoff for the next intelligent agent. Read this before touching the repo.
 
 ## 1. Mission
 
-`xlfg` is not trying to be a generic CLI product. The real product is the **agent skill / harness** that helps Claude Code or similar coding agents build **production-grade services** with less fake-green output, less terminal thrash, and better retained operational knowledge.
+`xlfg` is an **agent harness skill** for building production-grade services.
 
-The harness should make good engineering behavior easier than bad engineering behavior.
+The main product is not the helper CLI. The main product is the **plugin workflow and file protocol** that force agents to:
 
-## 2. Non-negotiables from the user
+- recall relevant prior knowledge before broad fan-out
+- define why, behavior, and proof before coding
+- avoid fake-green verification
+- learn from repeated environment failures
+- leave behind durable, low-conflict knowledge for future runs
 
-- `/xlfg` must be a macro composed of explicit subcommands.
-- `/xlfg` must **use recall**. A recall system that only exists in a side CLI is meaningless.
-- Planning and implementation must prevent bad output; review is not the cleanup crew.
-- The workflow must prefer the **root solution**, not temporal patches.
-- Testing must be defined from concrete **UX / behavior flows** before coding.
-- Environment / harness failures must be learned and compounded so the same failure does not keep happening.
-- Every delivered bundle should include a high-signal handoff document so the next agent can pick up immediately.
-- Do **not** push vector-search / RAG / HyDE / reranking as a required core dependency.
-- Normal evolution bumps **patch version only**.
+## 2. Problem solved in 2.0.6
 
-## 3. What changed in 2.0.5
+The user reported a real operational failure:
 
-This patch takes useful ideas from DeerFlow-style harness thinking without turning xlfg into a giant always-on runtime.
+> when multiple worktrees or branches used xlfg at the same time, they kept getting PR merge conflicts on shared knowledge files.
 
-### Main changes
+The old model had a hidden flaw: feature branches were editing the same tracked rollup docs (`current-state.md`, `patterns.md`, `testing.md`, `failure-memory.md`, `harness-rules.md`, `ledger.jsonl`, role memory markdown). Those files were serving **two jobs at once**:
 
-1. Planning now starts with an explicit `why.md` written by `xlfg-why-analyst`.
-2. Planning now chooses a run-specific `harness-profile.md` (`quick`, `standard`, `deep`) written by `xlfg-harness-profiler`.
-3. Every run now has a `workboard.md` as a persistent stage / task ledger.
-4. Every run now has a `proof-map.md` so verification cannot pretend that green commands automatically mean real proof.
-5. `/xlfg:plan` now loads optional planning agents progressively instead of fanning out by default.
-6. `/xlfg` now reads the recommended verify mode from `harness-profile.md` instead of assuming maximal verification every time.
-7. Role memory now includes `why-analyst` and `harness-profiler`.
-8. This bundle now includes `docs/deer-flow-harness-review.md`, which explains what was borrowed, what was rejected, and why.
+1. durable storage
+2. convenient read model
 
-## 4. Why DeerFlow mattered here
+That was the wrong design for concurrent branches.
 
-The key useful lesson was **not** “make xlfg huge.”
+## 3. New design in one sentence
 
-The useful lesson was:
-- think of the harness as **runtime structure**, not a bigger prompt
-- keep explicit task state
-- bound subagent concurrency and execution cost
-- load capabilities progressively
-- separate durable memory from per-run state
+**Tracked knowledge is now written only as immutable branch-scoped cards and immutable event files. Local `_views/` files are generated read models and must not be hand-edited on feature branches.**
 
-That pushed xlfg toward:
-- `why.md`
-- `harness-profile.md`
-- `workboard.md`
-- `proof-map.md`
-- optional agent fan-out only when the diagnosis justifies it
+## 4. Current target-repo knowledge model
 
-## 5. Design direction
+### Tracked durable artifacts
 
-The desired shape is:
+- `docs/xlfg/meta.json`
+- `docs/xlfg/index.md`
+- `docs/xlfg/knowledge/service-context.md`
+- `docs/xlfg/knowledge/write-model.md`
+- `docs/xlfg/knowledge/commands.json`
+- `docs/xlfg/knowledge/cards/<kind>/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+- `docs/xlfg/knowledge/events/<branch-slug>/<timestamp>--<run-id>--<slug>.json`
+- `docs/xlfg/knowledge/agent-memory/<role>/cards/<branch-slug>/<timestamp>--<run-id>--<slug>.md`
+- `docs/xlfg/migrations/`
 
-1. **Prepare fast** — check scaffold version, migrate only on drift.
-2. **Recall first** — read the smallest relevant prior context before wide repo scanning.
-3. **Why first** — anchor the run to the user / operator value and false-success rejection.
-4. **Diagnose** — identify the real capability gap or fault chain.
-5. **Contract** — define behavior, tests, and environment up front.
-6. **Profile** — choose the minimum honest harness intensity.
-7. **Implement with bounded loops** — task-scoped work, explicit checks, anti-shortcut discipline.
-8. **Verify honestly** — layered proof with environment-state awareness.
-9. **Review as confirmation** — not as rescue.
-10. **Compound** — promote only small, verified lessons; keep runs local by default.
-11. **Refresh the handoff** — keep a concise tracked context document for the next agent.
+### Local generated read models
 
-## 6. Why recall is mandatory
+- `docs/xlfg/knowledge/_views/current-state.md`
+- `docs/xlfg/knowledge/_views/<kind>.md`
+- `docs/xlfg/knowledge/_views/agent-memory/<role>.md`
+- `docs/xlfg/knowledge/_views/ledger.jsonl`
+- `docs/xlfg/knowledge/_views/worktree.md`
 
-The user repeatedly ran into predictable harness failures such as duplicate `yarn dev`, port collisions, stale bundles, and expensive E2E loops that still missed real failures. When the system forgets those lessons at the start of a new run, it wastes time rediscovering them.
+### Local evidence
 
-Therefore recall is a first-class workflow step, not a side utility.
+- `docs/xlfg/runs/<run-id>/...`
+- `.xlfg/runs/<run-id>/...`
 
-`/xlfg` should always start from:
+## 5. Why this matters
 
-- `docs/xlfg/knowledge/current-state.md`
-- durable shared knowledge (`testing.md`, `ux-flows.md`, `failure-memory.md`, `harness-rules.md`, etc.)
-- role-specific memory when the role matches
-- the append-only ledger
-- recent local runs when they genuinely match
+This resolves the merge-conflict problem without weakening compounding.
 
-## 7. Memory model
+- feature branches write new files instead of editing the same shared file
+- generated rollups become local conveniences, not merge-sensitive write targets
+- the next agent in the same worktree still gets a fast `current-state.md`
+- durable knowledge is preserved through cards/events and can be replayed into views at any time
 
-There are now four layers of memory:
+## 6. Code changes in this patch
 
-1. **current-state.md** — the one tracked handoff doc a new agent should read first
-2. **shared knowledge** — tracked repo-wide durable lessons
-3. **role memory** — compact specialist heuristics for recurring failure classes
-4. **local runs** — episodic evidence, usually gitignored
+### New modules / capabilities
 
-The bundle-level analogue of `current-state.md` is this file: `NEXT_AGENT_CONTEXT.md`. Keep it updated whenever the bundle meaningfully changes.
+- `xlfg/gitmeta.py`
+  - detects git top/common dir, branch, default branch, worktree name, branch slug, and knowledge write namespace
+  - writes `.xlfg/worktree.json`
 
-## 8. Research synthesis that shaped the current design
+- `xlfg/knowledge.py`
+  - creates tracked card/event layout
+  - creates local `_views/` layout
+  - rebuilds shared and role-memory read models
+  - rebuilds local `ledger.jsonl`
+  - writes `worktree.md`
 
-This repo intentionally follows the non-hype parts of the research and ignores the parts that are hard to trust operationally.
+### Reworked modules
 
-### Adopted ideas
+- `xlfg/scaffold.py`
+  - scaffold schema version is now **7**
+  - creates `service-context.md`, `write-model.md`, `cards/`, `events/`, and role card dirs
+  - treats `_views/` as local generated read models
+  - records worktree context and rebuilds views during prepare/init
 
-- **Long-horizon agents need explicit artifacts** instead of hoping the model keeps everything straight in chat history.
-- **Verification should be requirement-linked** (new behavior and regression behavior) rather than a late generic suite blast.
-- **Memory should be subtask-, stage-, and role-aligned** instead of one giant summary blob.
-- **Append-only memory with provenance** is better than constantly rewriting “what we learned.”
-- **A harness is runtime structure**: state, bounded loops, capability loading, and execution policies.
+- `xlfg/cli.py`
+  - `status` now reports git/worktree context
+  - new `worktree` subcommand
+  - new `knowledge rebuild` subcommand
 
-### Rejected from the core path
+- `xlfg/recall.py`
+  - recall now searches local generated views, tracked cards, tracked role cards, immutable events, static docs, and runs
+  - legacy `ledger.jsonl` is still read if present for migration compatibility
 
-- vector search
-- embedding stores
-- HyDE / hypothetical query expansion
-- mandatory reranking
-- giant always-on server architecture for normal plugin usage
+- `tests/test_xlfg.py`
+  - now verifies branch-safe layout, `_views/` generation, event recall, role-memory views, and legacy metadata handling
 
-Those may be studied elsewhere, but they should not be required in the core harness until they are precise enough for production trust.
+## 7. Prompt / plugin changes in this patch
 
-## 9. Current weak spots
+The command and skill docs were rewritten so future agents do not accidentally keep using the old hot-file model.
 
-These are not solved yet and remain high-value follow-ups:
+Important behavior now expected from the prompts:
 
-- repo-specific stack profiles are still thin; command detection is still heuristic in unknown repos
-- reviewer specialization can improve further for framework-specific systems
-- `current-state.md` needs disciplined curation so it stays short and useful
-- plugin prompts still rely on the lead agent to honestly maintain `workboard.md` and `proof-map.md`; stronger mechanical enforcement could help
+- `/xlfg:prepare`
+  - ensure scaffold exists
+  - detect version drift
+  - record worktree context
+  - rebuild local views
 
-## 10. Editing rules for the next agent
+- `/xlfg:recall`
+  - read `_views/current-state.md` first
+  - read other `_views/`, cards, events, and runs deterministically
 
-If you continue evolving this repo:
+- `/xlfg:compound`
+  - write immutable shared cards under `cards/<kind>/<branch-slug>/...`
+  - write immutable role cards under `agent-memory/<role>/cards/<branch-slug>/...`
+  - write immutable event JSON files under `events/<branch-slug>/...`
+  - rebuild local `_views/`
+  - never hand-edit `_views/current-state.md` or `_views/ledger.jsonl`
+
+## 8. Research synthesis that justified this design
+
+The design direction is:
+
+- append-only or immutable write model
+- deterministic replay / projection into read models
+- explicit worktree-aware context
+- role-aligned memory instead of a giant shared blob
+- no vector/RAG dependency in the core path
+
+For the detailed reasoning, read `docs/branch-safe-knowledge.md`.
+
+## 9. Editing rules for the next agent
 
 - bump **patch only**
-- update version in all required files
-- update `plugins/xlfg-engineering/CHANGELOG.md`
-- update this `NEXT_AGENT_CONTEXT.md`
-- prefer improving `/xlfg` and its subcommands over polishing the CLI
-- do not add experimental retrieval as a core dependency
-- keep `docs/xlfg/runs/` local by default unless there is a very strong reason not to
+- keep the plugin workflow as the product; CLI is optional support
+- do not reintroduce tracked hot rollup files as the main write target
+- do not add vector-search or semantic recall as a core dependency
+- keep `_views/` local and generated
+- if you change the knowledge model, update:
+  - `NEXT_AGENT_CONTEXT.md`
+  - `docs/branch-safe-knowledge.md`
+  - `plugins/xlfg-engineering/README.md`
+  - `plugins/xlfg-engineering/CHANGELOG.md`
+  - `xlfg/scaffold.py`
+  - `tests/test_xlfg.py`
 
-## 11. Suggested immediate next checks
+## 10. Read these next
 
-If continuing from 2.0.5, inspect these first:
+1. `docs/branch-safe-knowledge.md`
+2. `plugins/xlfg-engineering/commands/xlfg-compound.md`
+3. `plugins/xlfg-engineering/commands/xlfg-prepare.md`
+4. `xlfg/knowledge.py`
+5. `xlfg/scaffold.py`
+6. `tests/test_xlfg.py`
 
-- `docs/deer-flow-harness-review.md`
-- `plugins/xlfg-engineering/commands/xlfg.md`
-- `plugins/xlfg-engineering/commands/xlfg-plan.md`
-- `plugins/xlfg-engineering/commands/xlfg-verify.md`
-- `xlfg/scaffold.py`
-- `tests/test_xlfg.py`
+## 11. Validation
+
+- `pytest`: 15 passed
+- branch-priority view generation is covered by tests
+- prepare/recall/migration/layout behavior is covered by tests
 
 ## 12. Success criterion
 
-The user should be able to install the plugin, run `/xlfg`, and get a workflow that:
+A target repo using `/xlfg` across multiple branches or linked worktrees should now be able to:
 
-- remembers relevant past failures and harness rules up front
-- defines why, behavior, and proof before coding
-- picks an honest harness intensity instead of wasting time by default
-- avoids the same bad dev-server / port / stale-build loops
-- prefers root fixes over temporal patches
-- leaves behind a clear tracked handoff for the next agent
+- compound useful lessons without all branches editing the same shared file
+- rebuild a useful local handoff in each worktree
+- keep durable knowledge reviewable in git
+- avoid the old PR conflict pattern on knowledge files

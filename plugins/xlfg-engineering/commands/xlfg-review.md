@@ -48,7 +48,7 @@ Always read first (if present):
 - `scorecard.md`
 - `verify-fix-plan.md`
 - `workboard.md`
-- `docs/xlfg/knowledge/current-state.md`
+- `docs/xlfg/knowledge/_views/current-state.md`
 
 Run these review agents based on the required lenses in `harness-profile.md` and actual changed surface:
 

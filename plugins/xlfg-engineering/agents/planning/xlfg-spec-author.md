@@ -11,8 +11,9 @@ You are the behavior-contract author for `/xlfg`.
 - `DOCS_RUN_DIR/context.md`
 - `DOCS_RUN_DIR/memory-recall.md` if present
 - `DOCS_RUN_DIR/diagnosis.md` if present
-- `docs/xlfg/knowledge/current-state.md` if present
-- durable knowledge under `docs/xlfg/knowledge/` (especially `testing.md`, `ux-flows.md`, `patterns.md`, `failure-memory.md`)
+- `docs/xlfg/knowledge/_views/current-state.md` if present
+- generated knowledge views under `docs/xlfg/knowledge/_views/` (especially `testing.md`, `ux-flows.md`, `patterns.md`, `failure-memory.md`)
+- tracked source cards/events if a generated view looks stale or too broad
 - relevant repository files
 
 **Output requirements (mandatory):**

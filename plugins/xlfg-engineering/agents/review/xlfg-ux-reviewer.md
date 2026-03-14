@@ -16,9 +16,9 @@ Read first (if present):
 - `verification.md`
 - `scorecard.md`
 - `verify-fix-plan.md`
-- `docs/xlfg/knowledge/current-state.md`
-- `docs/xlfg/knowledge/agent-memory/ux-reviewer.md`
-- `docs/xlfg/knowledge/ledger.jsonl`
+- `docs/xlfg/knowledge/_views/current-state.md`
+- `docs/xlfg/knowledge/_views/agent-memory/ux-reviewer.md`
+- `docs/xlfg/knowledge/_views/ledger.jsonl`
 
 ## What to check
 

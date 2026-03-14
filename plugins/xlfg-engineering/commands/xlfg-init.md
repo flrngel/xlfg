@@ -11,22 +11,42 @@ Use this when you want to explicitly bootstrap or repair the xlfg scaffold.
 
 ## Safety + idempotency rules
 
-- Do **not** overwrite existing files.
-- If a file already exists, only add missing sections.
-- Do **not** modify unrelated docs or tooling.
-- Respect the tracking model: `knowledge/` tracked, `runs/` local-only, `.xlfg/` ephemeral.
+- Do not overwrite existing files.
+- If a file already exists, only add missing structure.
+- Do not modify unrelated docs or tooling.
+- Respect the tracking model: tracked cards/events/seed docs, local generated `_views/`, local runs, ephemeral `.xlfg/`.
 
 ## What to create or repair
 
-### Directories
+### Tracked
 
-Tracked:
-- `docs/xlfg/knowledge/`
-- `docs/xlfg/knowledge/agent-memory/`
-- `docs/xlfg/migrations/`
+- `docs/xlfg/index.md`
 - `docs/xlfg/meta.json`
+- `docs/xlfg/knowledge/service-context.md`
+- `docs/xlfg/knowledge/write-model.md`
+- `docs/xlfg/knowledge/quality-bar-seed.md`
+- `docs/xlfg/knowledge/queries.md`
+- `docs/xlfg/knowledge/commands.json`
+- `docs/xlfg/knowledge/cards/README.md`
+- `docs/xlfg/knowledge/events/README.md`
+- `docs/xlfg/knowledge/cards/<kind>/.gitkeep`
+- `docs/xlfg/knowledge/events/.gitkeep`
+- `docs/xlfg/knowledge/agent-memory/README.md`
+- `docs/xlfg/knowledge/agent-memory/<role>/README.md`
+- `docs/xlfg/knowledge/agent-memory/<role>/cards/.gitkeep`
+- `docs/xlfg/migrations/`
 
-Local-only:
+### Local generated
+
+- `docs/xlfg/knowledge/_views/current-state.md`
+- `docs/xlfg/knowledge/_views/<kind>.md`
+- `docs/xlfg/knowledge/_views/agent-memory/<role>.md`
+- `docs/xlfg/knowledge/_views/ledger.jsonl`
+- `docs/xlfg/knowledge/_views/worktree.md`
+- `.xlfg/worktree.json`
+
+### Local-only evidence
+
 - `docs/xlfg/runs/`
 - `.xlfg/runs/`
 
@@ -38,30 +58,14 @@ Ensure the repo root `.gitignore` contains:
 - `docs/xlfg/runs/*`
 - `!docs/xlfg/runs/.gitkeep`
 - `!docs/xlfg/runs/README.md`
-
-### Durable knowledge files
-
-Create these if missing:
-
-- `docs/xlfg/index.md`
-- `docs/xlfg/knowledge/current-state.md`
-- `docs/xlfg/knowledge/quality-bar.md`
-- `docs/xlfg/knowledge/decision-log.md`
-- `docs/xlfg/knowledge/patterns.md`
-- `docs/xlfg/knowledge/testing.md`
-- `docs/xlfg/knowledge/ux-flows.md`
-- `docs/xlfg/knowledge/failure-memory.md`
-- `docs/xlfg/knowledge/harness-rules.md`
-- `docs/xlfg/knowledge/ledger.jsonl`
-- `docs/xlfg/knowledge/ledger.md`
-- `docs/xlfg/knowledge/queries.md`
-- `docs/xlfg/knowledge/commands.json`
-- role memories under `docs/xlfg/knowledge/agent-memory/`
+- `docs/xlfg/knowledge/_views/`
 
 ## Completion
 
 After scaffolding is created or repaired:
 
-- Print created paths
-- Print the scaffold version written to `docs/xlfg/meta.json`
-- Suggest running `/xlfg <your request>`
+- print created paths
+- print the scaffold version written to `docs/xlfg/meta.json`
+- print the detected worktree context
+- confirm that local views were rebuilt
+- suggest running `/xlfg <your request>`

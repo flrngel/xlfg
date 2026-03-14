@@ -37,8 +37,9 @@ Read these first and refuse to proceed if any are missing:
 - `proof-map.md`
 - `scorecard.md`
 - `risk.md` if present
-- `docs/xlfg/knowledge/current-state.md` if present
-- relevant role memory under `docs/xlfg/knowledge/agent-memory/`
+- `docs/xlfg/knowledge/_views/current-state.md` if present
+- relevant generated role memory under `docs/xlfg/knowledge/_views/agent-memory/`
+- exact source cards/events only when a generated view needs precision
 
 Extract from `harness-profile.md` before starting:
 
@@ -59,7 +60,7 @@ If the profile is missing or vague, stop and repair it before coding.
 - **Do not broaden file scope casually.** If scope must expand, update the plan first.
 - **Use targeted checks after each task.** Final verification comes later.
 - **If a disproof probe trips, stop and return to planning.**
-- **Do not repeat a known failure pattern** already called out in `memory-recall.md`, `current-state.md`, or role memory.
+- **Do not repeat a known failure pattern** already called out in `memory-recall.md`, `current-state.md`, generated role memory, or source cards.
 - **Do not mark a task done if its proof obligation is still undefined.** Update `proof-map.md` or return to planning.
 
 ## 4) Workboard discipline
@@ -118,61 +119,3 @@ A task is only complete when:
 - the relevant `proof-map.md` rows now have concrete planned or observed evidence paths
 - no known recall-derived trap was ignored silently
 - the task still aligns to `why.md`
-
-### 5D) Anti-loop rule
-
-Use the checker-loop budget from `harness-profile.md`.
-
-If the checker rejects the task up to that limit **without a new diagnosis or plan update**:
-
-- stop the patch loop
-- update `diagnosis.md` and `solution-decision.md` if needed
-- update `plan.md`, `workboard.md`, and `proof-map.md`
-- only then resume implementation
-
-Do not brute-force your way to green.
-
-## 6) Escalation rule
-
-Step the run up to a deeper harness profile if any of these become true:
-
-- the scope expands across more user-facing flows than planned
-- the task crosses an auth / money / destructive-data boundary
-- the required proof clearly exceeds the current profile budget
-- repeated checker failures reveal the diagnosis was too shallow
-- the environment plan is no longer credible for the changed surface
-
-If you escalate:
-- update `harness-profile.md`
-- update `workboard.md`
-- update `plan.md`
-- call out what changed and why
-
-## 7) Root-cause rule
-
-If a workaround is the only safe short-term move, document it explicitly in:
-
-- `tasks/<task-id>/implementer-report.md`
-- `run-summary.md`
-- `risk.md` or `verify-fix-plan.md` if it changes the ship gate
-
-Do not silently present a workaround as the final solution.
-
-## 8) Finish the implementation phase
-
-When all tasks are complete, write or update `run-summary.md` with:
-
-- why summary
-- what changed
-- manual smoke steps
-- targeted checks already run
-- areas that still depend on `/xlfg:verify`
-- proof obligations still open in `proof-map.md`
-- known risks or `none`
-- which recall-derived rules mattered most during implementation
-
-Update `workboard.md`:
-- `implement: DONE`
-- `verify: NEXT`
-
-Do not call final verification or review in this command. The workflow continues with `/xlfg:verify`.

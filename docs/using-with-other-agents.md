@@ -22,9 +22,10 @@ A different agent can pick up the run later because the reasoning lives in the r
 
 When integrating another agent harness, preserve these properties:
 
-- read `current-state.md` first
+- read `docs/xlfg/knowledge/_views/current-state.md` first if it exists
 - use deterministic recall before wide scanning
 - keep per-run state in `docs/xlfg/runs/<run-id>/`
-- keep durable lessons in `docs/xlfg/knowledge/`
+- keep durable lessons in tracked cards/events under `docs/xlfg/knowledge/`
+- treat `_views/` as generated read models, not shared write targets
 - treat `workboard.md` as execution truth
 - treat `proof-map.md` as proof truth

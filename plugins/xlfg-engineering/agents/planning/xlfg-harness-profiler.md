@@ -16,8 +16,8 @@ You are the harness profiler for `/xlfg`.
 - `env-plan.md`
 - `risk.md` if present
 - `memory-recall.md` if present
-- `docs/xlfg/knowledge/current-state.md` if present
-- `docs/xlfg/knowledge/agent-memory/harness-profiler.md` if present
+- `docs/xlfg/knowledge/_views/current-state.md` if present
+- `docs/xlfg/knowledge/_views/agent-memory/harness-profiler.md` if present
 - relevant repository files
 
 **Output requirement:**
