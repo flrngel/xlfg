@@ -2,25 +2,29 @@
 
 `/xlfg` is a **why-first, recall-first, proof-aware SDLC macro** for Claude Code.
 
-The defining change in **2.0.6** is that xlfg now uses a **branch-safe knowledge model**:
+It is designed for:
 
-- tracked memory is written as immutable cards and immutable event files
-- worktree-local `_views/` files are generated read models
-- `/xlfg:compound` no longer asks branches to edit the same shared rollup docs
+- long-horizon tasks
+- multi-file changes
+- user-flow-sensitive product work
+- evidence-backed verification and review
+- compounding from real failures instead of vague summaries
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
 | `/xlfg` | Macro that runs prepare → recall → plan → implement → verify → review → compound |
-| `/xlfg:prepare` | Fast scaffold/version check; records git worktree context and rebuilds local knowledge views |
+| `/xlfg:prepare` | Fast scaffold/version check; compare installed tool version vs repo scaffold version and migrate only on drift |
 | `/xlfg:init` | Manual bootstrap / repair of `docs/xlfg/` + `.xlfg/` scaffolding |
-| `/xlfg:recall` | Deterministic recall over generated views, immutable cards/events, role memory, and local runs |
-| `/xlfg:plan` | Reload memory, define why, diagnose the real problem, choose the harness profile, and write shared contracts |
+| `/xlfg:recall` | Deterministic recall over current-state, knowledge, role memory, the ledger, and local runs |
+| `/xlfg:plan` | Reload memory, write the why, diagnose the root problem, choose the harness profile, and write the shared contracts before coding |
 | `/xlfg:implement` | Execute bounded task loops with explicit implementation agents, workboard updates, and proof-aware discipline |
 | `/xlfg:verify` | Run profile-aware layered verification + write evidence |
-| `/xlfg:review` | Run the review lenses justified by the harness profile and changed surface |
-| `/xlfg:compound` | Promote reusable lessons into immutable cards/events and rebuild local views |
+| `/xlfg:review` | Run only the review lenses justified by the harness profile and changed surface |
+| `/xlfg:compound` | Convert a run into durable knowledge, role memory, and a refreshed next-agent handoff |
+
+`/xlfg` intentionally mirrors Compound’s macro style: it is a set of other commands, not one giant hidden workflow prompt.
 
 ## Key artifact model
 
@@ -42,30 +46,14 @@ These are the shared contracts for implementation, verification, review, and com
 
 ## Tracking model
 
-### Tracked write model
-
-- `docs/xlfg/knowledge/service-context.md`
-- `docs/xlfg/knowledge/write-model.md`
-- `docs/xlfg/knowledge/commands.json`
-- `docs/xlfg/knowledge/cards/<kind>/<branch-slug>/...`
-- `docs/xlfg/knowledge/events/<branch-slug>/...json`
-- `docs/xlfg/knowledge/agent-memory/<role>/cards/<branch-slug>/...`
-- `docs/xlfg/meta.json`
-
-### Local read model
-
-- `docs/xlfg/knowledge/_views/current-state.md`
-- `docs/xlfg/knowledge/_views/<kind>.md`
-- `docs/xlfg/knowledge/_views/agent-memory/<role>.md`
-- `docs/xlfg/knowledge/_views/ledger.jsonl`
-- `docs/xlfg/knowledge/_views/worktree.md`
-
-### Local evidence
-
+- `docs/xlfg/knowledge/current-state.md` → tracked handoff doc for the next agent
+- latest `docs/xlfg/runs/*/current-state-candidate.md` → local branch/worktree handoff when a feature branch has not promoted a repo-wide update yet
+- `docs/xlfg/knowledge/` → tracked durable knowledge
+- `docs/xlfg/knowledge/ledger.jsonl` → append-only durable memory events
 - `docs/xlfg/runs/` → local episodic evidence, gitignored by default
 - `.xlfg/` → ephemeral raw logs, gitignored
 
-This split avoids PR conflicts while keeping the next-agent handoff fast inside each worktree.
+This split keeps git clean while preserving local run history for compounding.
 
 ## Planning and implementation doctrine
 
@@ -73,10 +61,9 @@ This split avoids PR conflicts while keeping the next-agent handoff fast inside 
 - Use deterministic recall before wide fan-out.
 - Load optional agents progressively; do not fan out just because they exist.
 - Choose the **minimum honest harness profile** (`quick`, `standard`, `deep`).
-- Keep `workboard.md` current; it is execution truth.
-- Keep `proof-map.md` current; it is proof truth.
+- Keep `workboard.md` current; it is the run-truth ledger.
+- Keep `proof-map.md` current; green commands are not enough when proof is still vague.
 - Review is confirmation, not cleanup.
-- Compound writes immutable lessons; `_views/` are regenerated afterward.
 
 ## Agents
 
@@ -110,8 +97,8 @@ Review:
 
 Subagent model:
 - `/xlfg` subagents use `sonnet`.
-- High-value specialists can read role-specific generated views under `docs/xlfg/knowledge/_views/agent-memory/`.
-- Durable role memory is promoted as tracked cards under `docs/xlfg/knowledge/agent-memory/<role>/cards/`.
+- Certain agents have **role-specific memory** under `docs/xlfg/knowledge/agent-memory/`.
+- The first tracked context doc in a target repo should always be `current-state.md`.
 
 ## Skills
 
@@ -137,4 +124,4 @@ Only patch versions are bumped in normal evolution. Update all of these together
 
 ## Recall model
 
-`/xlfg:recall` is intentionally deterministic. It supports temporal run recall and typed lexical query documents, but does not depend on vector search, HyDE, or LLM query expansion. If the helper CLI is absent, the same recall discipline can still be performed directly over the tracked cards/events and local generated views.
+`/xlfg:recall` is intentionally **deterministic**. It supports temporal run recall and typed lexical query documents, but does not depend on vector search, HyDE, or LLM query expansion. If the helper CLI is absent, the same recall discipline can still be performed directly over the tracked files with `rg`, `find`, and file reads.

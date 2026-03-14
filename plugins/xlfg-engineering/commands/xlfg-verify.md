@@ -14,8 +14,8 @@ Run verification commands and save evidence.
 
 Treat arguments as:
 
-- first token: `run-id` (or `latest`)
-- optional second token: `fast` or `full`
+- First token: `run-id` (or `latest`)
+- Optional second token: `fast` or `full`
 
 If no mode is supplied, use the recommended verify mode from `harness-profile.md`.
 
@@ -43,13 +43,12 @@ Read first (if present):
 - `proof-map.md`
 - `scorecard.md`
 - `run-summary.md`
-- `docs/xlfg/knowledge/_views/current-state.md`
-- `docs/xlfg/knowledge/_views/failure-memory.md`
-- `docs/xlfg/knowledge/_views/harness-rules.md`
-- `docs/xlfg/knowledge/_views/worktree.md`
+- `docs/xlfg/knowledge/current-state.md`
 - `docs/xlfg/knowledge/commands.json`
-- `docs/xlfg/knowledge/_views/agent-memory/env-doctor.md`
-- `docs/xlfg/knowledge/_views/agent-memory/verify-reducer.md`
+- `docs/xlfg/knowledge/failure-memory.md`
+- `docs/xlfg/knowledge/harness-rules.md`
+- `docs/xlfg/knowledge/agent-memory/env-doctor.md`
+- `docs/xlfg/knowledge/agent-memory/verify-reducer.md`
 
 Before running commands, mark in `workboard.md`:
 - `verify: IN_PROGRESS`
@@ -70,29 +69,28 @@ Only the fastest feedback loop:
 
 Run layers in this order:
 
-1. fast checks
-2. scenario-targeted smoke checks from `test-contract.md`
-3. required e2e / real-flow checks from `proof-map.md`
-4. broader regression suites and build/package checks
+1. Fast checks
+2. Scenario-targeted smoke checks from `test-contract.md`
+3. Required e2e / real-flow checks from `proof-map.md`
+4. Broader regression suites and build/package checks
 
 Important rules:
 
-- do not jump straight to giant e2e by default
-- verify the root solution, not just the absence of the old symptom
-- use `test-contract.md` and `proof-map.md` to decide which P0/P1 flows truly deserve smoke or e2e
-- prefer environment-state verification when relevant (healthy port, correct bundle, correct endpoint behavior), not just proof that a start command was invoked
-- if `memory-recall.md`, `current-state.md`, failure-memory, or harness-rules describes a repeated wrong-green trap, make sure the verify plan explicitly guards against it
-- a green command run is not enough if the proof map still has an unproven required scenario
+- **Do not jump straight to giant e2e by default.**
+- **Verify the root solution, not just the absence of the old symptom.**
+- Use `test-contract.md` and `proof-map.md` to decide which P0/P1 flows truly deserve smoke or e2e.
+- Prefer **environment-state verification** when relevant (healthy port, correct bundle, correct endpoint behavior), not just proof that a start command was invoked.
+- If `memory-recall.md`, `current-state.md`, or failure memory describes a repeated wrong-green trap, make sure the verify plan explicitly guards against it.
+- A green command run is **not** enough if the proof map still has an unproven required scenario.
 
 ## 3) Environment doctor (before smoke / e2e)
 
 If smoke or e2e requires a local app/server:
 
-- reuse an already healthy server if safe
-- do not start another `yarn dev` / `npm run dev` on top of it
-- check port + health first
-- use `.xlfg/worktree.json` and `knowledge/_views/worktree.md` to keep branch/worktree context explicit
-- write a doctor report under `.xlfg/runs/<run-id>/doctor/<ts>/`
+- Reuse an already healthy server if safe
+- Do **not** start another `yarn dev` / `npm run dev` on top of it
+- Check port + health first
+- Write a doctor report under `.xlfg/runs/<run-id>/doctor/<ts>/`
 
 If the port is already in use but the configured healthcheck is unhealthy, stop and surface that as the first actionable failure.
 
@@ -104,8 +102,8 @@ Run Task `xlfg-verify-runner` with:
 - `DX_RUN_DIR`
 - ordered layered commands
 - any relevant notes from `env-plan.md`
-- repeated failure signatures from memory or current-state
-- explicit proof obligations from `proof-map.md`
+- any repeated failure signatures from `memory-recall.md` or `current-state.md`
+- any explicit proof obligations from `proof-map.md`
 
 Runner responsibilities:
 
@@ -120,3 +118,54 @@ Runner responsibilities:
 - for Node-based commands, set `CI=1` unless the repo forbids it
 - do not run watch mode
 - if a command appears to hang and `timeout` exists, use it
+- if the same harness failure signature reappears, stop and classify it instead of looping blindly
+
+## 5) Reduce via verify reducer
+
+Run Task `xlfg-verify-reducer` with:
+
+- `DOCS_RUN_DIR`
+- `DX_RUN_DIR`
+- the verify timestamp or results path
+
+Reducer responsibilities:
+
+- write `verification.md`
+- update `scorecard.md`
+- update `proof-map.md`
+- update `workboard.md`
+- if RED, write `verify-fix-plan.md`
+- identify the **first actionable failure only**
+- call out if the test contract is too weak to prove the chosen solution
+- call out if a known repeated harness failure reappeared
+- mark proof gaps explicitly when the commands were green but the requirement still is not honestly proven
+
+## 6) Gate rule
+
+Verification is only GREEN when all are true:
+
+- required commands passed for the selected mode
+- required environment state was healthy when needed
+- `scorecard.md` is green for required F2P / P2P items
+- `proof-map.md` has no unresolved required proof gaps
+- the evidence still matches `why.md` and the chosen root solution
+
+If commands are green but the proof map still has a required gap, the run is RED.
+
+## 7) If failing, iterate correctly
+
+If verification is RED:
+
+- fix the first actionable failure
+- update `diagnosis.md` or `plan.md` if the failure changes the understanding of the problem
+- update `harness-profile.md` if the proof requirement was underestimated
+- re-run `/xlfg:verify`
+
+Do not continue to review while verification is RED.
+
+## 8) Finish verification phase
+
+If GREEN:
+- update `workboard.md` to `verify: DONE`
+- set `review: NEXT`
+- record the evidence location as the current next action

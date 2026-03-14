@@ -11,14 +11,12 @@ You are the environment doctor for `/xlfg`.
 - repository files
 - `DOCS_RUN_DIR/why.md`
 - `DOCS_RUN_DIR/memory-recall.md` if present
-- `docs/xlfg/knowledge/_views/current-state.md` if present
-- `docs/xlfg/knowledge/_views/failure-memory.md` if present
-- `docs/xlfg/knowledge/_views/harness-rules.md` if present
-- `docs/xlfg/knowledge/_views/worktree.md` if present
+- `docs/xlfg/knowledge/current-state.md` if present
 - `docs/xlfg/knowledge/commands.json` if present
-- `docs/xlfg/knowledge/_views/ledger.jsonl` if present
-- `docs/xlfg/knowledge/_views/agent-memory/env-doctor.md` if present
-- tracked source cards/events when a generated view needs precise sourcing
+- `docs/xlfg/knowledge/ledger.jsonl` if present
+- `docs/xlfg/knowledge/failure-memory.md` if present
+- `docs/xlfg/knowledge/harness-rules.md` if present
+- `docs/xlfg/knowledge/agent-memory/env-doctor.md` if present
 
 **Output requirement:**
 - Write `DOCS_RUN_DIR/env-plan.md`.
@@ -49,5 +47,5 @@ Define how the environment and verification harness must behave so the run does 
 - Reuse a healthy server rather than starting another one.
 - If a port may already be occupied, recommend checking health before restart.
 - Call out commands that often look green while serving the wrong build.
-- Use `why.md`, `current-state.md`, `memory-recall.md`, worktree context, and role memory when the stack or harness genuinely matches.
-- Prefer explicit failure signatures from the ledger or source cards over vague “similar stack” intuition.
+- Use `why.md`, `current-state.md`, `memory-recall.md`, and role memory when the stack or harness genuinely matches.
+- Prefer explicit failure signatures from the ledger over vague “similar stack” intuition.

@@ -38,6 +38,7 @@ Run these slash commands in order. Do not invent a shortcut workflow.
   - chosen harness profile
   - verification result
   - run artifact path
+  - whether shared knowledge was promoted or kept branch-local (`current-state-candidate.md`)
   - unresolved risks (or `none`)
 
 Start with step 1 now.

@@ -1,33 +1,29 @@
-# Research notes behind xlfg 2.0.6
+# Research notes behind xlfg 2.0.5
 
-This patch is about one concrete failure mode: concurrent branches were fighting over shared knowledge files.
+This revision adds a more explicit harness model instead of just adding more prompts.
 
-## 1) A harness needs a write model and a read model
+## 1) A harness is runtime structure, not a bigger prompt
 
-The old xlfg knowledge shape was convenient for reading but bad for concurrent writing. The new shape separates:
+The most useful lesson from recent harness writeups is that long-horizon agent quality improves when the environment, execution loop, and artifacts are made more explicit and enforceable.
 
-- immutable tracked write units (cards and events)
-- generated local read models (`_views/`)
-
-That makes compounding safer under multiple worktrees.
+That is why xlfg now adds:
+- `why.md`
+- `harness-profile.md`
+- `workboard.md`
+- `proof-map.md`
 
 ## 2) Memory should align to the actual unit of work
 
-Large, episode-level memory blobs are too coarse for long software workflows. xlfg keeps:
+Large, episode-level memory blobs are too coarse for long software workflows. xlfg keeps shared knowledge, role-specific memory, and an append-only ledger, and retrieval can filter by stage, role, kind, scope, path, and time.
 
-- shared cards by knowledge kind
-- role-specific cards by specialist
-- immutable event files with structured evidence
-- local generated views for fast reading
+## 3) Verification must be linked to the requirement, not only to command success
 
-## 3) Verification must stay linked to the requirement
+The new `proof-map.md` makes verification answer a stricter question: *what exact evidence would prove this scenario really works?*
 
-`proof-map.md` still exists for the same reason as before: command success does not automatically prove the requirement.
+## 4) Capability loading should be progressive
 
-## 4) Capability loading should stay progressive
-
-Optional agents still load only when the diagnosis justifies them. This keeps context and runtime cost under control.
+Optional agents now load only when the diagnosis justifies them. This borrows the useful “progressive loading” idea from larger harnesses without importing the whole runtime stack.
 
 ## 5) Deterministic recall stays the default
 
-This repo still intentionally avoids vector search, HyDE, and LLM query expansion in the core path. The priority is auditability, exact provenance, and a knowledge model that stays reviewable under git.
+This repo still intentionally avoids vector search, HyDE, and LLM query expansion in the core path. The priority is auditability, exact provenance, and high-signal retrieval for production engineering work.

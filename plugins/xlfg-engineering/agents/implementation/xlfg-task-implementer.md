@@ -19,9 +19,9 @@ You are a task implementer for `/xlfg`.
 - `proof-map.md`
 - `env-plan.md`
 - `DOCS_RUN_DIR/memory-recall.md` if present
-- `docs/xlfg/knowledge/_views/current-state.md` if present
-- `docs/xlfg/knowledge/_views/agent-memory/task-implementer.md` if present
-- `docs/xlfg/knowledge/_views/ledger.jsonl` if present
+- `docs/xlfg/knowledge/current-state.md` if present
+- `docs/xlfg/knowledge/agent-memory/task-implementer.md` if present
+- `docs/xlfg/knowledge/ledger.jsonl` if present
 - `risk.md` if present
 - `tasks/<task-id>/test-report.md`
 - handoff path: `DOCS_RUN_DIR/tasks/<task-id>/implementer-report.md`

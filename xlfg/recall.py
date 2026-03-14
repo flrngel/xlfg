@@ -52,6 +52,7 @@ _RUN_STAGE_BY_NAME = {
     "verify-fix-plan": "verify",
     "review-summary": "review",
     "compound-summary": "compound",
+    "current-state-candidate": "compound",
     "run-summary": "compound",
     "task-brief": "implement",
     "implementer-report": "implement",
@@ -59,17 +60,14 @@ _RUN_STAGE_BY_NAME = {
     "test-report": "implement",
 }
 _KNOWLEDGE_KIND = {
-    "current-state": ("current-state", "cross"),
-    "patterns": ("patterns", "implement"),
-    "decision-log": ("decision-log", "plan"),
+    "current-state": ("state-brief", "cross"),
+    "patterns": ("pattern", "implement"),
+    "decision-log": ("decision", "plan"),
     "testing": ("testing", "verify"),
-    "ux-flows": ("ux-flows", "plan"),
-    "failure-memory": ("failure-memory", "verify"),
-    "harness-rules": ("harness-rules", "verify"),
+    "ux-flows": ("ux-flow", "plan"),
+    "failure-memory": ("failure", "verify"),
+    "harness-rules": ("harness-rule", "verify"),
     "quality-bar": ("quality-bar", "cross"),
-    "service-context": ("service-context", "cross"),
-    "write-model": ("write-model", "cross"),
-    "quality-bar-seed": ("quality-bar", "cross"),
     "ledger": ("memory-event", "cross"),
     "queries": ("query-syntax", "cross"),
 }
@@ -330,20 +328,6 @@ def _infer_knowledge_kind(stem: str) -> Tuple[str, str]:
     return _KNOWLEDGE_KIND.get(stem, (stem, "cross"))
 
 
-def _infer_card_kind(path: Path) -> Tuple[str, str, Optional[str], str]:
-    parts = list(path.parts)
-    if "cards" in parts:
-        idx = parts.index("cards")
-        if idx >= 1:
-            kind = parts[idx + 1] if idx + 1 < len(parts) else path.stem.lower()
-            return kind.lower(), _KNOWLEDGE_KIND.get(kind.lower(), (kind.lower(), "cross"))[1], None, "card"
-    if "agent-memory" in parts and "cards" in parts:
-        idx = parts.index("agent-memory")
-        role = parts[idx + 1] if idx + 1 < len(parts) else path.stem.lower()
-        return "agent-memory", _ROLE_STAGE.get(role.lower(), "cross"), role.lower(), "card"
-    return path.stem.lower(), "cross", None, "markdown"
-
-
 def _extract_request_from_context(context_text: str) -> str:
     lines = context_text.splitlines()
     capture = False
@@ -363,99 +347,25 @@ def _extract_request_from_context(context_text: str) -> str:
 def _iter_markdown_docs(root: Path) -> Iterable[MemoryDoc]:
     knowledge_dir = root / "docs" / "xlfg" / "knowledge"
     if knowledge_dir.exists():
-        # Generated local read-model views
-        views_dir = knowledge_dir / "_views"
-        if views_dir.exists():
-            for path in sorted(views_dir.rglob("*.md")):
-                rel = str(path.relative_to(root))
-                text = _read_text(path)
-                if not text:
-                    continue
-                if "agent-memory" in path.parts:
-                    role = path.stem.lower()
-                    yield MemoryDoc(
-                        id=rel,
-                        scope="agent-memory",
-                        path=rel,
-                        title=_first_heading(text) or role,
-                        body=text,
-                        kind="agent-memory",
-                        stage=_ROLE_STAGE.get(role, "cross"),
-                        role=role,
-                        timestamp=_dt.datetime.fromtimestamp(path.stat().st_mtime),
-                        source="view",
-                    )
-                    continue
-                kind, stage = _infer_knowledge_kind(path.stem)
-                yield MemoryDoc(
-                    id=rel,
-                    scope="knowledge",
-                    path=rel,
-                    title=_first_heading(text) or path.stem,
-                    body=text,
-                    kind=kind,
-                    stage=stage,
-                    role=None,
-                    timestamp=_dt.datetime.fromtimestamp(path.stat().st_mtime),
-                    source="view",
-                )
-
-        # Tracked shared cards
-        cards_dir = knowledge_dir / "cards"
-        if cards_dir.exists():
-            for path in sorted(cards_dir.rglob("*.md")):
-                if path.name.lower() == "readme.md":
-                    continue
-                rel = str(path.relative_to(root))
-                text = _read_text(path)
-                if not text:
-                    continue
-                kind = path.parts[path.parts.index("cards") + 1].lower()
-                _, stage = _KNOWLEDGE_KIND.get(kind, (kind, "cross"))
-                yield MemoryDoc(
-                    id=rel,
-                    scope="knowledge",
-                    path=rel,
-                    title=_first_heading(text) or path.stem,
-                    body=text,
-                    kind=kind,
-                    stage=stage,
-                    role=None,
-                    timestamp=_dt.datetime.fromtimestamp(path.stat().st_mtime),
-                    source="card",
-                )
-
-        # Tracked role-specific cards
-        agent_dir = knowledge_dir / "agent-memory"
-        if agent_dir.exists():
-            for path in sorted(agent_dir.rglob("cards/**/*.md")):
-                if path.name.lower() == "readme.md":
-                    continue
-                rel = str(path.relative_to(root))
-                text = _read_text(path)
-                if not text:
-                    continue
-                role = path.parts[path.parts.index("agent-memory") + 1].lower()
+        for path in sorted(knowledge_dir.rglob("*.md")):
+            rel = str(path.relative_to(root))
+            text = _read_text(path)
+            if not text:
+                continue
+            if "agent-memory" in path.parts:
+                role = path.stem.lower()
                 yield MemoryDoc(
                     id=rel,
                     scope="agent-memory",
                     path=rel,
-                    title=_first_heading(text) or path.stem,
+                    title=_first_heading(text) or role,
                     body=text,
                     kind="agent-memory",
                     stage=_ROLE_STAGE.get(role, "cross"),
                     role=role,
                     timestamp=_dt.datetime.fromtimestamp(path.stat().st_mtime),
-                    source="card",
+                    source="markdown",
                 )
-
-        # Tracked static docs and legacy hot files, if present
-        for path in sorted(knowledge_dir.glob("*.md")):
-            if path.name.lower() == "readme.md":
-                continue
-            rel = str(path.relative_to(root))
-            text = _read_text(path)
-            if not text:
                 continue
             kind, stage = _infer_knowledge_kind(path.stem)
             yield MemoryDoc(
@@ -518,83 +428,53 @@ def _iter_markdown_docs(root: Path) -> Iterable[MemoryDoc]:
 
 
 def _iter_ledger_docs(root: Path) -> Iterable[MemoryDoc]:
-    knowledge_dir = root / "docs" / "xlfg" / "knowledge"
-    events_dir = knowledge_dir / "events"
+    ledger_path = root / "docs" / "xlfg" / "knowledge" / "ledger.jsonl"
+    if not ledger_path.exists():
+        return []
+
     docs: List[MemoryDoc] = []
-
-    if events_dir.exists():
-        for path in sorted(events_dir.rglob("*.json")):
+    for idx, line in enumerate(ledger_path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        body_parts: List[str] = []
+        for key in ("title", "summary", "symptom", "root_cause", "action", "prevention", "lex"):
+            value = data.get(key)
+            if isinstance(value, str) and value.strip():
+                body_parts.append(value.strip())
+        tags = data.get("tags") or []
+        if isinstance(tags, list):
+            body_parts.append(" ".join(str(t) for t in tags))
+        evidence = data.get("evidence") or []
+        if isinstance(evidence, list):
+            body_parts.append(" ".join(str(e) for e in evidence))
+        created_at = data.get("created_at")
+        ts = None
+        if isinstance(created_at, str):
             try:
-                data = json.loads(path.read_text(encoding="utf-8", errors="ignore"))
-            except json.JSONDecodeError:
-                continue
-            body_parts: List[str] = []
-            for key in ("title", "summary", "symptom", "root_cause", "action", "prevention", "lex"):
-                value = data.get(key)
-                if isinstance(value, str) and value.strip():
-                    body_parts.append(value.strip())
-            tags = data.get("tags") or []
-            if isinstance(tags, list):
-                body_parts.append(" ".join(str(t) for t in tags))
-            evidence = data.get("evidence") or []
-            if isinstance(evidence, list):
-                body_parts.append(" ".join(str(e) for e in evidence))
-            created_at = data.get("created_at")
-            ts = None
-            if isinstance(created_at, str):
-                try:
-                    ts = _dt.datetime.fromisoformat(created_at.replace("Z", "+00:00")).replace(tzinfo=None)
-                except Exception:
-                    ts = None
-            docs.append(
-                MemoryDoc(
-                    id=str(data.get("id") or path.stem),
-                    scope="ledger",
-                    path=str(path.relative_to(root)),
-                    title=str(data.get("title") or data.get("id") or path.stem),
-                    body="\n".join(body_parts).strip(),
-                    kind=str(data.get("kind") or "memory-event").lower(),
-                    stage=str(data.get("stage") or _ROLE_STAGE.get(str(data.get("role") or "").lower(), "cross")).lower(),
-                    role=str(data.get("role")).lower() if data.get("role") else None,
-                    timestamp=ts or _dt.datetime.fromtimestamp(path.stat().st_mtime),
-                    source="event",
-                    run_id=str(data.get("run_id")) if data.get("run_id") else None,
-                    extra=data,
-                )
+                ts = _dt.datetime.fromisoformat(created_at.replace("Z", "+00:00")).replace(tzinfo=None)
+            except Exception:
+                ts = None
+        docs.append(
+            MemoryDoc(
+                id=str(data.get("id") or f"ledger-{idx}"),
+                scope="ledger",
+                path=f"docs/xlfg/knowledge/ledger.jsonl#{data.get('id') or idx}",
+                title=str(data.get("title") or data.get("id") or f"ledger-{idx}"),
+                body="\n".join(body_parts).strip(),
+                kind=str(data.get("kind") or "memory-event").lower(),
+                stage=str(data.get("stage") or _ROLE_STAGE.get(str(data.get("role") or "").lower(), "cross")).lower(),
+                role=str(data.get("role")).lower() if data.get("role") else None,
+                timestamp=ts,
+                source="ledger",
+                run_id=str(data.get("run_id")) if data.get("run_id") else None,
+                extra=data,
             )
-
-    # Legacy tracked jsonl source, if present
-    ledger_path = knowledge_dir / "ledger.jsonl"
-    if ledger_path.exists():
-        for idx, line in enumerate(ledger_path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                data = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            body_parts: List[str] = []
-            for key in ("title", "summary", "symptom", "root_cause", "action", "prevention", "lex"):
-                value = data.get(key)
-                if isinstance(value, str) and value.strip():
-                    body_parts.append(value.strip())
-            docs.append(
-                MemoryDoc(
-                    id=str(data.get("id") or f"ledger-{idx}"),
-                    scope="ledger",
-                    path=f"docs/xlfg/knowledge/ledger.jsonl#{data.get('id') or idx}",
-                    title=str(data.get("title") or data.get("id") or f"ledger-{idx}"),
-                    body="\n".join(body_parts).strip(),
-                    kind=str(data.get("kind") or "memory-event").lower(),
-                    stage=str(data.get("stage") or _ROLE_STAGE.get(str(data.get("role") or "").lower(), "cross")).lower(),
-                    role=str(data.get("role")).lower() if data.get("role") else None,
-                    timestamp=None,
-                    source="ledger",
-                    run_id=str(data.get("run_id")) if data.get("run_id") else None,
-                    extra=data,
-                )
-            )
+        )
     return docs
 
 
@@ -603,8 +483,6 @@ def _normalize_scope(scope: str) -> List[str]:
     if scope == "all" or not scope:
         return ["knowledge", "agent-memory", "ledger", "runs", "migrations"]
     if scope == "memory":
-        return ["knowledge", "agent-memory", "ledger"]
-    if scope in {"views", "cards", "events"}:
         return ["knowledge", "agent-memory", "ledger"]
     return [scope]
 
@@ -707,12 +585,14 @@ def _bm25_scores(docs: Sequence[MemoryDoc], query: RecallQuery) -> Dict[str, flo
         if not matched_any:
             continue
 
-        if doc.source in {"ledger", "event"}:
+        if doc.source == "ledger":
             score += 0.5
-        if doc.source == "view":
-            score += 0.35
         if doc.scope == "agent-memory":
             score += 0.4
+        if doc.path.endswith("current-state.md"):
+            score += 0.75
+        if doc.path.endswith("current-state-candidate.md"):
+            score += 0.9
         scores[doc.id] = score
 
     return scores

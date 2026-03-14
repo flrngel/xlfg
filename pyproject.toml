@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xlfg"
-version = "2.0.6"
+version = "2.0.7"
 description = "Why-first, proof-aware SDLC harness for agentic software engineering"
 readme = "README.md"
 requires-python = ">=3.11"

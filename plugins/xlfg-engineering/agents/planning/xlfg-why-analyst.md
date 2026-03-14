@@ -10,8 +10,8 @@ You are the why analyst for `/xlfg`.
 - `DOCS_RUN_DIR`
 - `DOCS_RUN_DIR/context.md`
 - `DOCS_RUN_DIR/memory-recall.md` if present
-- `docs/xlfg/knowledge/_views/current-state.md` if present
-- `docs/xlfg/knowledge/_views/agent-memory/why-analyst.md` if present
+- `docs/xlfg/knowledge/current-state.md` if present
+- `docs/xlfg/knowledge/agent-memory/why-analyst.md` if present
 - relevant repository files only when they materially clarify who is affected or what quality bar matters
 
 **Output requirement:**

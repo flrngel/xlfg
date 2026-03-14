@@ -56,9 +56,9 @@ Write the raw request and known constraints to `context.md`.
 
 Before scanning the repo widely, load the smallest relevant slice of prior memory.
 
-### 1A) Read the local handoff first
+### 1A) Read the tracked handoff first
 
-Read `docs/xlfg/knowledge/_views/current-state.md` if present. This is the generated worktree-local handoff, not a tracked shared write target.
+Read `docs/xlfg/knowledge/current-state.md` if present.
 
 ### 1B) Use the immediately preceding `/xlfg:recall` result if available
 

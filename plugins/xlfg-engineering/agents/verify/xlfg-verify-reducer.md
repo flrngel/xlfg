@@ -14,9 +14,9 @@ You reduce verification artifacts into durable run documents.
 - `harness-profile.md` if present
 - `proof-map.md` if present
 - `workboard.md` if present
-- `docs/xlfg/knowledge/_views/current-state.md` if present
-- `docs/xlfg/knowledge/_views/agent-memory/verify-reducer.md` if present
-- `docs/xlfg/knowledge/_views/ledger.jsonl` if present
+- `docs/xlfg/knowledge/current-state.md` if present
+- `docs/xlfg/knowledge/agent-memory/verify-reducer.md` if present
+- `docs/xlfg/knowledge/ledger.jsonl` if present
 
 **Output requirements (mandatory):**
 - Read runner artifacts:

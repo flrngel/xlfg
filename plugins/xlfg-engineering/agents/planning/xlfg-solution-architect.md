@@ -16,9 +16,9 @@ You are the solution architect for `/xlfg`.
 - `env-plan.md`
 - `repo-map.md`
 - `research.md` if present
-- `docs/xlfg/knowledge/_views/current-state.md` if present
-- `docs/xlfg/knowledge/_views/agent-memory/solution-architect.md` if present
-- `docs/xlfg/knowledge/_views/ledger.jsonl` if present
+- `docs/xlfg/knowledge/current-state.md` if present
+- `docs/xlfg/knowledge/agent-memory/solution-architect.md` if present
+- `docs/xlfg/knowledge/ledger.jsonl` if present
 - relevant repository files
 
 **Output requirement:**

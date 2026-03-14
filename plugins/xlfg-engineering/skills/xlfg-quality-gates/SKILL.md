@@ -66,18 +66,18 @@ A run is only “done” when all apply.
 
 - monitoring / validation plan exists
 - rollback plan exists for risky changes
-- repeated harness failures are compounded into tracked cards/events or the relevant role-memory cards
-- local generated `_views/current-state.md` is rebuilt when the run changes what the next agent in this worktree should know first
+- repeated harness failures are compounded into `failure-memory.md`, `harness-rules.md`, or the relevant role memory file
+- `docs/xlfg/knowledge/current-state.md` is refreshed when the run changes what the next agent should know first
 
 ## Sanity check before calling a task or run “done”
 
 Ask:
 
-1. why does this work matter to the user or operator?
-2. what really fires when the flow runs?
-3. do tests exercise the real chain or only mocks?
-4. can failure leave stale or orphaned state?
-5. what other interfaces expose the same behavior?
-6. can the harness produce a fake green result?
-7. did we fix the real problem or only hide the symptom?
-8. did the proof map honestly prove the requirement?
+1. Why does this work matter to the user or operator?
+2. What really fires when the flow runs?
+3. Do tests exercise the real chain or only mocks?
+4. Can failure leave stale or orphaned state?
+5. What other interfaces expose the same behavior?
+6. Can the harness produce a fake green result?
+7. Did we fix the real problem or only hide the symptom?
+8. Did the proof map honestly prove the requirement?

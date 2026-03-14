@@ -1,0 +1,12 @@
+# xlfg bundle repository
+# Target repositories using xlfg will receive the same merge-friendly rules via `xlfg prepare`.
+
+docs/xlfg/knowledge/decision-log.md merge=union
+docs/xlfg/knowledge/patterns.md merge=union
+docs/xlfg/knowledge/testing.md merge=union
+docs/xlfg/knowledge/ux-flows.md merge=union
+docs/xlfg/knowledge/failure-memory.md merge=union
+docs/xlfg/knowledge/harness-rules.md merge=union
+docs/xlfg/knowledge/quality-bar.md merge=union
+docs/xlfg/knowledge/ledger.jsonl merge=union
+docs/xlfg/knowledge/agent-memory/*.md merge=union

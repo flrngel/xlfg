@@ -19,9 +19,9 @@ You are the targeted test implementer for `/xlfg`.
 - `proof-map.md`
 - `env-plan.md`
 - `memory-recall.md` if present
-- `docs/xlfg/knowledge/_views/current-state.md` if present
-- `docs/xlfg/knowledge/_views/agent-memory/test-implementer.md` if present
-- `docs/xlfg/knowledge/_views/ledger.jsonl` if present
+- `docs/xlfg/knowledge/current-state.md` if present
+- `docs/xlfg/knowledge/agent-memory/test-implementer.md` if present
+- `docs/xlfg/knowledge/ledger.jsonl` if present
 - relevant repository files
 
 **Output requirements (mandatory):**
