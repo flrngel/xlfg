@@ -14,6 +14,7 @@ A run is only “done” when all apply.
 ### Why, diagnosis, and scope
 
 - `memory-recall.md` exists and captures the strongest prior relevant lessons or an explicit no-hit
+- `query-contract.md` exists and preserves direct asks, implied asks, quality requirements, and prohibited shallow fixes
 - `why.md` exists and makes false success explicit
 - `diagnosis.md` exists and identifies the real problem or capability gap
 - `solution-decision.md` exists and records rejected shortcuts
@@ -46,6 +47,7 @@ A run is only “done” when all apply.
 - `proof-map.md` has no unresolved required proof gap
 - verification proves actual environment state when required (not just that a command was invoked)
 - green commands do not overrule missing proof
+- uncovered direct asks or non-negotiable implied asks keep the run RED
 
 ### UX
 

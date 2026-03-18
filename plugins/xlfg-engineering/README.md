@@ -1,6 +1,6 @@
 # xlfg-engineering (Claude Code plugin)
 
-`/xlfg` is a **why-first, recall-first, proof-aware SDLC macro** for Claude Code.
+`/xlfg` is a **query-first, why-first, recall-first, proof-aware SDLC macro** for Claude Code.
 
 It is designed for:
 
@@ -18,7 +18,7 @@ It is designed for:
 | `/xlfg:prepare` | Fast scaffold/version check; compare installed tool version vs repo scaffold version and migrate only on drift |
 | `/xlfg:init` | Manual bootstrap / repair of `docs/xlfg/` + `.xlfg/` scaffolding |
 | `/xlfg:recall` | Deterministic recall over current-state, knowledge, role memory, the ledger, and local runs |
-| `/xlfg:plan` | Reload memory, write the why, diagnose the root problem, choose the harness profile, and write the shared contracts before coding |
+| `/xlfg:plan` | Reload memory, refine the request into a query contract, write the why, diagnose the root problem, choose the harness profile, and write the shared contracts before coding |
 | `/xlfg:implement` | Execute bounded task loops with explicit implementation agents, workboard updates, and proof-aware discipline |
 | `/xlfg:verify` | Run profile-aware layered verification + write evidence |
 | `/xlfg:review` | Run only the review lenses justified by the harness profile and changed surface |
@@ -30,6 +30,7 @@ It is designed for:
 
 Before coding, every serious run should produce:
 
+- `query-contract.md`
 - `why.md`
 - `memory-recall.md`
 - `diagnosis.md`
@@ -42,7 +43,7 @@ Before coding, every serious run should produce:
 - `proof-map.md`
 - `scorecard.md`
 
-These are the shared contracts for implementation, verification, review, and compounding.
+These are the shared contracts for implementation, verification, review, and compounding. `query-contract.md` is the request truth; later files must trace back to it.
 
 ## Tracking model
 
@@ -68,6 +69,7 @@ This split keeps git clean while preserving local run history for compounding.
 ## Agents
 
 Planning:
+- `xlfg-query-refiner`
 - `xlfg-why-analyst`
 - `xlfg-repo-mapper`
 - `xlfg-root-cause-analyst`

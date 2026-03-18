@@ -15,6 +15,7 @@ _TOKEN_RE = re.compile(r"[a-z0-9_]+")
 _QUOTED_RE = re.compile(r'(-?)"([^"]+)"')
 _NEG_TERM_RE = re.compile(r"(?<!\S)-([a-z0-9_][a-z0-9_\-/]*)")
 _ROLE_STAGE = {
+    "query-refiner": "plan",
     "why-analyst": "plan",
     "root-cause-analyst": "plan",
     "test-strategist": "plan",
@@ -31,6 +32,7 @@ _ROLE_STAGE = {
     "performance-reviewer": "review",
 }
 _RUN_STAGE_BY_NAME = {
+    "query-contract": "plan",
     "why": "plan",
     "context": "plan",
     "repo-map": "plan",

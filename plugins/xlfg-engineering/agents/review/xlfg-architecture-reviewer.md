@@ -8,6 +8,7 @@ You are an architecture reviewer.
 
 Read first (if present):
 - `memory-recall.md`
+- `query-contract.md`
 - `why.md`
 - `harness-profile.md`
 - `flow-spec.md`
@@ -33,6 +34,7 @@ Read first (if present):
 - state / data invariants at boundaries
 - whether the implementation matches the promised flow contract
 - whether the test contract is reflected honestly in the code structure
+- whether the implementation drifted from direct asks or non-negotiable implied asks
 - whether a recall-derived architecture warning was ignored
 
 ## Output format

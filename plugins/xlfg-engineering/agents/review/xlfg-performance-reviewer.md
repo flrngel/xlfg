@@ -8,6 +8,7 @@ You are a performance reviewer.
 
 Read first (if present):
 - `memory-recall.md`
+- `query-contract.md`
 - `why.md`
 - `harness-profile.md`
 - `flow-spec.md`
@@ -28,6 +29,7 @@ Read first (if present):
 - heavy e2e / smoke checks that should have stayed targeted
 - harness steps that make iteration slower than necessary
 - memory / concurrency hazards
+- whether the implementation drifted from direct asks or non-negotiable implied asks
 - whether a recall-derived iteration-speed trap was ignored
 
 ## Output format

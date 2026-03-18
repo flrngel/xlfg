@@ -8,6 +8,7 @@ You are a UX + accessibility reviewer.
 
 Read first (if present):
 - `memory-recall.md`
+- `query-contract.md`
 - `why.md`
 - `harness-profile.md`
 - `flow-spec.md`
@@ -28,6 +29,7 @@ Read first (if present):
 - empty / loading states are helpful
 - keyboard and screen-reader accessibility when applicable
 - verification actually covered the important UX paths
+- whether the implementation drifted from direct asks or non-negotiable implied asks
 - whether a recall-derived UX trap was ignored
 
 ## Output format

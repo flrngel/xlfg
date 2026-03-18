@@ -31,6 +31,7 @@ Define:
 
 Read first (if present):
 
+- `query-contract.md`
 - `memory-recall.md`
 - `why.md`
 - `diagnosis.md`
@@ -53,10 +54,14 @@ Read first (if present):
 Before running commands, mark in `workboard.md`:
 - `verify: IN_PROGRESS`
 - current next action
+- note that the carry-forward anchor was re-read
 
 ## 2) Decide the layered verify plan
 
-The verify plan must match **both** the selected harness profile and the `proof-map.md` obligations.
+The verify plan must match **all three** of these:
+- the selected harness profile
+- the `proof-map.md` obligations
+- the direct asks / non-negotiable implied asks in `query-contract.md`
 
 ### `fast`
 
@@ -64,6 +69,7 @@ Only the fastest feedback loop:
 
 - lint / format / typecheck / static checks
 - any ultra-cheap scenario proof explicitly required by `proof-map.md`
+- any anti-monkey probe that is cheap enough to run now
 
 ### `full`
 
@@ -78,10 +84,10 @@ Important rules:
 
 - **Do not jump straight to giant e2e by default.**
 - **Verify the root solution, not just the absence of the old symptom.**
-- Use `test-contract.md` and `proof-map.md` to decide which P0/P1 flows truly deserve smoke or e2e.
+- Use `test-contract.md`, `proof-map.md`, and `query-contract.md` to decide which P0/P1 flows truly deserve smoke or e2e.
 - Prefer **environment-state verification** when relevant (healthy port, correct bundle, correct endpoint behavior), not just proof that a start command was invoked.
 - If `memory-recall.md`, `current-state.md`, or failure memory describes a repeated wrong-green trap, make sure the verify plan explicitly guards against it.
-- A green command run is **not** enough if the proof map still has an unproven required scenario.
+- A green command run is **not** enough if the proof map still has an unproven required scenario or if a direct ask is still uncovered.
 
 ## 3) Environment doctor (before smoke / e2e)
 
@@ -104,6 +110,7 @@ Run Task `xlfg-verify-runner` with:
 - any relevant notes from `env-plan.md`
 - any repeated failure signatures from `memory-recall.md` or `current-state.md`
 - any explicit proof obligations from `proof-map.md`
+- the carry-forward anchor from `query-contract.md`
 
 Runner responsibilities:
 
@@ -139,6 +146,7 @@ Reducer responsibilities:
 - call out if the test contract is too weak to prove the chosen solution
 - call out if a known repeated harness failure reappeared
 - mark proof gaps explicitly when the commands were green but the requirement still is not honestly proven
+- mark any uncovered direct asks or required implied asks explicitly
 
 ## 6) Gate rule
 
@@ -148,15 +156,18 @@ Verification is only GREEN when all are true:
 - required environment state was healthy when needed
 - `scorecard.md` is green for required F2P / P2P items
 - `proof-map.md` has no unresolved required proof gaps
+- every direct ask in `query-contract.md` has evidence or an explicit user-approved deferral
+- every non-negotiable implied ask in `query-contract.md` has evidence or an explicit user-approved deferral
 - the evidence still matches `why.md` and the chosen root solution
 
-If commands are green but the proof map still has a required gap, the run is RED.
+If commands are green but the proof map still has a required gap, or the query contract is only partially covered, the run is RED.
 
 ## 7) If failing, iterate correctly
 
 If verification is RED:
 
 - fix the first actionable failure
+- update `query-contract.md` if the failure changes the understanding of the request
 - update `diagnosis.md` or `plan.md` if the failure changes the understanding of the problem
 - update `harness-profile.md` if the proof requirement was underestimated
 - re-run `/xlfg:verify`

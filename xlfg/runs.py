@@ -32,6 +32,56 @@ CONTEXT_MD_TEMPLATE = """# Context
 - ...
 """
 
+QUERY_CONTRACT_TEMPLATE = """# Query contract
+
+This file keeps the run honest about **what the request actually means**.
+
+## Raw request
+- ...
+
+## Direct asks
+- `Q1`: ...
+
+## Implied asks
+- `I1`: ...
+
+## Functionality and quality requirements
+- `R1`: ...
+
+## General solution constraints
+- ...
+
+## Specific solution constraints
+- ...
+
+## Expected behavior / acceptance criteria
+- `A1`: ...
+
+## Reproduction / baseline notes
+- ...
+
+## Non-goals / explicitly not requested
+- ...
+
+## Developer / product intention
+- ...
+
+## Prohibited shallow fixes
+- one-entry-point patch
+- test-only green without real behavior proof
+- disabling / weakening checks to get green
+- local symptom masking that leaves alternate paths broken
+
+## Open ambiguities
+- ...
+
+## Carry-forward anchor
+- direct asks to keep visible after long trajectories:
+- implied asks that must not be dropped:
+- quality bar that must survive implementation:
+- most dangerous monkey-fix trap:
+"""
+
 WHY_TEMPLATE = """# Why
 
 This file keeps the run anchored to the user and product reason for the work.
@@ -181,6 +231,7 @@ This file is the shared **behavior contract** for implementation and verificatio
 - Goal:
 - Why this flow matters:
 - Non-goals:
+- Query / intent IDs covered:
 
 ## State / transition model
 
@@ -192,6 +243,7 @@ This file is the shared **behavior contract** for implementation and verificatio
 ## Scenarios
 
 ## Scenario P0-1: <primary flow name>
+- **Query / intent IDs**: <Q1, I1, A1>
 - **Actor**:
 - **Preconditions**:
 - **Primary steps**:
@@ -210,6 +262,9 @@ This file is the shared **behavior contract** for implementation and verificatio
 SPEC_TEMPLATE = """# Spec
 
 ## Summary
+
+## Query / intent coverage
+- `Q1` / `I1` / `A1`: ...
 
 ## Why
 
@@ -231,15 +286,17 @@ PLAN_TEMPLATE = """# Plan
 ## Summary
 
 ## Ordered tasks
-- [ ] T1 <task aligned to scenario IDs> | scenario IDs: <...> | scope: <...> | checks: <...> | disproof probe: <...>
+- [ ] T1 <task aligned to scenario IDs> | query IDs: <Q1 I1 A1> | scenario IDs: <...> | scope: <...> | checks: <...> | disproof probe: <...>
 
 ## Definition of done
+- Direct asks are covered or explicitly deferred
+- Non-negotiable implied asks still hold
 - Diagnosis confirmed or intentionally revised
 - Root solution implemented (or bounded workaround explicitly approved)
 - Why file still matches the shipped change
 - Flow spec satisfied
 - Test contract satisfied
-- Proof map has concrete evidence links for required scenarios
+- Proof map has concrete evidence links for required scenarios and query / intent IDs
 - Verification green
 - Review green
 - Compound completed
@@ -250,13 +307,16 @@ TEST_CONTRACT_TEMPLATE = """# Test contract
 This file defines **what to test** before implementation starts.
 
 ## Flow-to-proof map
-- `P0-1` → start state: ... | action variants: click / keyboard / enter / button | success proof: ... | failure proof: ...
+- `P0-1` / `Q1` / `A1` → start state: ... | action variants: click / keyboard / enter / button | success proof: ... | failure proof: ...
 
 ## F2P (new / changed requirements)
-- `P0-1` → fast check: ... | integration / e2e: ... | owner: ...
+- `P0-1` → fast check: ... | integration / e2e: ... | owner: ... | query IDs: ...
 
 ## P2P (existing behavior to preserve)
 - Existing flow / suite: ...
+
+## Counterexample / anti-monkey probes
+- `P0-1` → alternate path or adjacent state that would still fail under a shallow fix: ...
 
 ## Layered execution order
 1. Static / type / lint
@@ -312,10 +372,15 @@ This is the run-level task and stage ledger.
 ## Current next action
 - ...
 
+## Carry-forward anchor
+- re-read `query-contract.md` before each major phase and each task handoff
+- do not drop direct asks or non-negotiable implied asks
+- do not ship a monkey fix as if it were the root solution
+
 ## Tasks
-| Task | Status | Scenario IDs | Owner | Checks | Notes |
-|---|---|---|---|---|---|
-| T1 | TODO |  |  |  |  |
+| Task | Status | Query IDs | Scenario IDs | Owner | Checks | Notes |
+|---|---|---|---|---|---|---|
+| T1 | TODO |  |  |  |  |  |
 
 ## Blockers / escalations
 - ...
@@ -323,29 +388,29 @@ This is the run-level task and stage ledger.
 
 PROOF_MAP_TEMPLATE = """# Proof map
 
-This file links every required scenario to concrete evidence.
+This file links every required scenario and query / intent clause to concrete evidence.
 
 ## Required scenarios
-| Scenario ID | Requirement kind | Required proof | Planned check | Evidence path | Status |
-|---|---|---|---|---|---|
-| P0-1 | F2P |  |  |  | UNASSESSED |
+| Scenario ID | Query / intent IDs | Requirement kind | Required proof | Planned check | Evidence path | Status |
+|---|---|---|---|---|---|---|
+| P0-1 | Q1 A1 | F2P |  |  |  | UNASSESSED |
 
 ## Regression guards
-| Guard | Planned check | Evidence path | Status |
-|---|---|---|---|
-| Existing behavior |  |  | UNASSESSED |
+| Guard | Query / intent IDs | Planned check | Evidence path | Status |
+|---|---|---|---|---|
+| Existing behavior | I1 |  |  | UNASSESSED |
 
 ## Proof gaps
-- Record any scenario that is still not honestly proven.
+- Record any scenario or query / intent clause that is still not honestly proven.
 """
 
 SCORECARD_TEMPLATE = """# Scorecard
 
 ## F2P status
-- `P0-1`: UNASSESSED | proof: <command or artifact>
+- `P0-1` / `Q1` / `A1`: UNASSESSED | proof: <command or artifact>
 
 ## P2P status
-- Core regression suites: UNASSESSED | proof: <command or artifact>
+- `I1`: UNASSESSED | proof: <command or artifact>
 
 ## Notes
 - Update this after verification and review.
@@ -373,6 +438,7 @@ def create_run(root: Path, request: str, run_id: Optional[str] = None) -> dict:
     ensure_dir(docs_dir / "tasks")
 
     safe_write(docs_dir / "context.md", CONTEXT_MD_TEMPLATE.format(request=request.strip()))
+    safe_write(docs_dir / "query-contract.md", QUERY_CONTRACT_TEMPLATE)
     safe_write(docs_dir / "why.md", WHY_TEMPLATE)
     safe_write(docs_dir / "memory-recall.md", MEMORY_RECALL_TEMPLATE)
     safe_write(docs_dir / "diagnosis.md", DIAGNOSIS_TEMPLATE)

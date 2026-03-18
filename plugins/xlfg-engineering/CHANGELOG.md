@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.0.8 - 2026-03-18
+
+### Added
+- New planning agent `xlfg-query-refiner`.
+- New run artifact `query-contract.md` seeded for every run.
+- New bundle-level design note `docs/query-understanding-and-root-solution.md` that explains the research and the resulting harness changes.
+- New role-memory scaffold `docs/xlfg/knowledge/agent-memory/query-refiner.md` for request-shaping lessons that repeatedly clarify intent.
+
+### Changed
+- `/xlfg:plan` now writes `query-contract.md` before broad repo fan-out, forcing the run to separate direct asks, implied asks, functionality/quality requirements, solution constraints, expected behavior, and prohibited shallow fixes.
+- `/xlfg:implement`, `/xlfg:verify`, and `/xlfg:review` now re-read the carry-forward anchor from `query-contract.md` so the request does not fade after long trajectories.
+- `spec.md`, `plan.md`, `test-contract.md`, `proof-map.md`, and `scorecard.md` now trace scenario and proof obligations back to explicit query / intent IDs.
+- Implementation and checking prompts now reject uncovered direct asks, uncovered non-negotiable implied asks, and symptom-hiding monkey fixes.
+- Compounding now promotes request-understanding lessons when they are concrete and reusable.
+
+### Why
+- Recent March 2026 work shows that coding agents fail often because they start from underspecified problem statements, let early intent fade in long sessions, and accept patches that satisfy symptoms but miss developer intention or specification coverage.
+- xlfg needed a request contract and a lightweight reminder mechanism, not a bigger prompt blob.
+
 ## 2.0.5 - 2026-03-09
 
 ### Added

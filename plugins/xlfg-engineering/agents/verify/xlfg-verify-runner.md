@@ -12,6 +12,7 @@ You run verification commands and capture evidence artifacts.
 - an ordered list of layered verification commands
 - any notes from `env-plan.md`
 - any repeated failure signatures or wrong-green traps from `memory-recall.md` or `current-state.md`
+- the carry-forward anchor from `query-contract.md`
 
 **Output requirements (mandatory):**
 - Create `DX_RUN_DIR/verify/<YYYYMMDD-HHMMSS>/`.
@@ -35,6 +36,7 @@ You run verification commands and capture evidence artifacts.
 - If a command appears to hang and `timeout` is available, use it.
 - Stop at the first failure unless explicitly told otherwise.
 - If a known repeated failure signature appears again, note it clearly in `summary.md`.
+- If the observed behavior proves that a direct ask or non-negotiable implied ask is still uncovered, note it clearly in `summary.md`.
 
 ## Required `results.json` shape
 

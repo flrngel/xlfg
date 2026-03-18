@@ -1,6 +1,6 @@
 ---
 name: xlfg:plan
-description: Start from why, load the right memory, diagnose the root problem, pick the minimum honest harness profile, and write the shared contracts before coding.
+description: Refine the request into a query contract, diagnose the root problem, choose the minimum honest harness profile, and write the shared contracts before coding.
 argument-hint: "[feature description, bugfix, or product request]"
 ---
 
@@ -16,12 +16,14 @@ If the request is empty, ask the user what they want to build or fix and stop un
 
 1. **No coding in this command.** Planning only.
 2. **Recall is mandatory.** Do not broad-scan the repo until `memory-recall.md` exists.
-3. **Start with why.** If `why.md` is weak, every later artifact becomes shallow.
-4. **No late-thinking shortcuts.** The goal is the root solution, not the fastest patch.
-5. **Do not hide behind “run the full suite later.”** The test contract must be scenario-based and explicit.
-6. **Pick the minimum honest harness profile.** Do not over-fan-out by default.
-7. **Ask the user only blocking questions.** If a safe default exists, record it and proceed.
-8. **Disconfirm yourself.** Every chosen solution must record what evidence would prove it wrong.
+3. **Query refinement is mandatory.** Do not broad-scan the repo until `query-contract.md` exists.
+4. **Start with why.** If `why.md` is weak, every later artifact becomes shallow.
+5. **No late-thinking shortcuts.** The goal is the root solution, not the fastest patch.
+6. **Do not hide behind “run the full suite later.”** The test contract must be scenario-based and explicit.
+7. **Pick the minimum honest harness profile.** Do not over-fan-out by default.
+8. **Ask the user only blocking questions.** If a safe default exists, record it and proceed.
+9. **Disconfirm yourself.** Every chosen solution must record what evidence would prove it wrong.
+10. **Keep requirements separate from guessed solutions.** Preserve what the user asked for before deciding how to build it.
 
 ## Phase 0 — Fast scaffold check + create run
 
@@ -35,6 +37,7 @@ Create a new `RUN_ID=<YYYYMMDD-HHMMSS>-<slug>` and these paths:
 Ensure the run contains at least:
 
 - `context.md`
+- `query-contract.md`
 - `why.md`
 - `memory-recall.md`
 - `diagnosis.md`
@@ -75,12 +78,6 @@ Minimum recall:
 
 Add a focused typed query if the request touches repeated harness / UX / testing / flow / environment risk.
 
-Good example:
-
-```bash
-xlfg recall $'lex: "port already in use" yarn dev healthcheck\nstage: verify\nkind: failure harness-rule\nrole: env-doctor\nscope: memory runs'
-```
-
 Write `memory-recall.md` with all of these sections filled:
 - queries / sources used
 - strong matches
@@ -90,7 +87,28 @@ Write `memory-recall.md` with all of these sections filled:
 
 You may not proceed to repo fan-out until `memory-recall.md` is non-placeholder.
 
-## Phase 2 — Write the why before the what
+## Phase 2 — Refine the query before the repo becomes loud
+
+Run `xlfg-query-refiner` → `query-contract.md`
+
+`query-contract.md` must make these concrete:
+- the raw request in crisp terms
+- **direct asks** with stable IDs (`Q1`, `Q2`, ...)
+- **implied asks** with stable IDs (`I1`, `I2`, ...)
+- **functionality + quality requirements** (`R1`, `R2`, ...)
+- **general solution constraints** the user actually requested
+- **specific solution constraints** the user actually requested
+- **expected behavior / acceptance criteria** (`A1`, `A2`, ...)
+- reproduction / baseline notes for bugfixes
+- non-goals / explicitly not requested items
+- developer / product intention in plain language
+- prohibited shallow fixes / monkey fixes
+- open ambiguities
+- a concise **carry-forward anchor** later phases can re-read quickly
+
+If the request is still too ambiguous after one refinement pass, ask a blocking question instead of pretending the goal is clear.
+
+## Phase 3 — Write the why before the what
 
 Run `xlfg-why-analyst` → `why.md`
 
@@ -103,7 +121,7 @@ Run `xlfg-why-analyst` → `why.md`
 
 If the why is still mushy after one pass, stop and ask a blocking question instead of pretending the goal is clear.
 
-## Phase 3 — Minimum mapping and core diagnosis
+## Phase 4 — Minimum mapping and core diagnosis
 
 Do the smallest repo fan-out that can support an honest diagnosis.
 
@@ -126,13 +144,13 @@ Run optional agents **only** if the core diagnosis shows a real need:
 - `xlfg-context-adjacent-investigator` → `context/adjacent.md` when nearby systems or sibling flows materially affect the change
 - `xlfg-context-constraints-investigator` → `context/constraints.md` when infra / policy / API / deployment constraints meaningfully shape the solution
 - `xlfg-context-unknowns-investigator` → `context/unknowns.md` when unknowns are blocking or high-risk
-- `xlfg-brainstorm` → `brainstorm.md` only if the request is materially ambiguous after `why.md`
+- `xlfg-brainstorm` → `brainstorm.md` only if the request is materially ambiguous after `query-contract.md` and `why.md`
 - `xlfg-researcher` → `research.md` only if the stack or domain is unfamiliar / high-risk
 - `xlfg-risk-assessor` → `risk.md` when auth, money, destructive data, or reliability risk is present
 
 Do **not** fan out to optional agents just because they exist.
 
-## Phase 4 — Choose the harness profile
+## Phase 5 — Choose the harness profile
 
 `harness-profile.md` must choose the smallest honest profile:
 
@@ -150,7 +168,7 @@ The profile must define:
 
 If the request is risky but the profile stays `quick`, explain why that is still honest. Otherwise escalate.
 
-## Phase 5 — Reduce into canonical planning files
+## Phase 6 — Reduce into canonical planning files
 
 Write `spec.md` and `plan.md` yourself by reducing the agent outputs.
 
@@ -164,6 +182,7 @@ Write `spec.md` and `plan.md` yourself by reducing the agent outputs.
 - acceptance criteria
 - non-goals
 - rollout / rollback notes if relevant
+- explicit mapping from query / intent IDs to the chosen solution surface
 
 ### `plan.md` must include
 
@@ -172,21 +191,24 @@ Keep the plan coarse. Aim for **3–6 tasks**, not a task explosion.
 For each task include:
 
 - task ID (`T1`, `T2`, ...)
+- query / intent IDs covered (`Q*`, `I*`, `A*`)
 - scenario IDs covered
 - goal
 - allowed file scope
 - targeted checks to run after the task
 - invariants that must stay true
 - one **disproof probe** or stop condition that would force diagnosis review
+- one **anti-monkey-fix note** describing what a shallow patch would look like here
 - stop conditions / blockers
 - any recall-derived rule that must not be violated
 
-The plan must align to `why.md`, `diagnosis.md`, `solution-decision.md`, `harness-profile.md`, `flow-spec.md`, and `memory-recall.md`.
+The plan must align to `query-contract.md`, `why.md`, `diagnosis.md`, `solution-decision.md`, `harness-profile.md`, `flow-spec.md`, and `memory-recall.md`.
 
 ### `workboard.md` must include
 
 - stage status for recall / plan / implement / verify / review / compound
-- one row per planned task with status, owner, scenario IDs, checks, and notes
+- the carry-forward anchor from `query-contract.md`
+- one row per planned task with status, owner, query IDs, scenario IDs, checks, and notes
 - current next action
 - blockers / escalations
 
@@ -194,6 +216,7 @@ The plan must align to `why.md`, `diagnosis.md`, `solution-decision.md`, `harnes
 
 - every required F2P scenario
 - every relevant P2P regression guard
+- the query / intent IDs each proof item protects
 - the planned proof type for each item
 - the exact command / artifact / log expected when verification runs
 - initial status set to `UNASSESSED`
@@ -202,6 +225,7 @@ The plan must align to `why.md`, `diagnosis.md`, `solution-decision.md`, `harnes
 
 - every required F2P scenario
 - every relevant P2P regression guard
+- the query / intent IDs each item protects
 - the exact check or evidence source for each item
 - initial status set to `UNASSESSED`
 
@@ -210,25 +234,25 @@ The plan must align to `why.md`, `diagnosis.md`, `solution-decision.md`, `harnes
 Do **not** continue to implementation until all are true:
 
 - `memory-recall.md` exists and is specific
+- `query-contract.md` exists and is specific
 - `why.md` exists and explains the real value of the work
 - `diagnosis.md` exists and identifies the real problem or capability gap
 - `solution-decision.md` exists and records rejected shortcuts
 - `harness-profile.md` exists and is justified
 - `flow-spec.md` is concrete enough to test from
-- `test-contract.md` maps scenarios to explicit checks
+- `test-contract.md` maps scenarios to explicit checks and anti-monkey probes
 - `env-plan.md` explains how local verification will avoid server / harness traps
 - `workboard.md` reflects the chosen tasks and current next action
-- `proof-map.md` names the proof expected for each required scenario
-- `plan.md` has bounded tasks with file scope and targeted checks
-- at least one disconfirming probe exists in `solution-decision.md` or `plan.md`
+- `proof-map.md` and `scorecard.md` have query / intent traceability
 
-## Completion
+## Output
 
-Print:
-
+At the end, print a concise summary containing:
 - `RUN_ID`
-- the run folder path
-- the selected harness profile
-- the recommended verify mode
-- any blocking user questions (if truly blocking)
-- a one-paragraph planning summary
+- one-line query / intent summary
+- one-line why summary
+- chosen harness profile
+- run path
+- any blocking ambiguity that still remains
+
+Do not code. The next workflow step is `/xlfg:implement <RUN_ID>`.

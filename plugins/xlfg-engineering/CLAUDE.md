@@ -17,7 +17,7 @@ Normal evolution should bump **patch** only.
 ## Read order for future agents
 
 1. `NEXT_AGENT_CONTEXT.md`
-2. `docs/deer-flow-harness-review.md`
+2. `docs/query-understanding-and-root-solution.md`
 3. `README.md`
 4. the command files under `commands/`
 5. scaffold + tests
@@ -47,7 +47,7 @@ Put examples and long guidance in the body (loads on invocation).
 - `/xlfg:init` is manual bootstrap / repair only.
 - `/xlfg` is a macro; keep the actual workflow in the subcommands.
 - `/xlfg` must always use deterministic recall before broad repo scanning.
-- `/xlfg:plan` must write `why.md`, `harness-profile.md`, `workboard.md`, and `proof-map.md` before implementation.
+- `/xlfg:plan` must write `query-contract.md`, `why.md`, `harness-profile.md`, `workboard.md`, and `proof-map.md` before implementation.
 - `/xlfg:plan` should load optional agents progressively instead of always fanning out.
 - `/xlfg:plan` must finish before `/xlfg:implement` starts.
 - `/xlfg` must never claim success unless verification evidence exists and the proof map is honest.

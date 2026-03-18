@@ -10,10 +10,11 @@ Use this when an xlfg agent or user needs past context without relying on vector
 ## Read order
 
 1. `docs/xlfg/knowledge/current-state.md`
-2. `docs/xlfg/knowledge/*.md`
-3. `docs/xlfg/knowledge/agent-memory/*.md`
-4. `docs/xlfg/knowledge/ledger.jsonl`
-5. `docs/xlfg/runs/`
+2. latest run `query-contract.md` when you are continuing a live run
+3. `docs/xlfg/knowledge/*.md`
+4. `docs/xlfg/knowledge/agent-memory/*.md`
+5. `docs/xlfg/knowledge/ledger.jsonl`
+6. `docs/xlfg/runs/`
 
 ## Backends
 
@@ -53,7 +54,7 @@ Supported keys:
 - `lex:` exact lexical search with phrases and negation
 - `kind:` memory kind(s)
 - `stage:` `plan`, `implement`, `verify`, `review`, `compound`, `cross`
-- `role:` `why-analyst`, `root-cause-analyst`, `harness-profiler`, `solution-architect`, `test-strategist`, `env-doctor`, `test-implementer`, `task-implementer`, `task-checker`, `verify-reducer`, `ux-reviewer`, `architecture-reviewer`, `security-reviewer`, `performance-reviewer`
+- `role:` `query-refiner`, `why-analyst`, `root-cause-analyst`, `harness-profiler`, `solution-architect`, `test-strategist`, `env-doctor`, `test-implementer`, `task-implementer`, `task-checker`, `verify-reducer`, `ux-reviewer`, `architecture-reviewer`, `security-reviewer`, `performance-reviewer`
 - `scope:` `knowledge`, `agent-memory`, `ledger`, `runs`, `migrations`, `memory`, `all`
 - `path:` substring filter
 - `when:` date filter

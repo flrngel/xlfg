@@ -1,6 +1,6 @@
 ---
 name: xlfg:compound
-description: Convert an xlfg run into durable knowledge, role memory, and a next-agent handoff that captures why, proof, and harness lessons.
+description: Convert an xlfg run into durable knowledge, role memory, and a next-agent handoff that captures request understanding, why, proof, and harness lessons.
 argument-hint: "[run-id | latest]"
 ---
 
@@ -44,6 +44,7 @@ This keeps merge behavior simple while preserving branch-local handoff.
 
 Read (if present):
 
+- `query-contract.md`
 - `memory-recall.md`
 - `why.md`
 - `diagnosis.md`
@@ -67,7 +68,7 @@ Read (if present):
 
 ## 3) Extract only reusable, verified lessons
 
-Append small, specific entries to the right knowledge files, and append structured durable events to `ledger.jsonl`:
+Append small, specific entries to the right knowledge files, and append structured durable events to `ledger.jsonl`.
 
 Append at the end of the file. Do not rewrite or reflow old shared entries during this step.
 
@@ -75,13 +76,14 @@ Shared memory:
 - `current-state.md` — short tracked handoff for the next agent
 - `patterns.md` — durable implementation or design patterns
 - `decision-log.md` — durable decisions and rejected shortcuts worth remembering
-- `testing.md` — scenario-level testing lessons
+- `testing.md` — scenario-level testing lessons and anti-monkey probes
 - `ux-flows.md` — durable UX / keyboard / failure-path expectations
 - `failure-memory.md` — repeated unexpected failures and proven fixes
 - `harness-rules.md` — dev-server, watch-mode, port, readiness, cleanup rules
 - `quality-bar.md` — missing gate discovered by this run
 
 Role memory (only when role-specific and compact):
+- `agent-memory/query-refiner.md`
 - `agent-memory/why-analyst.md`
 - `agent-memory/root-cause-analyst.md`
 - `agent-memory/harness-profiler.md`
@@ -101,6 +103,8 @@ Role memory (only when role-specific and compact):
 
 Prefer lessons that answer one of these:
 
+- how this class of request should be interpreted before coding starts
+- which implied asks were easy to drop and how to keep them visible
 - why this class of request matters and what false success looks like
 - which harness profile was actually honest for this problem shape
 - which UX flow or proof obligation repeatedly matters
@@ -141,7 +145,7 @@ Do **not** compound vague summaries.
 
 Only write entries that are:
 
-- tied to a concrete symptom, decision, proof gap, or contract gap
+- tied to a concrete symptom, decision, proof gap, contract gap, or request-understanding lesson
 - backed by verification, review, or a repeated real failure
 - likely to help the next run directly
 - small enough that the role can retrieve them without prompt bloat
@@ -162,7 +166,7 @@ Otherwise:
 The handoff content should stay short and current. Include only the highest-signal truths that remain useful after this run, such as:
 
 - the current service / product context if it materially changed
-- the most important why / quality-bar truths now in force
+- the most important request-shaping / quality-bar truths now in force
 - the most important UX / behavior contracts now in force
 - the harness profile rules that should shape the next similar run immediately
 - repeated failure signatures and the proven first response
@@ -180,7 +184,7 @@ Write `DOCS_RUN_DIR/compound-summary.md` with:
 - what was appended to `ledger.jsonl`
 - what was added to role memory and why
 - whether `current-state.md` changed or a `current-state-candidate.md` was written instead
-- how the why / proof / harness profile shaped the final lessons
+- how the query contract, why, proof, and harness profile shaped the final lessons
 - what shortcuts were rejected and why
 - what was intentionally not added and why
 - what the next similar run should do first

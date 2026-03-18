@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from .util import append_unique_line, ensure_dir, safe_write
 
-SCAFFOLD_SCHEMA_VERSION = 7
+SCAFFOLD_SCHEMA_VERSION = 8
 
 INDEX_MD = """# xlfg
 
@@ -48,18 +48,19 @@ This keeps retrieval simple: read the tracked brief first for repo-wide truths, 
 
 ## Core workflow contract
 
-Define **why this work matters**, **what the real problem is**, and **what to build / test** *before* implementation:
+Define **what the request really means**, **why this work matters**, **what the real problem is**, and **what to build / test** *before* implementation:
 
-1. `why.md` — user / operator reason, non-goals, and quality bar for the run
-2. `diagnosis.md` — root problem or missing capability
-3. `solution-decision.md` — chosen solution and rejected shortcuts
-4. `harness-profile.md` — the minimum harness intensity that still gives honest proof
-5. `flow-spec.md` — UX / behavior contract
-6. `test-contract.md` — F2P + P2P test mapping
-7. `env-plan.md` — exact harness and dev-server plan
-8. `workboard.md` — run-level stage + task ledger
-9. `proof-map.md` — scenario-to-evidence map
-10. `scorecard.md` — step-level status for requirements and regressions
+1. `query-contract.md` — direct asks, implied asks, quality requirements, solution constraints, developer intention, and prohibited shallow fixes
+2. `why.md` — user / operator reason, non-goals, and quality bar for the run
+3. `diagnosis.md` — root problem or missing capability
+4. `solution-decision.md` — chosen solution and rejected shortcuts
+5. `harness-profile.md` — the minimum harness intensity that still gives honest proof
+6. `flow-spec.md` — UX / behavior contract
+7. `test-contract.md` — F2P + P2P test mapping plus anti-monkey probes
+8. `env-plan.md` — exact harness and dev-server plan
+9. `workboard.md` — run-level stage + task ledger
+10. `proof-map.md` — scenario/query-to-evidence map
+11. `scorecard.md` — step-level status for requirements and regressions
 
 ## Agent memory model
 
@@ -77,6 +78,7 @@ QUALITY_BAR_MD = """# xlfg quality bar
 
 Nothing is "done" unless:
 
+- **The request is explicit** (`query-contract.md` exists and keeps direct asks, implied asks, quality requirements, and prohibited shallow fixes visible)
 - **Why is explicit** (`why.md` exists and the run still serves it)
 - **Diagnosis is explicit** (`diagnosis.md` exists)
 - **The root solution is explicit** (`solution-decision.md` exists and records rejected shortcuts)
@@ -91,6 +93,7 @@ Nothing is "done" unless:
 - **Workboard is current** (`workboard.md` reflects stage / task truth)
 - **Proof map is concrete** (`proof-map.md` links required scenarios to evidence or an explicit proof gap)
 - **Unexpected failures are compounded** into failure memory / harness rules / role memory when warranted
+- **No monkey fix is misrepresented as the final solution** (bounded workarounds are labeled honestly)
 - **Operational plan exists** (monitoring + rollback notes)
 
 Evidence should be recorded in each run's `verification.md` and `scorecard.md`.
@@ -105,6 +108,7 @@ Read this file first when entering a repo that uses xlfg. It is the shortest tra
 
 ## Current high-signal truths
 - The most important facts that should shape new work immediately
+- Any request-shaping rule that repeatedly prevents dropped implied asks or monkey fixes
 
 ## Active UX / behavior contracts
 - Flows or invariants that repeatedly matter
@@ -348,6 +352,7 @@ Only compound something into role memory when it is:
 
 ## Files
 
+- `query-refiner.md`
 - `why-analyst.md`
 - `root-cause-analyst.md`
 - `harness-profiler.md`
@@ -363,6 +368,23 @@ Only compound something into role memory when it is:
 - `security-reviewer.md`
 - `performance-reviewer.md`
 """
+
+QUERY_REFINER_MEMORY_MD = """# Agent memory: query-refiner
+
+Store reusable request-shaping lessons that help preserve what the user actually asked for.
+
+## Entry template
+
+## Query pattern: <name>
+- **Raw request shape**:
+- **Direct asks that often get dropped**:
+- **Implied asks that must stay visible**:
+- **Developer / product intention to preserve**:
+- **Common monkey fix to reject**:
+- **Best carry-forward anchor**:
+- **Links**:
+"""
+
 
 WHY_ANALYST_MEMORY_MD = """# Agent memory: why-analyst
 
@@ -601,6 +623,11 @@ If you intentionally want to share a specific run, copy or export the relevant f
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
+    "2.0.8": [
+        "Added `query-contract.md` to every run scaffold.",
+        "Planning now starts by separating direct asks, implied asks, functionality/quality requirements, and solution constraints before broad repo fan-out.",
+        "Implementation, verification, and review now re-read the query carry-forward anchor to reduce request drift and monkey fixes.",
+    ],
     "2.0.7": [
         "Scaffold now adds .gitattributes rules so append-only knowledge files use Git's union merge driver.",
         "Shared knowledge files should stay append-only; do not rewrite old entries during compounding.",
@@ -825,6 +852,7 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
         "docs/xlfg/knowledge/queries.md": QUERIES_MD,
         "docs/xlfg/knowledge/commands.json": COMMANDS_JSON,
         "docs/xlfg/knowledge/agent-memory/README.md": AGENT_MEMORY_INDEX_MD,
+        "docs/xlfg/knowledge/agent-memory/query-refiner.md": QUERY_REFINER_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/why-analyst.md": WHY_ANALYST_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/root-cause-analyst.md": ROOT_CAUSE_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/harness-profiler.md": HARNESS_PROFILER_MEMORY_MD,

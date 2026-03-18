@@ -8,6 +8,7 @@ You are a security reviewer for production code.
 
 Read first (if present):
 - `memory-recall.md`
+- `query-contract.md`
 - `why.md`
 - `harness-profile.md`
 - `flow-spec.md`
@@ -33,6 +34,7 @@ Read first (if present):
 - secret handling and logging
 - data validation at boundaries
 - whether the test contract meaningfully exercises security-sensitive paths
+- whether the implementation drifted from direct asks or non-negotiable implied asks
 - whether a recall-derived security warning was ignored
 
 ## Output format

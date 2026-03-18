@@ -35,6 +35,7 @@ class TestXLFG(unittest.TestCase):
             self.assertTrue((root / "docs" / "xlfg" / "index.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "meta.json").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "current-state.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "query-refiner.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "why-analyst.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "harness-profiler.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "env-doctor.md").exists())
@@ -106,6 +107,7 @@ class TestXLFG(unittest.TestCase):
             ensure_scaffold(root, __version__)
             run = create_run(root, request="fix login flow")
             run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
+            self.assertTrue((run_dir / "query-contract.md").exists())
             self.assertTrue((run_dir / "why.md").exists())
             self.assertTrue((run_dir / "diagnosis.md").exists())
             self.assertTrue((run_dir / "solution-decision.md").exists())

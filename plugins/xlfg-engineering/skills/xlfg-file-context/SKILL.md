@@ -53,6 +53,7 @@ docs/xlfg/
   runs/
     <run-id>/
       context.md
+      query-contract.md
       why.md
       memory-recall.md
       diagnosis.md
@@ -103,12 +104,14 @@ Before repo fan-out:
 - read `docs/xlfg/knowledge/current-state.md`
 - load the smallest relevant slice of durable memory
 - write `memory-recall.md`
+- write `query-contract.md` before broad repo fan-out
 - record both strong matches and explicit no-hit cases
 
 ### 3) Why + diagnosis + contract first
 
 Before implementation, make sure the run has:
 
+- `query-contract.md`
 - `why.md`
 - `memory-recall.md`
 - `diagnosis.md`

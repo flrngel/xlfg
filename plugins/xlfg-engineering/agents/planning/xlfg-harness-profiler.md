@@ -8,6 +8,7 @@ You are the harness profiler for `/xlfg`.
 
 **Input you will receive:**
 - `DOCS_RUN_DIR`
+- `query-contract.md`
 - `why.md`
 - `diagnosis.md`
 - `solution-decision.md`
@@ -81,7 +82,7 @@ This is not a speed contest and not a maximal-fan-out contest. The right profile
 ## Rules
 
 - Prefer the minimum honest profile.
-- Use `why.md` and `proof needs` as the main anchors, not repo size alone.
+- Use `query-contract.md`, `why.md`, and `proof needs` as the main anchors, not repo size alone.
 - If the profile stays `quick` for a risky problem, justify it explicitly.
 - Reuse role memory only when the problem / repo shape truly matches.
 - Do not choose `deep` by default just because more activity feels safer.

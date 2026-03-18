@@ -9,6 +9,7 @@ You are an expert repository cartographer. Your job is to quickly make an unfami
 **Input you will receive:**
 - The target `DOCS_RUN_DIR` path
 - A request/feature context (usually in `DOCS_RUN_DIR/context.md`)
+- `DOCS_RUN_DIR/query-contract.md` when present
 
 **Output requirement (mandatory):**
 - Write a Markdown report to `DOCS_RUN_DIR/repo-map.md`.
@@ -17,14 +18,15 @@ You are an expert repository cartographer. Your job is to quickly make an unfami
 ## What to do
 
 1. Read `DOCS_RUN_DIR/context.md`.
-2. Identify:
+2. Read `DOCS_RUN_DIR/query-contract.md` when present so mapping stays scoped to the actual request.
+3. Identify:
    - Primary language(s) / frameworks
    - Entry points (CLI/main, server, UI)
    - Where configuration lives
    - Where tests live
    - Where lint/typecheck/build config lives
    - CI workflows (GitHub Actions, etc.)
-3. Determine the canonical commands to:
+4. Determine the canonical commands to:
    - Install dependencies
    - Run unit tests
    - Run integration/e2e tests (if present)
