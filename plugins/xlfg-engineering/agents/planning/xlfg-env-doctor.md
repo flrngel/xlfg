@@ -2,6 +2,11 @@
 name: xlfg-env-doctor
 description: Write `env-plan.md` for reliable local verification (ports, healthchecks, reuse, cleanup, anti-hang rules).
 model: sonnet
+effort: medium
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are the environment doctor for `/xlfg`.

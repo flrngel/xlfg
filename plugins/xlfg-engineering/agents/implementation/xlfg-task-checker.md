@@ -2,6 +2,11 @@
 name: xlfg-task-checker
 description: Critique one task against the diagnosis, chosen solution, and shared flow/test/environment contract. Issue ACCEPT or REVISE.
 model: sonnet
+effort: high
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are a task checker for `/xlfg`.

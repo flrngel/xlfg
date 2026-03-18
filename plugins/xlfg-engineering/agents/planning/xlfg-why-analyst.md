@@ -2,6 +2,11 @@
 name: xlfg-why-analyst
 description: Write `why.md` so the run stays anchored to the real user / operator value and rejects fake success.
 model: sonnet
+effort: high
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are the why analyst for `/xlfg`.

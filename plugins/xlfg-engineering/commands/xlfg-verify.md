@@ -1,6 +1,6 @@
 ---
 name: xlfg:verify
-description: Run profile-aware layered verification and update the proof map, scorecard, and workboard with evidence.
+description: Run profile-aware verification from the predeclared scenario contract and keep the run RED when changed work lacks honest proof.
 argument-hint: "[run-id | latest] [fast|full]"
 ---
 
@@ -39,6 +39,7 @@ Read first (if present):
 - `harness-profile.md`
 - `flow-spec.md`
 - `test-contract.md`
+- `test-readiness.md`
 - `env-plan.md`
 - `workboard.md`
 - `proof-map.md`
@@ -58,18 +59,19 @@ Before running commands, mark in `workboard.md`:
 
 ## 2) Decide the layered verify plan
 
-The verify plan must match **all three** of these:
+The verify plan must match **all four** of these:
 - the selected harness profile
 - the `proof-map.md` obligations
 - the direct asks / non-negotiable implied asks in `query-contract.md`
+- the practical scenario contract in `test-contract.md`
 
 ### `fast`
 
 Only the fastest feedback loop:
 
 - lint / format / typecheck / static checks
-- any ultra-cheap scenario proof explicitly required by `proof-map.md`
-- any anti-monkey probe that is cheap enough to run now
+- the declared `fast_check` for changed scenarios
+- any cheap anti-monkey probe that the contract says is needed now
 
 ### `full`
 
@@ -77,17 +79,19 @@ Run layers in this order:
 
 1. Fast checks
 2. Scenario-targeted smoke checks from `test-contract.md`
-3. Required e2e / real-flow checks from `proof-map.md`
+3. Required e2e / real-flow checks from `test-contract.md` or `proof-map.md`
 4. Broader regression suites and build/package checks
 
 Important rules:
 
 - **Do not jump straight to giant e2e by default.**
+- **Do not call static checks alone “verification” when the changed work is behavioral.**
 - **Verify the root solution, not just the absence of the old symptom.**
 - Use `test-contract.md`, `proof-map.md`, and `query-contract.md` to decide which P0/P1 flows truly deserve smoke or e2e.
 - Prefer **environment-state verification** when relevant (healthy port, correct bundle, correct endpoint behavior), not just proof that a start command was invoked.
 - If `memory-recall.md`, `current-state.md`, or failure memory describes a repeated wrong-green trap, make sure the verify plan explicitly guards against it.
 - A green command run is **not** enough if the proof map still has an unproven required scenario or if a direct ask is still uncovered.
+- If `test-readiness.md` is `REVISE`, verification is already RED until planning is fixed.
 
 ## 3) Environment doctor (before smoke / e2e)
 
@@ -106,7 +110,7 @@ Run Task `xlfg-verify-runner` with:
 
 - `DOCS_RUN_DIR`
 - `DX_RUN_DIR`
-- ordered layered commands
+- ordered layered commands compiled from `test-contract.md` first, then any supplemental detected commands
 - any relevant notes from `env-plan.md`
 - any repeated failure signatures from `memory-recall.md` or `current-state.md`
 - any explicit proof obligations from `proof-map.md`
@@ -154,13 +158,17 @@ Verification is only GREEN when all are true:
 
 - required commands passed for the selected mode
 - required environment state was healthy when needed
+- `test-readiness.md` verdict is `READY`
+- at least one scenario-targeted check actually ran when the test contract declares changed scenarios
+- every changed primary scenario has a passing practical `fast_check`
+- in `full` mode, every changed primary scenario also has its declared passing ship proof (or an explicit user-approved manual exception)
 - `scorecard.md` is green for required F2P / P2P items
 - `proof-map.md` has no unresolved required proof gaps
 - every direct ask in `query-contract.md` has evidence or an explicit user-approved deferral
 - every non-negotiable implied ask in `query-contract.md` has evidence or an explicit user-approved deferral
 - the evidence still matches `why.md` and the chosen root solution
 
-If commands are green but the proof map still has a required gap, or the query contract is only partially covered, the run is RED.
+If commands are green but the proof map still has a required gap, or the query contract is only partially covered, or the run skipped scenario-targeted proof, the run is RED.
 
 ## 7) If failing, iterate correctly
 
@@ -169,6 +177,7 @@ If verification is RED:
 - fix the first actionable failure
 - update `query-contract.md` if the failure changes the understanding of the request
 - update `diagnosis.md` or `plan.md` if the failure changes the understanding of the problem
+- update `test-contract.md` and `test-readiness.md` if the proof contract was too weak or impractical
 - update `harness-profile.md` if the proof requirement was underestimated
 - re-run `/xlfg:verify`
 

@@ -2,6 +2,11 @@
 name: xlfg-spec-author
 description: Write the shared behavior contract (`flow-spec.md`) before implementation starts.
 model: sonnet
+effort: high
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are the behavior-contract author for `/xlfg`.

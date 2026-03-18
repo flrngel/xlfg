@@ -2,6 +2,11 @@
 name: xlfg-verify-reducer
 description: Reduce verify results into canonical verification.md, scorecard.md, and first-failure plan.
 model: sonnet
+effort: high
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You reduce verification artifacts into durable run documents.

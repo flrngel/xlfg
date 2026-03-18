@@ -1,6 +1,6 @@
 ---
 name: xlfg:implement
-description: Implement the planned root solution task-by-task while preserving the request contract, why, and proof map.
+description: Implement the planned root solution task-by-task while preserving the query contract, why, and predeclared proof obligations.
 argument-hint: "[run-id | latest]"
 ---
 
@@ -34,6 +34,7 @@ Read these files first, in this order if present:
 - `spec.md`
 - `plan.md`
 - `test-contract.md`
+- `test-readiness.md`
 - `env-plan.md`
 - `workboard.md`
 - `proof-map.md`
@@ -56,12 +57,14 @@ Extract from `harness-profile.md` before starting:
 - max parallel subagents
 - escalation triggers
 
-If either contract is missing or vague, stop and repair it before coding.
+If `test-readiness.md` is missing or not `READY`, stop and return to `/xlfg:plan`.
 
 ## 3) Implementation doctrine
 
 - **Query before code.** Every task must still satisfy the direct asks and non-negotiable implied asks.
 - **Why before code.** Every task must still serve `why.md`, not just a visible symptom.
+- **Tests were planned first.** Implement against the scenario contracts already declared in `test-contract.md`; do not invent proof late.
+- **Respect subagent conclusions.** Do not casually override `flow-spec.md`, `test-contract.md`, or `solution-decision.md` inside implementation.
 - **Review is not the cleanup crew.** Build cleanly now.
 - **Do not patch the symptom if the diagnosis says the real problem lives elsewhere.**
 - **Do not weaken tests to get green.**
@@ -70,7 +73,7 @@ If either contract is missing or vague, stop and repair it before coding.
 - **If a disproof probe trips, stop and return to planning.**
 - **If a task only fixes one obvious entrypoint while alternate paths remain broken, that is a monkey fix. Reject it.**
 - **Do not repeat a known failure pattern** already called out in `memory-recall.md`, `current-state.md`, or role memory.
-- **Do not mark a task done if its proof obligation is still undefined.** Update `proof-map.md` or return to planning.
+- **Do not mark a task done if its proof obligation is still undefined.** Update planning first.
 
 ## 4) Workboard discipline
 
@@ -97,12 +100,12 @@ For each unchecked task in `plan.md`, in order:
 Ensure `tasks/<task-id>/` exists and write `task-brief.md` with:
 
 - why this task matters to the run
-- direct asks / implied asks / acceptance criteria covered (`Q*`, `I*`, `A*`)
+- objective IDs and direct asks / implied asks / acceptance criteria covered (`O*`, `Q*`, `I*`, `A*`)
 - task goal
 - scenario IDs
 - allowed file scope
 - proof obligations from `proof-map.md`
-- required checks
+- required checks from `test-contract.md`
 - relevant invariants
 - disproof probe / stop condition
 - anti-monkey-fix warning for this task
@@ -131,7 +134,8 @@ A task is only complete when:
 - the relevant `proof-map.md` rows now have concrete planned or observed evidence paths
 - the relevant direct asks and non-negotiable implied asks are still covered or explicitly deferred
 - no known recall-derived trap was ignored silently
-- the task still aligns to `query-contract.md` and `why.md`
+- the task still aligns to `query-contract.md`, `why.md`, and `solution-decision.md`
+- the task did not silently invalidate `test-readiness.md`
 
 ### 5D) Anti-loop rule
 
@@ -142,6 +146,7 @@ If the checker rejects the task up to that limit **without a new diagnosis or pl
 - stop the patch loop
 - update `query-contract.md` if the request understanding changed
 - update `diagnosis.md` and `solution-decision.md` if needed
+- update `test-contract.md` and `test-readiness.md` if the proof contract changed
 - update `plan.md`, `workboard.md`, and `proof-map.md`
 - only then resume implementation
 
@@ -162,6 +167,7 @@ If you escalate:
 - update `harness-profile.md`
 - update `workboard.md`
 - update `plan.md`
+- if proof changed materially, update `test-contract.md` and `test-readiness.md`
 - call out what changed and why
 
 ## 7) Root-cause rule
@@ -189,6 +195,7 @@ When all tasks are complete, write or update `run-summary.md` with:
 - implied asks still pending or explicitly deferred
 - known risks or `none`
 - which recall-derived rules mattered most during implementation
+- whether the predeclared scenario contracts stayed stable or required revision
 
 Update `workboard.md`:
 - `implement: DONE`

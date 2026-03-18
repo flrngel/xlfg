@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.0.9 - 2026-03-18
+
+### Added
+- New planning agent `xlfg-test-readiness-checker`.
+- New required run artifact `test-readiness.md` seeded for every run.
+- New bundle-level design note `docs/testing-before-coding-and-practical-proof.md`.
+- New role-memory scaffold `docs/xlfg/knowledge/agent-memory/test-readiness-checker.md`.
+
+### Changed
+- `/xlfg:plan` now treats concise practical scenario contracts as mandatory before coding and hard-gates implementation on `test-readiness.md = READY`.
+- `/xlfg:implement` now stops when the readiness gate is missing or failed, and it must preserve the predeclared proof contract instead of improvising proof late.
+- `/xlfg:verify` now compiles scenario-targeted checks from `test-contract.md` before supplemental repo checks and stays RED when changed scenarios are not honestly proven.
+- `test-contract.md`, `flow-spec.md`, `proof-map.md`, `scorecard.md`, and `workboard.md` now emphasize objective/query traceability and practical proof.
+- Key planning/checker/review agents now use Claude Code frontmatter controls (`effort`, `maxTurns`, `disallowedTools`) to reduce overwork and accidental code edits in analysis-only roles.
+- Detect heuristics and Python verification logic were updated to prefer practical fast/smoke/e2e checks and to reject no-scenario-test runs.
+
+### Why
+- The user found that xlfg often failed to test its own work properly and could be worse than vanilla Claude Code because the harness cost did not reliably buy stronger proof.
+- xlfg needed a real pre-implementation test gate and a more practical verification compiler, not more generic process.
+
 ## 2.0.8 - 2026-03-18
 
 ### Added

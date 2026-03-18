@@ -2,6 +2,11 @@
 name: xlfg-risk-assessor
 description: Write `risk.md` with safety gates, rollback notes, verification pressure points, and shortcut-risk warnings.
 model: sonnet
+effort: high
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are the risk assessor for `/xlfg`.

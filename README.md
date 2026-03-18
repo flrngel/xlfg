@@ -1,6 +1,6 @@
 # xlfg-engineering-plugin
 
-`/xlfg` is a **query-first, why-first, recall-first, proof-aware** software development harness for agents building production-grade services.
+`/xlfg` is a **query-first, why-first, recall-first, tests-before-code, proof-aware** software development harness for agents building production-grade services.
 
 The core rule in this revision is simple:
 
@@ -11,16 +11,17 @@ This repository includes:
 1. A **Claude Code plugin** (in `plugins/xlfg-engineering`) with `/xlfg`, `/xlfg:prepare`, `/xlfg:recall`, `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, `/xlfg:review`, and `/xlfg:compound`.
 2. An optional dependency-free **Python helper CLI** (`xlfg`) that can scaffold, recall, doctor, and verify the same file model locally.
 3. A required bundle-level handoff doc: `NEXT_AGENT_CONTEXT.md`.
-4. A research + comparison note for this patch: `docs/query-understanding-and-root-solution.md`.
+4. Research/design notes for this repo: `docs/query-understanding-and-root-solution.md` and `docs/testing-before-coding-and-practical-proof.md`.
 
 ## Read this repo in this order
 
 1. `NEXT_AGENT_CONTEXT.md`
-2. `docs/query-understanding-and-root-solution.md`
-3. `plugins/xlfg-engineering/README.md`
-4. `plugins/xlfg-engineering/commands/xlfg.md`
-5. `xlfg/scaffold.py`
-6. `tests/test_xlfg.py`
+2. `docs/testing-before-coding-and-practical-proof.md`
+3. `docs/query-understanding-and-root-solution.md`
+4. `plugins/xlfg-engineering/README.md`
+5. `plugins/xlfg-engineering/commands/xlfg.md`
+6. `xlfg/scaffold.py`
+7. `tests/test_xlfg.py`
 
 ## Quick start (Claude Code)
 
@@ -33,10 +34,11 @@ This repository includes:
 1. `/xlfg:prepare`
 2. `/xlfg:recall`
 3. `/xlfg:plan`
-4. `/xlfg:implement`
-5. `/xlfg:verify`
-6. `/xlfg:review`
-7. `/xlfg:compound`
+4. confirm `test-readiness.md` is `READY`
+5. `/xlfg:implement`
+6. `/xlfg:verify`
+7. `/xlfg:review`
+8. `/xlfg:compound`
 
 Use `/xlfg:init` manually only when you want to bootstrap or repair the scaffold yourself.
 
@@ -55,6 +57,8 @@ Local run evidence (gitignored by default):
 - `docs/xlfg/runs/<run-id>/query-contract.md` — direct asks, implied asks, quality requirements, developer intention, and the carry-forward anchor
 - `docs/xlfg/runs/<run-id>/why.md` — why this work matters and what false success looks like
 - `docs/xlfg/runs/<run-id>/harness-profile.md` — minimum honest harness intensity for this run
+- `docs/xlfg/runs/<run-id>/test-contract.md` — concise practical scenario contracts written before coding
+- `docs/xlfg/runs/<run-id>/test-readiness.md` — READY / REVISE gate for whether those scenarios are honest enough to code against
 - `docs/xlfg/runs/<run-id>/workboard.md` — run-truth stage / task ledger
 - `docs/xlfg/runs/<run-id>/proof-map.md` — scenario-to-evidence contract
 - `docs/xlfg/runs/<run-id>/...` — diagnosis, solution decisions, behavior contracts, plans, scorecards, reviews, summaries
@@ -75,10 +79,10 @@ Local run evidence (gitignored by default):
 
 ### New discipline
 - `/xlfg` itself now starts with recall and flows into a query-first, why-first planning step
-- planning must write `query-contract.md`, `why.md`, `memory-recall.md`, `harness-profile.md`, `workboard.md`, and `proof-map.md` before coding
+- planning must write `query-contract.md`, `why.md`, `memory-recall.md`, `harness-profile.md`, `test-contract.md`, `test-readiness.md`, `workboard.md`, and `proof-map.md` before coding
 - harness intensity is selected explicitly (`quick`, `standard`, `deep`) instead of defaulting to maximal fan-out
 - optional planning agents are loaded progressively only when the diagnosis justifies them
-- verification is green only when command results **and** the proof map agree
+- verification is green only when scenario-targeted proof exists and command results **and** the proof map agree
 - compound updates durable memory and the current-state handoff with why / proof / harness lessons
 
 ## What we kept from “super harness” systems, and what we rejected

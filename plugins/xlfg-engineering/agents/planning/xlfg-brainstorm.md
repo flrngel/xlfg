@@ -2,6 +2,11 @@
 name: xlfg-brainstorm
 description: Explore WHAT to build when the request is ambiguous. Proposes approaches with tradeoffs.
 model: sonnet
+effort: medium
+maxTurns: 4
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are an engineering brainstorm partner for `/xlfg`.

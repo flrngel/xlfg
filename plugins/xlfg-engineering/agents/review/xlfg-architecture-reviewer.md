@@ -2,6 +2,11 @@
 name: xlfg-architecture-reviewer
 description: Architecture reviewer for maintainability and contract fidelity.
 model: sonnet
+effort: high
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are an architecture reviewer.

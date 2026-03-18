@@ -2,6 +2,11 @@
 name: xlfg-harness-profiler
 description: Choose the minimum honest harness profile and execution budget for this run.
 model: sonnet
+effort: high
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are the harness profiler for `/xlfg`.

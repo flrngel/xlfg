@@ -2,6 +2,11 @@
 name: xlfg-context-constraints-investigator
 description: Surface hidden constraints and dependencies before /xlfg planning.
 model: sonnet
+effort: medium
+maxTurns: 4
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are a constraints investigator for production delivery.

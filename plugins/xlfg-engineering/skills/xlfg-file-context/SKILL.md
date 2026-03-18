@@ -63,6 +63,7 @@ docs/xlfg/
       spec.md
       plan.md
       test-contract.md
+      test-readiness.md
       env-plan.md
       workboard.md
       proof-map.md
@@ -119,6 +120,7 @@ Before implementation, make sure the run has:
 - `harness-profile.md`
 - `flow-spec.md`
 - `test-contract.md`
+- `test-readiness.md`
 - `env-plan.md`
 - `workboard.md`
 - `proof-map.md`
@@ -135,6 +137,7 @@ Before implementation, make sure the run has:
 
 - The lead merges results into canonical files.
 - The plan must align tasks to scenario IDs, why, diagnosis, and proof obligations.
+- The run must not move into implementation until `test-readiness.md` says `READY`.
 - The plan should carry forward recall-derived rules when they matter.
 
 ### 6) Implement with bounded pair loops
@@ -148,6 +151,7 @@ Before implementation, make sure the run has:
 ### 7) Verify honestly
 
 - Verification mode should match `harness-profile.md`.
+- Verification should compile scenario-targeted checks from `test-contract.md` before falling back to generic repo commands.
 - A green command is not enough if `proof-map.md` still has a required gap.
 - Update `verification.md`, `scorecard.md`, `proof-map.md`, and `workboard.md` together.
 

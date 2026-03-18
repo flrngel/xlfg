@@ -12,6 +12,7 @@ from xlfg.detect import detect_commands
 from xlfg.doctor import ensure_dev_server
 from xlfg.runs import create_run
 from xlfg.recall import recall
+from xlfg.contracts import parse_test_readiness_verdict
 from xlfg.scaffold import ensure_scaffold, scaffold_status
 from xlfg.verify import verify
 
@@ -42,6 +43,7 @@ class TestXLFG(unittest.TestCase):
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "solution-architect.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "test-implementer.md").exists())
             self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "task-checker.md").exists())
+            self.assertTrue((root / "docs" / "xlfg" / "knowledge" / "agent-memory" / "test-readiness-checker.md").exists())
             self.assertTrue((root / ".xlfg" / "runs").exists())
             gi = (root / ".gitignore").read_text(encoding="utf-8")
             self.assertIn(".xlfg/", gi)
@@ -115,6 +117,7 @@ class TestXLFG(unittest.TestCase):
             self.assertTrue((run_dir / "flow-spec.md").exists())
             self.assertTrue((run_dir / "workboard.md").exists())
             self.assertTrue((run_dir / "proof-map.md").exists())
+            self.assertTrue((run_dir / "test-readiness.md").exists())
             self.assertTrue((run_dir / "tasks").exists())
 
     def test_prepare_scaffold_creates_recall_files(self) -> None:
@@ -133,6 +136,16 @@ class TestXLFG(unittest.TestCase):
             run = create_run(root, request="fix login flow")
             run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
             self.assertTrue((run_dir / "memory-recall.md").exists())
+
+    def test_readiness_parser_ignores_template_placeholder(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "test-readiness.md"
+            path.write_text(
+                "# Test readiness\n\n## Verdict\n- `READY` | `REVISE`\n",
+                encoding="utf-8",
+            )
+            self.assertIsNone(parse_test_readiness_verdict(path))
+
 
     def test_recall_searches_ledger_and_agent_memory_with_filters(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -282,6 +295,49 @@ class TestXLFG(unittest.TestCase):
             fix = root / "docs" / "xlfg" / "runs" / run["run_id"] / "verify-fix-plan.md"
             self.assertTrue(vmd.exists())
             self.assertTrue(fix.exists())
+
+    def test_verify_passes_with_ready_scenario_contracts(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            ensure_scaffold(root, __version__)
+            run = create_run(root, request="fix login flow")
+            run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
+            (run_dir / "test-readiness.md").write_text(
+                "# Test readiness\n\n## Verdict\n- `READY`\n",
+                encoding="utf-8",
+            )
+            (run_dir / "test-contract.md").write_text(
+                """# Test contract\n\n## Required scenario contracts\n\n### P0-1 — login submit\n- objective: `O1`\n- requirement_kind: `F2P`\n- priority: `P0`\n- query_ids: `Q1 I1 A1`\n- practical_steps:\n  1. enter valid credentials\n  2. submit\n  3. land on dashboard\n- fast_check: python -c "print('fast proof')"\n- ship_phase: `fast`\n- ship_check: python -c "print('ship proof')"\n- regression_check: python -c "print('guard proof')"\n- manual_smoke: open app and confirm dashboard\n- anti_monkey_probe: invalid credentials still show an error\n- notes:\n\n### G1 — invalid credentials guard\n- objective: `O1`\n- requirement_kind: `P2P`\n- priority: `P1`\n- query_ids: `I1`\n- practical_steps:\n  1. submit invalid credentials\n- fast_check: python -c "print('guard fast')"\n- ship_phase: `fast`\n- ship_check: python -c "print('guard ship')"\n- regression_check: python -c "print('guard full')"\n- manual_smoke: try invalid login manually\n- anti_monkey_probe: button path works but enter path fails\n- notes:\n""",
+                encoding="utf-8",
+            )
+            res = verify(root, run_id=run["run_id"], mode="full")
+            self.assertTrue(res["ok"])
+            self.assertEqual(res["test_readiness"], "READY")
+            self.assertIn("P0-1", res["scenario_results"])
+            self.assertTrue(res["scenario_results"]["P0-1"]["fast_ok"])
+            self.assertTrue(res["scenario_results"]["P0-1"]["ship_ok"])
+
+    def test_verify_fails_when_scenario_proof_is_not_practical(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".git").mkdir()
+            ensure_scaffold(root, __version__)
+            run = create_run(root, request="fix checkout flow")
+            run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
+            (run_dir / "test-readiness.md").write_text(
+                "# Test readiness\n\n## Verdict\n- `READY`\n",
+                encoding="utf-8",
+            )
+            (run_dir / "test-contract.md").write_text(
+                """# Test contract\n\n## Required scenario contracts\n\n### P0-1 — checkout submit\n- objective: `O1`\n- requirement_kind: `F2P`\n- priority: `P0`\n- query_ids: `Q1 A1`\n- practical_steps:\n  1. add item\n  2. submit order\n- fast_check: NONE\n- ship_phase: `manual`\n- ship_check: NONE\n- regression_check: NONE\n- manual_smoke: click around until it seems okay\n- anti_monkey_probe: API succeeds but order UI never updates\n- notes:\n""",
+                encoding="utf-8",
+            )
+            res = verify(root, run_id=run["run_id"], mode="full")
+            self.assertFalse(res["ok"])
+            joined = "\n".join(res["contract_issues"])
+            self.assertIn("practical fast_check", joined)
+            self.assertIn("manual ship proof", joined)
 
     def test_macro_mentions_profile_driven_verify(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

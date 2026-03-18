@@ -54,6 +54,7 @@ Read (if present):
 - `spec.md`
 - `plan.md`
 - `test-contract.md`
+- `test-readiness.md`
 - `env-plan.md`
 - `workboard.md`
 - `proof-map.md`
@@ -89,6 +90,7 @@ Role memory (only when role-specific and compact):
 - `agent-memory/harness-profiler.md`
 - `agent-memory/solution-architect.md`
 - `agent-memory/test-strategist.md`
+- `agent-memory/test-readiness-checker.md`
 - `agent-memory/env-doctor.md`
 - `agent-memory/test-implementer.md`
 - `agent-memory/task-implementer.md`
@@ -183,6 +185,7 @@ Write `DOCS_RUN_DIR/compound-summary.md` with:
 - what was added to each knowledge file
 - what was appended to `ledger.jsonl`
 - what was added to role memory and why
+- whether the pre-implementation test contract proved strong enough in practice
 - whether `current-state.md` changed or a `current-state-candidate.md` was written instead
 - how the query contract, why, proof, and harness profile shaped the final lessons
 - what shortcuts were rejected and why

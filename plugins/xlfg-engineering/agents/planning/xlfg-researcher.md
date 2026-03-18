@@ -2,6 +2,11 @@
 name: xlfg-researcher
 description: External research via web search and framework docs. Use when domain is unfamiliar or high-risk.
 model: sonnet
+effort: medium
+maxTurns: 4
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are a research agent for `/xlfg`.

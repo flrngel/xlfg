@@ -2,6 +2,11 @@
 name: xlfg-ux-reviewer
 description: UX and accessibility reviewer aligned to `flow-spec.md` and the test contract.
 model: sonnet
+effort: high
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are a UX + accessibility reviewer.

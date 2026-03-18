@@ -18,9 +18,9 @@ It is designed for:
 | `/xlfg:prepare` | Fast scaffold/version check; compare installed tool version vs repo scaffold version and migrate only on drift |
 | `/xlfg:init` | Manual bootstrap / repair of `docs/xlfg/` + `.xlfg/` scaffolding |
 | `/xlfg:recall` | Deterministic recall over current-state, knowledge, role memory, the ledger, and local runs |
-| `/xlfg:plan` | Reload memory, refine the request into a query contract, write the why, diagnose the root problem, choose the harness profile, and write the shared contracts before coding |
+| `/xlfg:plan` | Reload memory, refine the request into a query contract, write the why, diagnose the root problem, choose the harness profile, and produce practical scenario contracts plus a READY-before-coding gate |
 | `/xlfg:implement` | Execute bounded task loops with explicit implementation agents, workboard updates, and proof-aware discipline |
-| `/xlfg:verify` | Run profile-aware layered verification + write evidence |
+| `/xlfg:verify` | Run profile-aware verification compiled from scenario contracts first, then supplemental repo checks, and write evidence |
 | `/xlfg:review` | Run only the review lenses justified by the harness profile and changed surface |
 | `/xlfg:compound` | Convert a run into durable knowledge, role memory, and a refreshed next-agent handoff |
 
@@ -38,6 +38,7 @@ Before coding, every serious run should produce:
 - `harness-profile.md`
 - `flow-spec.md`
 - `test-contract.md`
+- `test-readiness.md`
 - `env-plan.md`
 - `workboard.md`
 - `proof-map.md`
@@ -64,6 +65,7 @@ This split keeps git clean while preserving local run history for compounding.
 - Choose the **minimum honest harness profile** (`quick`, `standard`, `deep`).
 - Keep `workboard.md` current; it is the run-truth ledger.
 - Keep `proof-map.md` current; green commands are not enough when proof is still vague.
+- Do not code until `test-readiness.md` says `READY`.
 - Review is confirmation, not cleanup.
 
 ## Agents
@@ -75,6 +77,7 @@ Planning:
 - `xlfg-root-cause-analyst`
 - `xlfg-spec-author`
 - `xlfg-test-strategist`
+- `xlfg-test-readiness-checker`
 - `xlfg-env-doctor`
 - `xlfg-solution-architect`
 - `xlfg-harness-profiler`

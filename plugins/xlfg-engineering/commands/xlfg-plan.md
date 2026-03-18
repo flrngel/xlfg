@@ -1,6 +1,6 @@
 ---
 name: xlfg:plan
-description: Refine the request into a query contract, diagnose the root problem, choose the minimum honest harness profile, and write the shared contracts before coding.
+description: Refine the request into a query contract, diagnosis, practical scenario contracts, and a READY-before-coding plan.
 argument-hint: "[feature description, bugfix, or product request]"
 ---
 
@@ -17,13 +17,15 @@ If the request is empty, ask the user what they want to build or fix and stop un
 1. **No coding in this command.** Planning only.
 2. **Recall is mandatory.** Do not broad-scan the repo until `memory-recall.md` exists.
 3. **Query refinement is mandatory.** Do not broad-scan the repo until `query-contract.md` exists.
-4. **Start with why.** If `why.md` is weak, every later artifact becomes shallow.
-5. **No late-thinking shortcuts.** The goal is the root solution, not the fastest patch.
-6. **Do not hide behind “run the full suite later.”** The test contract must be scenario-based and explicit.
-7. **Pick the minimum honest harness profile.** Do not over-fan-out by default.
-8. **Ask the user only blocking questions.** If a safe default exists, record it and proceed.
-9. **Disconfirm yourself.** Every chosen solution must record what evidence would prove it wrong.
-10. **Keep requirements separate from guessed solutions.** Preserve what the user asked for before deciding how to build it.
+4. **Why before what.** If `why.md` is weak, every later artifact becomes shallow.
+5. **Tests before implementation.** The run must know what it will prove before code changes begin.
+6. **Keep test scenarios clear, concise, and practical.** Prefer 1–5 required scenario cards total.
+7. **No late giant-suite hand-waving.** “Run the full suite later” is not an acceptable test strategy.
+8. **Pick the minimum honest harness profile.** Do not over-fan-out by default.
+9. **Respect subagent outputs.** If you override one, record why and what evidence justified it.
+10. **Disconfirm yourself.** Every chosen solution must record what evidence would prove it wrong.
+11. **Keep requirements separate from guessed solutions.** Preserve what the user asked for before deciding how to build it.
+12. **Do not allow monkey-fix planning.** If a scenario could still fail under the obvious shallow patch, the test contract is not ready.
 
 ## Phase 0 — Fast scaffold check + create run
 
@@ -47,6 +49,7 @@ Ensure the run contains at least:
 - `spec.md`
 - `plan.md`
 - `test-contract.md`
+- `test-readiness.md`
 - `env-plan.md`
 - `workboard.md`
 - `proof-map.md`
@@ -76,7 +79,7 @@ Run deterministic recall yourself using `/xlfg:recall` or the equivalent manual 
 Minimum recall:
 - one broad recall shaped by the raw request
 
-Add a focused typed query if the request touches repeated harness / UX / testing / flow / environment risk.
+Add one focused typed query only if the request touches repeated harness / UX / testing / environment risk.
 
 Write `memory-recall.md` with all of these sections filled:
 - queries / sources used
@@ -93,6 +96,8 @@ Run `xlfg-query-refiner` → `query-contract.md`
 
 `query-contract.md` must make these concrete:
 - the raw request in crisp terms
+- **work kind** (`build` | `bugfix` | `research` | `multi`)
+- **objective groups** with stable IDs (`O1`, `O2`, ...)
 - **direct asks** with stable IDs (`Q1`, `Q2`, ...)
 - **implied asks** with stable IDs (`I1`, `I2`, ...)
 - **functionality + quality requirements** (`R1`, `R2`, ...)
@@ -133,6 +138,7 @@ Run these agents. Each agent must write to its owned file.
 - `xlfg-root-cause-analyst` → `diagnosis.md`
 - `xlfg-spec-author` → `flow-spec.md`
 - `xlfg-test-strategist` → `test-contract.md`
+- `xlfg-test-readiness-checker` → `test-readiness.md`
 - `xlfg-env-doctor` → `env-plan.md`
 - `xlfg-solution-architect` → `solution-decision.md`
 - `xlfg-harness-profiler` → `harness-profile.md`
@@ -154,9 +160,9 @@ Do **not** fan out to optional agents just because they exist.
 
 `harness-profile.md` must choose the smallest honest profile:
 
-- `quick` — tight bugfix / local change / low risk / limited scope
-- `standard` — normal product work with moderate scope or one user-facing flow
-- `deep` — auth, money, destructive data, migrations, high reliability risk, or large unknowns
+- `quick` — tight bugfix / local change / low risk / one or two practical scenarios
+- `standard` — normal product work with moderate scope or one important user-facing flow
+- `deep` — auth, money, destructive data, migrations, high reliability risk, large unknowns, or multi-flow proof
 
 The profile must define:
 - max ordered tasks
@@ -170,7 +176,7 @@ If the request is risky but the profile stays `quick`, explain why that is still
 
 ## Phase 6 — Reduce into canonical planning files
 
-Write `spec.md` and `plan.md` yourself by reducing the agent outputs.
+Write `spec.md`, `plan.md`, `workboard.md`, `proof-map.md`, and `scorecard.md` yourself by reducing the agent outputs.
 
 ### `spec.md` must include
 
@@ -182,7 +188,8 @@ Write `spec.md` and `plan.md` yourself by reducing the agent outputs.
 - acceptance criteria
 - non-goals
 - rollout / rollback notes if relevant
-- explicit mapping from query / intent IDs to the chosen solution surface
+- explicit mapping from objective IDs and query / intent IDs to the chosen solution surface
+- any override of a subagent recommendation, with the evidence for the override
 
 ### `plan.md` must include
 
@@ -191,6 +198,7 @@ Keep the plan coarse. Aim for **3–6 tasks**, not a task explosion.
 For each task include:
 
 - task ID (`T1`, `T2`, ...)
+- objective IDs covered (`O*`)
 - query / intent IDs covered (`Q*`, `I*`, `A*`)
 - scenario IDs covered
 - goal
@@ -202,13 +210,15 @@ For each task include:
 - stop conditions / blockers
 - any recall-derived rule that must not be violated
 
-The plan must align to `query-contract.md`, `why.md`, `diagnosis.md`, `solution-decision.md`, `harness-profile.md`, `flow-spec.md`, and `memory-recall.md`.
+The plan must align to `query-contract.md`, `why.md`, `diagnosis.md`, `solution-decision.md`, `harness-profile.md`, `flow-spec.md`, `test-contract.md`, `test-readiness.md`, and `memory-recall.md`.
 
 ### `workboard.md` must include
 
 - stage status for recall / plan / implement / verify / review / compound
 - the carry-forward anchor from `query-contract.md`
-- one row per planned task with status, owner, query IDs, scenario IDs, checks, and notes
+- one row per objective
+- one row per planned task with status, owner, objective IDs, query IDs, scenario IDs, checks, and notes
+- one row per required scenario with fast proof, ship proof, and evidence slot
 - current next action
 - blockers / escalations
 
@@ -216,16 +226,16 @@ The plan must align to `query-contract.md`, `why.md`, `diagnosis.md`, `solution-
 
 - every required F2P scenario
 - every relevant P2P regression guard
-- the query / intent IDs each proof item protects
+- the objective IDs and query / intent IDs each proof item protects
 - the planned proof type for each item
 - the exact command / artifact / log expected when verification runs
 - initial status set to `UNASSESSED`
 
 ### `scorecard.md` must include
 
+- every objective
 - every required F2P scenario
 - every relevant P2P regression guard
-- the query / intent IDs each item protects
 - the exact check or evidence source for each item
 - initial status set to `UNASSESSED`
 
@@ -240,10 +250,13 @@ Do **not** continue to implementation until all are true:
 - `solution-decision.md` exists and records rejected shortcuts
 - `harness-profile.md` exists and is justified
 - `flow-spec.md` is concrete enough to test from
-- `test-contract.md` maps scenarios to explicit checks and anti-monkey probes
+- `test-contract.md` is concise, practical, and maps changed scenarios to explicit fast proof + ship proof + anti-monkey probes
+- `test-readiness.md` exists and the verdict is `READY`
 - `env-plan.md` explains how local verification will avoid server / harness traps
 - `workboard.md` reflects the chosen tasks and current next action
-- `proof-map.md` and `scorecard.md` have query / intent traceability
+- `proof-map.md` and `scorecard.md` have objective / query / intent traceability
+
+If `test-readiness.md` says `REVISE`, fix planning instead of coding anyway.
 
 ## Output
 
@@ -252,6 +265,7 @@ At the end, print a concise summary containing:
 - one-line query / intent summary
 - one-line why summary
 - chosen harness profile
+- test-readiness verdict
 - run path
 - any blocking ambiguity that still remains
 

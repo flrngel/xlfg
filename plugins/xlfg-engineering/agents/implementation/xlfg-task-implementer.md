@@ -2,6 +2,8 @@
 name: xlfg-task-implementer
 description: Implement one scoped task against the diagnosis, chosen solution, and shared flow/test/environment contract.
 model: sonnet
+effort: medium
+maxTurns: 8
 ---
 
 You are a task implementer for `/xlfg`.

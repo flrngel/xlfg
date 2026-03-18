@@ -45,6 +45,7 @@ Always read first (if present):
 - `harness-profile.md`
 - `flow-spec.md`
 - `test-contract.md`
+- `test-readiness.md`
 - `env-plan.md`
 - `proof-map.md`
 - `verification.md`
@@ -69,6 +70,7 @@ Each reviewer must explicitly separate:
 - any evidence that the implementation drifted from the chosen root solution
 - any evidence that a recall-derived warning was ignored
 - any evidence that the proof map still overclaims what was proven
+- any evidence that the scenario contract was too weak or too broad for the work
 
 Do **not** run every possible reviewer by default if the harness profile does not justify it.
 
@@ -83,6 +85,7 @@ Create `DOCS_RUN_DIR/review-summary.md`:
 - keep one section for `Net-new findings`
 - keep one section for `Query / why / root-solution drift`
 - keep one section for `Proof-map honesty`
+- keep one section for `Scenario contract quality`
 - call out P0 blockers first
 - list any uncovered direct asks or non-negotiable implied asks
 

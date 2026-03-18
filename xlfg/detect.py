@@ -292,19 +292,19 @@ def detect_commands(root: Path) -> Dict[str, Any]:
             "bun": "bun install",
         }.get(pm, f"{pm} install")
 
-        for s in ("lint", "format", "typecheck", "check"):
+        for s in ("lint", "format", "typecheck", "check", "check:types", "test:unit", "unit", "test:quick"):
             if isinstance(scripts, dict) and s in scripts:
                 fast.append(_pm_run(pm, s))
 
-        for s in ("smoke", "test:smoke", "smoke:test"):
+        for s in ("smoke", "test:smoke", "smoke:test", "test:integration", "integration", "test:browser", "test:ui"):
             if isinstance(scripts, dict) and s in scripts:
                 smoke.append(_pm_run(pm, s))
 
-        for s in ("e2e", "test:e2e", "e2e:test", "playwright", "cypress"):
+        for s in ("e2e", "test:e2e", "e2e:test", "playwright", "cypress", "test:acceptance", "acceptance"):
             if isinstance(scripts, dict) and s in scripts:
                 e2e.append(_pm_run(pm, s))
 
-        for s in ("test", "test:unit", "build"):
+        for s in ("test", "test:ci", "build"):
             if isinstance(scripts, dict) and s in scripts:
                 full.append(_pm_run(pm, s))
 

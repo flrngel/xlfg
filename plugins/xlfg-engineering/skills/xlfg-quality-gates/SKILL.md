@@ -20,7 +20,8 @@ A run is only “done” when all apply.
 - `solution-decision.md` exists and records rejected shortcuts
 - `harness-profile.md` exists and is appropriate for the risk
 - `flow-spec.md` exists and matches shipped behavior
-- `test-contract.md` exists and the run followed it honestly
+- `test-contract.md` exists, stays concise/practical, and the run followed it honestly
+- `test-readiness.md` was `READY` before implementation or the run explicitly returned to planning
 - `env-plan.md` explains how the harness was controlled
 - `workboard.md` reflects the current stage / task truth
 - `proof-map.md` names the exact evidence required for each important scenario
@@ -37,9 +38,10 @@ A run is only “done” when all apply.
 
 ### Tests, proof, and verification
 
-- new behavior has F2P proof
+- new behavior has F2P proof from scenario-targeted checks declared before coding
 - existing behavior has P2P protection
 - at least one real interaction / integration check exists when the flow crosses boundaries
+- verification ran at least one scenario-targeted proof when changed scenarios existed
 - lint / typecheck / build pass when applicable
 - evidence is written to `verification.md`
 - raw logs exist under `.xlfg/`

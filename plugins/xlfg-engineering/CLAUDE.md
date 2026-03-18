@@ -17,10 +17,11 @@ Normal evolution should bump **patch** only.
 ## Read order for future agents
 
 1. `NEXT_AGENT_CONTEXT.md`
-2. `docs/query-understanding-and-root-solution.md`
-3. `README.md`
-4. the command files under `commands/`
-5. scaffold + tests
+2. `docs/testing-before-coding-and-practical-proof.md`
+3. `docs/query-understanding-and-root-solution.md`
+4. `README.md`
+5. the command files under `commands/`
+6. scaffold + tests
 
 Every shipped bundle must contain enough context that the next agent can continue without extra explanation. `NEXT_AGENT_CONTEXT.md` is the required handoff document for this repo.
 
@@ -47,10 +48,11 @@ Put examples and long guidance in the body (loads on invocation).
 - `/xlfg:init` is manual bootstrap / repair only.
 - `/xlfg` is a macro; keep the actual workflow in the subcommands.
 - `/xlfg` must always use deterministic recall before broad repo scanning.
-- `/xlfg:plan` must write `query-contract.md`, `why.md`, `harness-profile.md`, `workboard.md`, and `proof-map.md` before implementation.
+- `/xlfg:plan` must write `query-contract.md`, `why.md`, `harness-profile.md`, `test-contract.md`, `test-readiness.md`, `workboard.md`, and `proof-map.md` before implementation.
 - `/xlfg:plan` should load optional agents progressively instead of always fanning out.
 - `/xlfg:plan` must finish before `/xlfg:implement` starts.
-- `/xlfg` must never claim success unless verification evidence exists and the proof map is honest.
+- `/xlfg:implement` must stop if `test-readiness.md` is not `READY`.
+- `/xlfg` must never claim success unless verification evidence exists, scenario-targeted proof ran, and the proof map is honest.
 - Review is a confirmation gate, not a cleanup crew.
 
 ## Docs

@@ -13,22 +13,25 @@ CONTEXT_MD_TEMPLATE = """# Context
 
 {request}
 
-## Product / user intent
+## Source context
+- user request / issue / ticket text:
+- follow-up clarifications already given:
+- repo / service area likely involved:
 
-- Who is this for?
-- What problem is changing?
-- What friction or failure is happening now?
+## Product / user intent
+- who is this for?
+- what problem is changing?
+- what friction or failure is happening now?
+- what false success would still disappoint the user?
 
 ## Constraints
-
-- Environment / OS:
-- Performance:
-- Security / privacy:
+- environment / OS:
+- performance:
+- security / privacy:
 - UX / accessibility:
-- Delivery constraints:
+- delivery constraints:
 
 ## Open questions
-
 - ...
 """
 
@@ -36,8 +39,15 @@ QUERY_CONTRACT_TEMPLATE = """# Query contract
 
 This file keeps the run honest about **what the request actually means**.
 
+## Work kind
+- `build` | `bugfix` | `research` | `multi`
+
 ## Raw request
 - ...
+
+## Objective groups
+- `O1`: ...
+- `O2`: ...
 
 ## Direct asks
 - `Q1`: ...
@@ -185,6 +195,13 @@ SOLUTION_DECISION_TEMPLATE = """# Solution decision
 ## Disconfirming evidence to watch for
 - What result would prove this design is wrong?
 
+## Subagent evidence used
+- repo-map.md:
+- diagnosis.md:
+- flow-spec.md:
+- test-contract.md:
+- env-plan.md:
+
 ## Testing / rollout implications
 - ...
 
@@ -201,6 +218,9 @@ This file chooses the minimum harness intensity that still gives honest proof.
 
 ## Why this profile fits
 - ...
+
+## Work shape
+- single-flow build | bugfix | multi-task | research-heavy
 
 ## Planning fan-out
 - required agents:
@@ -227,33 +247,38 @@ FLOW_SPEC_TEMPLATE = """# Flow spec
 This file is the shared **behavior contract** for implementation and verification.
 
 ## Summary
-
-- Goal:
-- Why this flow matters:
-- Non-goals:
-- Query / intent IDs covered:
+- goal:
+- why this flow matters:
+- non-goals:
+- objective groups covered:
+- query / intent IDs covered:
 
 ## State / transition model
+- start state:
+- key transitions:
+- success terminal state:
+- failure terminal state:
 
-- Start state:
-- Key transitions:
-- Success terminal state:
-- Failure terminal state:
+## Required scenario cards
 
-## Scenarios
-
-## Scenario P0-1: <primary flow name>
-- **Query / intent IDs**: <Q1, I1, A1>
-- **Actor**:
-- **Preconditions**:
-- **Primary steps**:
+### P0-1 — <primary flow name>
+- objective: `O1`
+- query_ids: `Q1 I1 A1`
+- actor:
+- preconditions:
+- practical_steps:
   1. ...
-- **Alternate steps**:
-  - A. ...
-- **Failure / empty / loading states**:
-- **Assertions**:
-- **Accessibility / keyboard**:
-- **Telemetry / observability**:
+  2. ...
+  3. ...
+- interaction_variants:
+  - click path:
+  - keyboard path:
+  - enter vs button:
+- expected_outcome:
+- failure_states:
+- accessibility:
+- telemetry_or_logs:
+- non_goals:
 
 ## Existing behavior to preserve
 - ...
@@ -262,72 +287,141 @@ This file is the shared **behavior contract** for implementation and verificatio
 SPEC_TEMPLATE = """# Spec
 
 ## Summary
+- ...
+
+## Objective coverage
+- `O1`: ...
+- `O2`: ...
 
 ## Query / intent coverage
 - `Q1` / `I1` / `A1`: ...
 
 ## Why
+- ...
 
 ## Root cause / missing capability
+- ...
 
 ## Chosen solution
+- ...
 
 ## Rejected shortcuts
+- ...
 
 ## Acceptance criteria
+- ...
 
 ## Non-goals
+- ...
 
 ## Rollout / rollback notes
+- ...
+
+## Subagent decisions preserved
+- which core agent outputs were adopted directly:
+- any disagreement / override and evidence for it:
 """
 
 PLAN_TEMPLATE = """# Plan
 
 ## Summary
+- ...
+
+## Objectives
+- `O1`: ...
+- `O2`: ...
 
 ## Ordered tasks
-- [ ] T1 <task aligned to scenario IDs> | query IDs: <Q1 I1 A1> | scenario IDs: <...> | scope: <...> | checks: <...> | disproof probe: <...>
+- [ ] T1 <task aligned to scenario IDs> | objectives: <O1> | query IDs: <Q1 I1 A1> | scenario IDs: <P0-1> | scope: <...> | checks: <fast_check / ship_check> | disproof probe: <...>
+
+## Test-first rule
+- each changed scenario must have a practical fast check and a ship proof before implementation begins
+- if a task cannot name its proof, return to planning instead of coding
 
 ## Definition of done
-- Direct asks are covered or explicitly deferred
-- Non-negotiable implied asks still hold
-- Diagnosis confirmed or intentionally revised
-- Root solution implemented (or bounded workaround explicitly approved)
-- Why file still matches the shipped change
-- Flow spec satisfied
-- Test contract satisfied
-- Proof map has concrete evidence links for required scenarios and query / intent IDs
-- Verification green
-- Review green
-- Compound completed
+- direct asks are covered or explicitly deferred
+- non-negotiable implied asks still hold
+- diagnosis confirmed or intentionally revised
+- root solution implemented (or bounded workaround explicitly approved)
+- why file still matches the shipped change
+- flow spec satisfied
+- test contract satisfied
+- test-readiness verdict stayed READY or was consciously re-approved after plan changes
+- proof map has concrete evidence links for required scenarios and query / intent IDs
+- verification green
+- review green
+- compound completed
 """
 
 TEST_CONTRACT_TEMPLATE = """# Test contract
 
-This file defines **what to test** before implementation starts.
+Keep this file **short, concrete, and practical**. Prefer 1–5 required scenario contracts total.
 
-## Flow-to-proof map
-- `P0-1` / `Q1` / `A1` → start state: ... | action variants: click / keyboard / enter / button | success proof: ... | failure proof: ...
+## Required scenario contracts
 
-## F2P (new / changed requirements)
-- `P0-1` → fast check: ... | integration / e2e: ... | owner: ... | query IDs: ...
+### P0-1 — <primary flow name>
+- objective: `O1`
+- requirement_kind: `F2P`
+- priority: `P0`
+- query_ids: `Q1 I1 A1`
+- practical_steps:
+  1. ...
+  2. ...
+  3. ...
+- fast_check: <single fastest honest command or NONE>
+- ship_phase: `fast` | `smoke` | `e2e` | `manual`
+- ship_check: <single command or NONE>
+- regression_check: <single command or NONE>
+- manual_smoke: <precise manual steps when automation is not practical>
+- anti_monkey_probe: <what would still fail under a shallow patch>
+- notes: <GUESS if command inference is uncertain>
 
-## P2P (existing behavior to preserve)
-- Existing flow / suite: ...
+### G1 — <existing behavior to preserve>
+- objective: `O1`
+- requirement_kind: `P2P`
+- priority: `P1`
+- query_ids: `I1`
+- practical_steps:
+  1. ...
+- fast_check: <single guard command or NONE>
+- ship_phase: `fast` | `smoke` | `e2e` | `manual`
+- ship_check: <single command or NONE>
+- regression_check: <single command or NONE>
+- manual_smoke: <precise manual steps>
+- anti_monkey_probe: <what a narrow regression would miss>
+- notes:
 
-## Counterexample / anti-monkey probes
-- `P0-1` → alternate path or adjacent state that would still fail under a shallow fix: ...
-
-## Layered execution order
-1. Static / type / lint
-2. Scenario-targeted smoke
-3. Required e2e / real-flow checks
-4. Broader regression suites
-
-## Manual smoke checklist
+## Why these scenarios are enough
 - ...
 
 ## Wrong-green traps
+- ...
+"""
+
+TEST_READINESS_TEMPLATE = """# Test readiness
+
+## Verdict
+- `READY` | `REVISE`
+
+## Required scenario coverage
+- which direct asks / implied asks are covered by the scenario contracts:
+- which scenarios are still vague or missing:
+
+## Practicality check
+- are the checks cheap enough for iteration?
+- is there a single honest ship proof per changed primary scenario?
+- is the plan relying on “run everything later” instead of concrete proof?
+
+## Under-testing risks
+- ...
+
+## Over-testing risks
+- ...
+
+## Missing commands / manual proof gaps
+- ...
+
+## Required fixes before implementation
 - ...
 """
 
@@ -337,23 +431,23 @@ ENV_PLAN_TEMPLATE = """# Environment plan
 - ...
 
 ## Dev server
-- Command:
-- Port:
-- Healthcheck:
-- Reuse if healthy:
-- Startup timeout:
+- command:
+- port:
+- healthcheck:
+- reuse if healthy:
+- startup timeout:
 
 ## Verification harness rules
-- Avoid watch mode
-- Capture logs under `.xlfg/`
-- Do not start duplicate dev servers
-- Check actual environment state, not just process start
-- Call out stale-version or stale-bundle traps
+- avoid watch mode
+- capture logs under `.xlfg/`
+- do not start duplicate dev servers
+- check actual environment state, not just process start
+- call out stale-version or stale-bundle traps
 
 ## Known failure patterns to watch for
-- Port already in use
-- Stale server / old bundle
-- Missing seed / missing env vars
+- port already in use
+- stale server / old bundle
+- missing seed / missing env vars
 """
 
 WORKBOARD_TEMPLATE = """# Workboard
@@ -377,10 +471,20 @@ This is the run-level task and stage ledger.
 - do not drop direct asks or non-negotiable implied asks
 - do not ship a monkey fix as if it were the root solution
 
+## Objectives
+| Objective | Status | Direct asks | Scenarios | Notes |
+|---|---|---|---|---|
+| O1 | TODO | Q1 | P0-1 |  |
+
 ## Tasks
-| Task | Status | Query IDs | Scenario IDs | Owner | Checks | Notes |
-|---|---|---|---|---|---|---|
-| T1 | TODO |  |  |  |  |  |
+| Task | Status | Objectives | Query IDs | Scenario IDs | Owner | Checks | Notes |
+|---|---|---|---|---|---|---|---|
+| T1 | TODO | O1 |  |  |  |  |  |
+
+## Scenario coverage
+| Scenario | Status | Fast proof | Ship proof | Evidence |
+|---|---|---|---|---|
+| P0-1 | UNASSESSED |  |  |  |
 
 ## Blockers / escalations
 - ...
@@ -391,14 +495,9 @@ PROOF_MAP_TEMPLATE = """# Proof map
 This file links every required scenario and query / intent clause to concrete evidence.
 
 ## Required scenarios
-| Scenario ID | Query / intent IDs | Requirement kind | Required proof | Planned check | Evidence path | Status |
-|---|---|---|---|---|---|---|
-| P0-1 | Q1 A1 | F2P |  |  |  | UNASSESSED |
-
-## Regression guards
-| Guard | Query / intent IDs | Planned check | Evidence path | Status |
-|---|---|---|---|---|
-| Existing behavior | I1 |  |  | UNASSESSED |
+| Scenario ID | Objective | Query / intent IDs | Requirement kind | Fast proof | Ship phase | Ship proof | Regression guard | Evidence path | Status |
+|---|---|---|---|---|---|---|---|---|---|
+| P0-1 | O1 | Q1 A1 | F2P |  | smoke |  |  |  | UNASSESSED |
 
 ## Proof gaps
 - Record any scenario or query / intent clause that is still not honestly proven.
@@ -406,11 +505,14 @@ This file links every required scenario and query / intent clause to concrete ev
 
 SCORECARD_TEMPLATE = """# Scorecard
 
+## Objective status
+- `O1`: UNASSESSED | proof: <command or artifact>
+
 ## F2P status
-- `P0-1` / `Q1` / `A1`: UNASSESSED | proof: <command or artifact>
+- `P0-1` / `Q1` / `A1`: UNASSESSED | fast: <command> | ship: <command or artifact>
 
 ## P2P status
-- `I1`: UNASSESSED | proof: <command or artifact>
+- `G1` / `I1`: UNASSESSED | proof: <command or artifact>
 
 ## Notes
 - Update this after verification and review.
@@ -448,6 +550,7 @@ def create_run(root: Path, request: str, run_id: Optional[str] = None) -> dict:
     safe_write(docs_dir / "spec.md", SPEC_TEMPLATE)
     safe_write(docs_dir / "plan.md", PLAN_TEMPLATE)
     safe_write(docs_dir / "test-contract.md", TEST_CONTRACT_TEMPLATE)
+    safe_write(docs_dir / "test-readiness.md", TEST_READINESS_TEMPLATE)
     safe_write(docs_dir / "env-plan.md", ENV_PLAN_TEMPLATE)
     safe_write(docs_dir / "workboard.md", WORKBOARD_TEMPLATE)
     safe_write(docs_dir / "proof-map.md", PROOF_MAP_TEMPLATE)

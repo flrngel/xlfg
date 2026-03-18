@@ -7,8 +7,10 @@ Read `NEXT_AGENT_CONTEXT.md` first. It is the bundle-level handoff document and 
 - `/xlfg` is a macro that chains explicit subcommands.
 - `/xlfg` must always use deterministic recall before broad repo fan-out.
 - Planning is **why-first** and diagnosis-first.
+- Planning must declare concise practical scenario contracts and get `test-readiness.md = READY` before implementation.
 - Planning should load optional agents progressively, not automatically.
 - Implementation must use explicit agents and targeted proof.
+- Verification must run scenario-targeted proof, not only generic repo checks.
 - `workboard.md` is execution truth.
 - `proof-map.md` is proof truth.
 - Review confirms quality; it does not create quality.

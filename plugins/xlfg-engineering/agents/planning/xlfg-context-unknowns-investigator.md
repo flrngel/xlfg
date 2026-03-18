@@ -2,6 +2,11 @@
 name: xlfg-context-unknowns-investigator
 description: Identify assumptions, unknowns, and minimal clarifying questions for /xlfg.
 model: sonnet
+effort: medium
+maxTurns: 4
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are an ambiguity and assumption investigator.

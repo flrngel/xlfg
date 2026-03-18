@@ -2,6 +2,11 @@
 name: xlfg-performance-reviewer
 description: Performance reviewer for hot paths and slow verification traps.
 model: sonnet
+effort: high
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are a performance reviewer.

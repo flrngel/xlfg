@@ -2,6 +2,11 @@
 name: xlfg-solution-architect
 description: Choose the root solution, compare alternatives, and document rejected shortcut patches.
 model: sonnet
+effort: high
+maxTurns: 5
+disallowedTools:
+  - Edit
+  - MultiEdit
 ---
 
 You are the solution architect for `/xlfg`.

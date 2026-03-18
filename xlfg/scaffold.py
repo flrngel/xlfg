@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from .util import append_unique_line, ensure_dir, safe_write
 
-SCAFFOLD_SCHEMA_VERSION = 8
+SCAFFOLD_SCHEMA_VERSION = 9
 
 INDEX_MD = """# xlfg
 
@@ -56,11 +56,12 @@ Define **what the request really means**, **why this work matters**, **what the 
 4. `solution-decision.md` — chosen solution and rejected shortcuts
 5. `harness-profile.md` — the minimum harness intensity that still gives honest proof
 6. `flow-spec.md` — UX / behavior contract
-7. `test-contract.md` — F2P + P2P test mapping plus anti-monkey probes
-8. `env-plan.md` — exact harness and dev-server plan
-9. `workboard.md` — run-level stage + task ledger
-10. `proof-map.md` — scenario/query-to-evidence map
-11. `scorecard.md` — step-level status for requirements and regressions
+7. `test-contract.md` — concise, practical scenario contracts with fast proof + ship proof
+8. `test-readiness.md` — READY / REVISE gate for whether those scenarios are honest enough to code against
+9. `env-plan.md` — exact harness and dev-server plan
+10. `workboard.md` — run-level stage + task ledger
+11. `proof-map.md` — scenario/query-to-evidence map
+12. `scorecard.md` — step-level status for requirements and regressions
 
 ## Agent memory model
 
@@ -83,11 +84,12 @@ Nothing is "done" unless:
 - **Diagnosis is explicit** (`diagnosis.md` exists)
 - **The root solution is explicit** (`solution-decision.md` exists and records rejected shortcuts)
 - **Behavior is contracted first** (`flow-spec.md` exists)
-- **Test intent is shared** (`test-contract.md` exists and maps scenarios to checks)
+- **Test intent is shared** (`test-contract.md` exists and maps concise scenario contracts to fast proof, ship proof, and regression guards)
+- **Test readiness is explicit** (`test-readiness.md` is `READY` before coding or clearly explains why planning must be revised)
 - **Harness profile is explicit** (`harness-profile.md` exists and is appropriate for the risk)
 - **Environment is controlled** (`env-plan.md` explains ports, healthchecks, and cleanup)
-- **New behavior is proven** (Fail → Pass)
-- **Existing behavior is preserved** (Pass → Pass)
+- **New behavior is proven** by scenario-targeted checks that were defined before implementation (Fail → Pass)
+- **Existing behavior is preserved** with relevant guard coverage (Pass → Pass)
 - **Lint / typecheck / build** pass when applicable
 - **User-facing flows are validated** (happy path, alternates, failure path, a11y)
 - **Workboard is current** (`workboard.md` reflects stage / task truth)
@@ -367,6 +369,7 @@ Only compound something into role memory when it is:
 - `architecture-reviewer.md`
 - `security-reviewer.md`
 - `performance-reviewer.md`
+- `test-readiness-checker.md`
 """
 
 QUERY_REFINER_MEMORY_MD = """# Agent memory: query-refiner
@@ -591,6 +594,23 @@ Store recurring performance or iteration-speed traps worth checking quickly.
 """
 
 
+TEST_READINESS_CHECKER_MEMORY_MD = """# Agent memory: test-readiness-checker
+
+Store recurring rules for deciding whether a planned test contract is concrete enough to code against.
+
+## Entry template
+
+## Readiness rule: <name>
+- **Scenario shape**:
+- **What made the contract READY**:
+- **What forced REVISE**:
+- **Fast proof rule**:
+- **Ship proof rule**:
+- **Wrong-green trap avoided**:
+- **Links**:
+"""
+
+
 COMMANDS_JSON = """{
   "install": null,
   "verify_fast": [],
@@ -623,6 +643,11 @@ If you intentionally want to share a specific run, copy or export the relevant f
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
+    "2.0.9": [
+        "Added `test-readiness.md` to every run scaffold as a hard plan gate before implementation.",
+        "Verification now compiles scenario-targeted checks from `test-contract.md` and stays RED when changed scenarios lack practical proof.",
+        "Planning and checker-style agents now bias toward concise scenario contracts, minimal context, and bounded execution budgets.",
+    ],
     "2.0.8": [
         "Added `query-contract.md` to every run scaffold.",
         "Planning now starts by separating direct asks, implied asks, functionality/quality requirements, and solution constraints before broad repo fan-out.",
@@ -677,6 +702,8 @@ def _manifest(tool_version: str) -> Dict[str, Any]:
         "proof_map": "required",
         "knowledge_merge_strategy": "union-append",
         "current_state_promotion": "default-branch-or-explicit",
+        "test_contract_style": "concise-practical-scenarios",
+        "test_readiness_gate": "required",
     }
 
 
@@ -867,6 +894,7 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
         "docs/xlfg/knowledge/agent-memory/architecture-reviewer.md": ARCHITECTURE_REVIEWER_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/security-reviewer.md": SECURITY_REVIEWER_MEMORY_MD,
         "docs/xlfg/knowledge/agent-memory/performance-reviewer.md": PERFORMANCE_REVIEWER_MEMORY_MD,
+        "docs/xlfg/knowledge/agent-memory/test-readiness-checker.md": TEST_READINESS_CHECKER_MEMORY_MD,
         "docs/xlfg/runs/.gitkeep": "",
         "docs/xlfg/runs/README.md": RUNS_README_MD,
     }
