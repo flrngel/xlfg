@@ -1,7 +1,7 @@
 ---
 name: xlfg-context-constraints-investigator
 description: Surface hidden constraints and dependencies before /xlfg planning.
-model: sonnet
+model: haiku
 effort: medium
 maxTurns: 4
 disallowedTools:

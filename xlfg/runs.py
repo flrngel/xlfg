@@ -85,6 +85,10 @@ This file keeps the run honest about **what the request actually means**.
 ## Open ambiguities
 - ...
 
+## Semantic commitments
+- the design / behavior commitments that must survive the whole run:
+- the interfaces / constraints that later tasks must preserve:
+
 ## Carry-forward anchor
 - direct asks to keep visible after long trajectories:
 - implied asks that must not be dropped:
@@ -207,6 +211,9 @@ SOLUTION_DECISION_TEMPLATE = """# Solution decision
 
 ## Task decomposition hints
 - ...
+
+## Future-evolution guard
+- what later follow-up work should still feel easy if this solution is correct:
 """
 
 HARNESS_PROFILE_TEMPLATE = """# Harness profile
@@ -216,27 +223,36 @@ This file chooses the minimum harness intensity that still gives honest proof.
 ## Selected profile
 - `quick` | `standard` | `deep`
 
+## Research mode
+- `none` | `light` | `heavy`
+
 ## Why this profile fits
 - ...
 
 ## Work shape
 - single-flow build | bugfix | multi-task | research-heavy
 
-## Planning fan-out
-- required agents:
-- optional agents only if triggered:
+## Planning fan-out budget
+- quick: 0–1 specialist total
+- standard: up to 2 specialists total
+- deep: up to 4 specialists total
+- preferred specialist types:
+- optional specialists only if triggered:
 
 ## Execution budget
 - max ordered tasks:
 - max checker loops per task:
-- max parallel subagents:
+- default implementation path: one implementer, add test/checker only when triggered
 
 ## Verification recommendation
 - recommended verify mode: `fast` | `full`
 - scenario classes that must get smoke or e2e:
 
 ## Required review lenses
-- ...
+- security:
+- performance:
+- ux:
+- architecture:
 
 ## Escalation rules
 - What conditions force this run to step up to a deeper profile?
@@ -286,8 +302,13 @@ This file is the shared **behavior contract** for implementation and verificatio
 
 SPEC_TEMPLATE = """# Spec
 
-## Summary
-- ...
+Treat this file as the **run card**. It should be short enough that planning, implementation, verification, and review can all start here.
+
+## PM summary
+- work kind:
+- current objective:
+- current status:
+- owner: agent
 
 ## Objective coverage
 - `O1`: ...
@@ -296,10 +317,15 @@ SPEC_TEMPLATE = """# Spec
 ## Query / intent coverage
 - `Q1` / `I1` / `A1`: ...
 
-## Why
+## Why / user outcome
 - ...
 
-## Root cause / missing capability
+## Research summary
+- repo findings:
+- external findings:
+- if no external research was needed, say `repo-only`:
+
+## Diagnosis / risk summary
 - ...
 
 ## Chosen solution
@@ -311,15 +337,24 @@ SPEC_TEMPLATE = """# Spec
 ## Acceptance criteria
 - ...
 
-## Non-goals
-- ...
+## Task map
+- `T1`: ...
+- `T2`: ...
 
-## Rollout / rollback notes
-- ...
+## Proof strategy
+- primary changed scenarios:
+- fastest honest proof:
+- ship proof:
 
-## Subagent decisions preserved
-- which core agent outputs were adopted directly:
-- any disagreement / override and evidence for it:
+## PM / UX / Engineering / QA / Release notes
+- PM:
+- UX:
+- Engineering:
+- QA:
+- Release / rollback:
+
+## Open questions / deferrals
+- ...
 """
 
 PLAN_TEMPLATE = """# Plan
@@ -331,8 +366,31 @@ PLAN_TEMPLATE = """# Plan
 - `O1`: ...
 - `O2`: ...
 
+## Execution ownership
+
+### Agent-owned
+- code changes
+- tests and test harness updates
+- repo-local config changes needed for correctness
+- local dev-server orchestration
+- fast / smoke / e2e / full local verification
+
+### Human-only / approval-gated
+- unavailable secrets / credentials
+- destructive external or production actions
+- ambiguous product decisions that change correctness
+
+## SDLC lanes
+| Lane | Goal | Owner | Status | Notes |
+|---|---|---|---|---|
+| Research | confirm external truth or state `repo-only` | agent | TODO |  |
+| Product / UX | preserve user intent and interaction quality | agent | TODO |  |
+| Engineering | implement the root solution | agent | TODO |  |
+| QA / Proof | prove changed and preserved behavior | agent | TODO |  |
+| Release / Follow-up | rollout, rollback, and known risks | agent | TODO |  |
+
 ## Ordered tasks
-- [ ] T1 <task aligned to scenario IDs> | objectives: <O1> | query IDs: <Q1 I1 A1> | scenario IDs: <P0-1> | scope: <...> | checks: <fast_check / ship_check> | disproof probe: <...>
+- [ ] T1 <task aligned to scenario IDs> | owner: agent | objectives: <O1> | query IDs: <Q1 I1 A1> | scenario IDs: <P0-1> | scope: <...> | checks: <fast_check / ship_check> | disproof probe: <...>
 
 ## Test-first rule
 - each changed scenario must have a practical fast check and a ship proof before implementation begins
@@ -343,8 +401,7 @@ PLAN_TEMPLATE = """# Plan
 - non-negotiable implied asks still hold
 - diagnosis confirmed or intentionally revised
 - root solution implemented (or bounded workaround explicitly approved)
-- why file still matches the shipped change
-- flow spec satisfied
+- spec.md still matches the shipped change
 - test contract satisfied
 - test-readiness verdict stayed READY or was consciously re-approved after plan changes
 - proof map has concrete evidence links for required scenarios and query / intent IDs
@@ -356,6 +413,10 @@ PLAN_TEMPLATE = """# Plan
 TEST_CONTRACT_TEMPLATE = """# Test contract
 
 Keep this file **short, concrete, and practical**. Prefer 1–5 required scenario contracts total.
+
+## Execution ownership
+- the agent runs repo-local fast checks and ship proofs itself unless a true human-only blocker is recorded
+- ask the user only for secrets/credentials, destructive approvals, or unresolved product decisions that change correctness
 
 ## Required scenario contracts
 
@@ -412,6 +473,10 @@ TEST_READINESS_TEMPLATE = """# Test readiness
 - is there a single honest ship proof per changed primary scenario?
 - is the plan relying on “run everything later” instead of concrete proof?
 
+## Agent ownership check
+- can the agent actually run the promised proofs itself?
+- are any manual steps truly human-only rather than lazy delegation?
+
 ## Under-testing risks
 - ...
 
@@ -455,7 +520,6 @@ WORKBOARD_TEMPLATE = """# Workboard
 This is the run-level task and stage ledger.
 
 ## Stage status
-- prepare: DONE
 - recall: TODO
 - plan: TODO
 - implement: TODO
@@ -471,6 +535,11 @@ This is the run-level task and stage ledger.
 - do not drop direct asks or non-negotiable implied asks
 - do not ship a monkey fix as if it were the root solution
 
+## Execution reminder
+- the agent owns implementation, repo-local config changes, and major local verification unless the blocker is truly human-only
+- do not assume the user will run the important proof later
+- start from `spec.md` and dive deeper only when the active task needs it
+
 ## Objectives
 | Objective | Status | Direct asks | Scenarios | Notes |
 |---|---|---|---|---|
@@ -485,6 +554,13 @@ This is the run-level task and stage ledger.
 | Scenario | Status | Fast proof | Ship proof | Evidence |
 |---|---|---|---|---|
 | P0-1 | UNASSESSED |  |  |  |
+
+## Team communication
+| Audience | Latest note | Owner |
+|---|---|---|
+| PM / Stakeholders |  | agent |
+| Engineering |  | agent |
+| QA |  | agent |
 
 ## Blockers / escalations
 - ...
@@ -513,6 +589,11 @@ SCORECARD_TEMPLATE = """# Scorecard
 
 ## P2P status
 - `G1` / `I1`: UNASSESSED | proof: <command or artifact>
+
+## PM / Engineering / QA rollup
+- PM: UNASSESSED
+- Engineering: UNASSESSED
+- QA: UNASSESSED
 
 ## Notes
 - Update this after verification and review.
@@ -543,18 +624,13 @@ def create_run(root: Path, request: str, run_id: Optional[str] = None) -> dict:
     safe_write(docs_dir / "query-contract.md", QUERY_CONTRACT_TEMPLATE)
     safe_write(docs_dir / "why.md", WHY_TEMPLATE)
     safe_write(docs_dir / "memory-recall.md", MEMORY_RECALL_TEMPLATE)
-    safe_write(docs_dir / "diagnosis.md", DIAGNOSIS_TEMPLATE)
-    safe_write(docs_dir / "solution-decision.md", SOLUTION_DECISION_TEMPLATE)
     safe_write(docs_dir / "harness-profile.md", HARNESS_PROFILE_TEMPLATE)
-    safe_write(docs_dir / "flow-spec.md", FLOW_SPEC_TEMPLATE)
     safe_write(docs_dir / "spec.md", SPEC_TEMPLATE)
     safe_write(docs_dir / "plan.md", PLAN_TEMPLATE)
     safe_write(docs_dir / "test-contract.md", TEST_CONTRACT_TEMPLATE)
     safe_write(docs_dir / "test-readiness.md", TEST_READINESS_TEMPLATE)
-    safe_write(docs_dir / "env-plan.md", ENV_PLAN_TEMPLATE)
     safe_write(docs_dir / "workboard.md", WORKBOARD_TEMPLATE)
     safe_write(docs_dir / "proof-map.md", PROOF_MAP_TEMPLATE)
-    safe_write(docs_dir / "scorecard.md", SCORECARD_TEMPLATE)
 
     return {
         "run_id": rid,

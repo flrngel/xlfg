@@ -1,12 +1,12 @@
 ---
 name: xlfg:implement
-description: Implement the planned root solution task-by-task while preserving the query contract, why, and predeclared proof obligations.
+description: Implement the planned solution with minimal read amplification, adaptive subagent use, and explicit proof discipline.
 argument-hint: "[run-id | latest]"
 ---
 
 # /xlfg:implement
 
-Implement the run one task at a time. Do **not** skip the planning contract.
+Implement the run one task at a time.
 
 <input>#$ARGUMENTS</input>
 
@@ -20,185 +20,158 @@ Define:
 - `DOCS_RUN_DIR=docs/xlfg/runs/<run-id>`
 - `DX_RUN_DIR=.xlfg/runs/<run-id>`
 
-## 2) Read the run contract before touching code
+## 2) Read the minimum honest brief first
 
-Read these files first, in this order if present:
+Always read these first:
+
+- `spec.md`
+- `plan.md`
+- `test-contract.md`
+- `test-readiness.md`
+- `workboard.md`
+- `proof-map.md`
+
+Read these only when the task needs deeper context:
 
 - `query-contract.md`
 - `why.md`
 - `memory-recall.md`
 - `diagnosis.md`
 - `solution-decision.md`
-- `harness-profile.md`
 - `flow-spec.md`
-- `spec.md`
-- `plan.md`
-- `test-contract.md`
-- `test-readiness.md`
 - `env-plan.md`
-- `workboard.md`
-- `proof-map.md`
-- `scorecard.md`
-- `risk.md` if present
-- `docs/xlfg/knowledge/current-state.md` if present
+- `risk.md`
+- `docs/xlfg/knowledge/current-state.md`
 - relevant role memory under `docs/xlfg/knowledge/agent-memory/`
-
-Extract from `query-contract.md` before starting:
-- direct asks
-- non-negotiable implied asks
-- developer / product intention
-- prohibited shallow fixes
-- the carry-forward anchor
-
-Extract from `harness-profile.md` before starting:
-- selected profile (`quick` | `standard` | `deep`)
-- max ordered tasks
-- max checker loops per task
-- max parallel subagents
-- escalation triggers
 
 If `test-readiness.md` is missing or not `READY`, stop and return to `/xlfg:plan`.
 
 ## 3) Implementation doctrine
 
-- **Query before code.** Every task must still satisfy the direct asks and non-negotiable implied asks.
-- **Why before code.** Every task must still serve `why.md`, not just a visible symptom.
-- **Tests were planned first.** Implement against the scenario contracts already declared in `test-contract.md`; do not invent proof late.
-- **Respect subagent conclusions.** Do not casually override `flow-spec.md`, `test-contract.md`, or `solution-decision.md` inside implementation.
-- **Review is not the cleanup crew.** Build cleanly now.
-- **Do not patch the symptom if the diagnosis says the real problem lives elsewhere.**
-- **Do not weaken tests to get green.**
-- **Do not broaden file scope casually.** If scope must expand, update the plan first.
-- **Use targeted checks after each task.** Final verification comes later.
-- **If a disproof probe trips, stop and return to planning.**
-- **If a task only fixes one obvious entrypoint while alternate paths remain broken, that is a monkey fix. Reject it.**
-- **Do not repeat a known failure pattern** already called out in `memory-recall.md`, `current-state.md`, or role memory.
-- **Do not mark a task done if its proof obligation is still undefined.** Update planning first.
+- Start from the run card, not from a file-reading marathon.
+- Re-open deeper docs only when the active task genuinely needs them.
+- Every task must still satisfy the direct asks, non-negotiable implied asks, and proof obligations.
+- Do not ask the user to implement code, run major local tests, or orchestrate the repo-local harness when the agent can do it.
+- Do not widen scope casually. If scope expands materially, update the plan first.
+- Do not weaken tests to get green.
+- Do not ship a symptom patch when the diagnosis says the root problem lives elsewhere.
+- If a disproof probe trips, stop and update the plan instead of grinding forward.
 
 ## 4) Workboard discipline
 
-`workboard.md` is the run-truth ledger during implementation.
-
 Before the first task:
+
 - set `implement` to `IN_PROGRESS`
-- mark the current next action
-- note the active profile and any active escalations
-- re-copy the carry-forward anchor into the current notes if needed
+- record the current next action
+- note the active profile and research mode
+- keep the PM / Engineering / QA status notes honest
 
 After each task:
-- update the task row status
-- record the checks actually run
-- record any new blocker, scope expansion, or escalation
-- keep `current next action` honest
 
-## 5) Task loop
+- update the task row
+- record checks actually run
+- record any new blocker or scope change
+- record a short engineering note and QA focus note when useful
 
-For each unchecked task in `plan.md`, in order:
+## 5) Default task loop
 
-### 5A) Create the task folder and brief
+For each unchecked task in `plan.md`:
 
-Ensure `tasks/<task-id>/` exists and write `task-brief.md` with:
+### 5A) Create the task brief
 
-- why this task matters to the run
-- objective IDs and direct asks / implied asks / acceptance criteria covered (`O*`, `Q*`, `I*`, `A*`)
-- task goal
-- scenario IDs
-- allowed file scope
-- proof obligations from `proof-map.md`
-- required checks from `test-contract.md`
-- relevant invariants
-- disproof probe / stop condition
-- anti-monkey-fix warning for this task
-- any blocker context
-- reused recall rules that matter for this task
+Ensure `tasks/<task-id>/task-brief.md` exists with:
 
-### 5B) Run the specified implementation agents
+- why this task matters
+- objective / query / scenario IDs
+- goal and file scope
+- proof obligations
+- required checks
+- invariants
+- disproof probe
+- anti-monkey-fix warning
 
-Run these agents in order for the task:
+### 5B) Adaptive agent budget
 
-1. `xlfg-test-implementer` → `tasks/<task-id>/test-report.md`
-2. `xlfg-task-implementer` → `tasks/<task-id>/implementer-report.md`
-3. run the targeted checks required by the task
-4. `xlfg-task-checker` → `tasks/<task-id>/checker-report.md`
+Default path:
 
-Keep task work scoped. Do not spawn optional subagents beyond the profile budget unless an escalation trigger fired.
+1. `xlfg-task-implementer` → `tasks/<task-id>/implementer-report.md`
+2. run targeted checks for the task
 
-### 5C) Acceptance rule
+Use `xlfg-test-implementer` only when:
 
-A task is only complete when:
+- the task changes or adds proof
+- planned checks do not yet have honest test coverage
+- the task touches regression-prone behavior that the plan already flagged
 
-- the targeted checks pass
-- the checker verdict is `ACCEPT`
-- the task checkbox in `plan.md` is marked complete
-- the task row in `workboard.md` is updated
-- the relevant `proof-map.md` rows now have concrete planned or observed evidence paths
-- the relevant direct asks and non-negotiable implied asks are still covered or explicitly deferred
+Use `xlfg-task-checker` only when **one of these triggers fires**:
+
+- profile is `deep`
+- checks failed once and the fix is non-obvious
+- the diff is broader than planned
+- the task crosses a public interface / auth / money / destructive-data boundary
+- the task changes multiple user-facing paths
+
+If no trigger fires, do a disciplined self-check against `task-brief.md` and record that in `implementer-report.md`.
+
+## 6) Acceptance rule
+
+A task is complete only when:
+
+- targeted checks pass
+- required proof work for the task exists
+- `plan.md` and `workboard.md` are updated
+- `proof-map.md` points to planned or observed evidence
+- the task still aligns with `spec.md`
 - no known recall-derived trap was ignored silently
-- the task still aligns to `query-contract.md`, `why.md`, and `solution-decision.md`
-- the task did not silently invalidate `test-readiness.md`
 
-### 5D) Anti-loop rule
+## 7) Anti-loop rule
 
-Use the checker-loop budget from `harness-profile.md`.
+Respect the checker-loop budget from `harness-profile.md`.
 
-If the checker rejects the task up to that limit **without a new diagnosis or plan update**:
+If repeated failures happen without a new diagnosis or plan update:
 
 - stop the patch loop
-- update `query-contract.md` if the request understanding changed
-- update `diagnosis.md` and `solution-decision.md` if needed
-- update `test-contract.md` and `test-readiness.md` if the proof contract changed
-- update `plan.md`, `workboard.md`, and `proof-map.md`
+- update the relevant run artifacts
 - only then resume implementation
 
 Do not brute-force your way to green.
 
-## 6) Escalation rule
+## 8) Escalation rule
 
-Step the run up to a deeper harness profile if any of these become true:
+Step the run up when:
 
-- the scope expands across more user-facing flows than planned
-- the task crosses an auth / money / destructive-data boundary
-- the required proof clearly exceeds the current profile budget
-- repeated checker failures reveal the diagnosis was too shallow
-- the environment plan is no longer credible for the changed surface
-- preserving the implied asks clearly requires more proof than originally budgeted
+- scope expands across more flows than planned
+- proof needs clearly exceed the current budget
+- repeated failures expose a shallow diagnosis
+- environment assumptions become unreliable
+- preserving implied asks needs more proof than expected
 
-If you escalate:
-- update `harness-profile.md`
-- update `workboard.md`
-- update `plan.md`
-- if proof changed materially, update `test-contract.md` and `test-readiness.md`
-- call out what changed and why
+If you escalate, update:
 
-## 7) Root-cause rule
+- `harness-profile.md`
+- `spec.md`
+- `plan.md`
+- `workboard.md`
+- `test-contract.md` / `test-readiness.md` / `proof-map.md` if proof changed
 
-If a workaround is the only safe short-term move, document it explicitly in:
-
-- `tasks/<task-id>/implementer-report.md`
-- `run-summary.md`
-- `risk.md` or `verify-fix-plan.md` if it changes the ship gate
-
-Do **not** silently present a workaround as the final solution.
-
-## 8) Finish the implementation phase
+## 9) Finish implementation
 
 When all tasks are complete, write or update `run-summary.md` with:
 
 - query / intent summary
 - why summary
+- research summary
 - what changed
-- manual smoke steps
-- targeted checks already run
-- areas that still depend on `/xlfg:verify`
-- proof obligations still open in `proof-map.md`
+- checks already run
+- remaining verification obligations
 - direct asks covered
-- implied asks still pending or explicitly deferred
+- implied asks pending or deferred
+- PM / Engineering / QA status
 - known risks or `none`
-- which recall-derived rules mattered most during implementation
-- whether the predeclared scenario contracts stayed stable or required revision
 
 Update `workboard.md`:
+
 - `implement: DONE`
 - `verify: NEXT`
 
-Do not call final verification or review in this command. The workflow continues with `/xlfg:verify`.
+Do not run final verification or review in this command.

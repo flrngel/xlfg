@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .audit import audit_repo
 from .detect import detect_commands
 from .doctor import cleanup_dev_server, ensure_dev_server
 from .runs import create_run
@@ -22,13 +23,13 @@ def _print_json(obj: Any) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="xlfg",
-        description="XLFG: why-first, proof-aware SDLC harness",
+        description="XLFG: adaptive research-to-release SDLC harness",
     )
     parser.add_argument("--version", action="store_true", help="Print version and exit")
 
     subparsers = parser.add_subparsers(dest="command")
 
-    p_prepare = subparsers.add_parser("prepare", help="Fast scaffold/version check with auto-migration")
+    p_prepare = subparsers.add_parser("prepare", help="Manual scaffold/version check with auto-migration")
     p_prepare.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
 
     p_init = subparsers.add_parser("init", help="Bootstrap or repair docs/xlfg + .xlfg scaffolding")
@@ -44,6 +45,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p_detect = subparsers.add_parser("detect", help="Detect verification commands")
     p_detect.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
+
+    p_audit = subparsers.add_parser("audit", help="Audit workflow load, SDLC coverage, and benchmark readiness")
+    p_audit.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
 
     p_recall = subparsers.add_parser("recall", help="Deterministic recall over xlfg knowledge, role memory, and local runs")
     p_recall.add_argument("query", nargs="*", help="Plain topic/date query or typed query document")
@@ -82,15 +86,20 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "start":
-        prep = ensure_scaffold(root, __version__)
+        scaffold = ensure_scaffold(root, __version__)
         result = create_run(root, request=args.request, run_id=args.run_id)
-        _print_json({"root": str(root), "prepare": prep, **result})
+        _print_json({"root": str(root), "scaffold": scaffold, **result})
         return 0
 
     if args.command == "detect":
         ensure_scaffold(root, __version__)
         detected = detect_commands(root)
         _print_json({"root": str(root), **detected})
+        return 0
+
+    if args.command == "audit":
+        report = audit_repo(root)
+        _print_json({"root": str(root), **report})
         return 0
 
     if args.command == "recall":

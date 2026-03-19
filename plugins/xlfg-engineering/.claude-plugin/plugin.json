@@ -1,7 +1,7 @@
 {
   "name": "xlfg-engineering",
-  "version": "2.0.9",
-  "description": "Query-first, why-first SDLC workflow with request contracts, proof-aware verification, environment discipline, and verified compounding.",
+  "version": "2.1.0",
+  "description": "Adaptive research-to-release SDLC harness for Claude Code with lean planning, proof, review, and benchmarking.",
   "author": {
     "name": "xlfg",
     "email": "",

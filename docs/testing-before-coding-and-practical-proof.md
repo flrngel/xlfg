@@ -259,9 +259,8 @@ The user asked for a production harness skill, not experimental retrieval or a r
 
 `/xlfg` should now mean:
 
-1. prepare
-2. recall
-3. plan
+1. recall
+2. plan
    - query contract
    - why
    - diagnosis

@@ -57,7 +57,8 @@ Mark `READY` only when all are true:
 3. The scenarios reflect the real request and the chosen root solution, not just the most obvious entrypoint.
 4. The checks are practical for iteration. “Run the whole suite later” is not the plan.
 5. The env plan can actually support the chosen smoke/e2e checks without obvious harness chaos.
-6. The plan is not over-testing. If a small flow needs one fast proof and one smoke proof, do not demand a giant e2e stack just because it exists.
+6. The proof can be executed by the agent without silently delegating core verification to the user, except for true human-only blockers.
+7. The plan is not over-testing. If a small flow needs one fast proof and one smoke proof, do not demand a giant e2e stack just because it exists.
 
 ## REVISE triggers
 
@@ -70,6 +71,7 @@ Mark `REVISE` when any of these are true:
 - the plan relies on late generic verification instead of predeclared practical proof
 - manual-only proof is being used as a lazy substitute for an obvious automated check
 - the contract ignores an important implied ask, interaction variant, or failure path that the flow spec made non-negotiable
+- the contract quietly assumes the user will run the important checks later
 
 ## Output format
 

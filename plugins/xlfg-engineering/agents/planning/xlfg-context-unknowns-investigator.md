@@ -1,7 +1,7 @@
 ---
 name: xlfg-context-unknowns-investigator
 description: Identify assumptions, unknowns, and minimal clarifying questions for /xlfg.
-model: sonnet
+model: haiku
 effort: medium
 maxTurns: 4
 disallowedTools:

@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from xlfg import __version__
+from xlfg.audit import audit_repo
 from xlfg.detect import detect_commands
 from xlfg.doctor import ensure_dev_server
 from xlfg.runs import create_run
@@ -111,14 +112,21 @@ class TestXLFG(unittest.TestCase):
             run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
             self.assertTrue((run_dir / "query-contract.md").exists())
             self.assertTrue((run_dir / "why.md").exists())
-            self.assertTrue((run_dir / "diagnosis.md").exists())
-            self.assertTrue((run_dir / "solution-decision.md").exists())
             self.assertTrue((run_dir / "harness-profile.md").exists())
-            self.assertTrue((run_dir / "flow-spec.md").exists())
             self.assertTrue((run_dir / "workboard.md").exists())
             self.assertTrue((run_dir / "proof-map.md").exists())
             self.assertTrue((run_dir / "test-readiness.md").exists())
+            self.assertFalse((run_dir / "diagnosis.md").exists())
+            self.assertFalse((run_dir / "solution-decision.md").exists())
+            self.assertFalse((run_dir / "flow-spec.md").exists())
+            self.assertFalse((run_dir / "env-plan.md").exists())
+            self.assertFalse((run_dir / "scorecard.md").exists())
             self.assertTrue((run_dir / "tasks").exists())
+            workboard = (run_dir / "workboard.md").read_text(encoding="utf-8")
+            self.assertNotIn("prepare:", workboard)
+            self.assertIn("Execution reminder", workboard)
+            plan = (run_dir / "plan.md").read_text(encoding="utf-8")
+            self.assertIn("## Execution ownership", plan)
 
     def test_prepare_scaffold_creates_recall_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -338,6 +346,26 @@ class TestXLFG(unittest.TestCase):
             joined = "\n".join(res["contract_issues"])
             self.assertIn("practical fast_check", joined)
             self.assertIn("manual ship proof", joined)
+
+    def test_versions_are_synced_across_package_and_plugin_manifests(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        pyproject_text = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn(f'version = "{__version__}"', pyproject_text)
+        claude_plugin = json.loads((repo_root / "plugins" / "xlfg-engineering" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        cursor_plugin = json.loads((repo_root / "plugins" / "xlfg-engineering" / ".cursor-plugin" / "plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(claude_plugin["version"], __version__)
+        self.assertEqual(cursor_plugin["version"], __version__)
+
+    def test_audit_reports_load_coverage_and_sync(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        report = audit_repo(repo_root)
+        self.assertTrue(report["version_sync"]["ok"])
+        self.assertIn("workflow_load_score", report["scores"])
+        self.assertIn("sdlc_coverage_score", report["scores"])
+        self.assertGreater(report["scores"]["efficiency_index"], 0)
+        self.assertTrue(report["metrics"]["features"]["research_lane"])
+        self.assertTrue(report["metrics"]["features"]["audit"])
+        self.assertGreaterEqual(report["metrics"]["models"]["counts"].get("haiku", 0), 1)
 
     def test_macro_mentions_profile_driven_verify(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

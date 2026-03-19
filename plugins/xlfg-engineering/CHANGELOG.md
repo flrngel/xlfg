@@ -1,5 +1,36 @@
 # Changelog
 
+## 2.1.0 - 2026-03-19
+
+### Changed
+- Reframed `/xlfg` as a **thin SDLC macro** that should complement Claude Code instead of competing with it.
+- `/xlfg:plan` now distinguishes **always-on artifacts** from **optional artifacts**, adds a first-class **research lane**, and treats `spec.md` as the run card for PM / Engineering / QA.
+- `/xlfg:implement` now starts from the run card plus proof docs instead of front-loading every run artifact, and it uses **adaptive subagent budgets** instead of routine test+implement+checker fan-out on every task.
+- `/xlfg:review` now has an explicit **lens budget** tied to harness profile and changed surface.
+- Added `/xlfg:audit` command plus `xlfg audit` CLI support.
+- Added `docs/benchmarking.md` describing both deterministic harness audit and live Claude Code A/B evaluation.
+- Synced plugin manifest versions with the package version.
+- Moved several read-only/mapping agents to lighter models.
+
+### Why
+- The user reported that `/xlfg` still felt worse than strong vanilla Claude Code because workflow load, fan-out, and artifact sprawl could outweigh the trust gains.
+- Recent work on coding-agent evaluation reinforces the same lesson: better proof and better planning are good, but excessive skills, prompt load, and orchestration overhead can cancel out the benefit.
+
+## 2.0.10 - 2026-03-19
+
+### Changed
+- `/xlfg` no longer treats scaffold sync as a routine `prepare` stage; normal runs now start from recall and planning.
+- `/xlfg:plan` was rewritten into a lead-owned planning pass with a small specialist budget instead of broad routine fan-out.
+- Planning now reduces the run into **semantic state**, **structural state**, and **execution state**.
+- Plans now make **execution ownership** explicit and reject silently delegating core implementation or major local verification to the user.
+- `workboard.md` no longer includes a stale `prepare` stage and now reminds the agent it owns the work.
+- `test-contract.md` / `test-readiness.md` now treat “the user can run it later” as an invalid proof strategy unless the blocker is truly human-only.
+- CLI `start` now reports `scaffold`, not `prepare`.
+
+### Why
+- The user reported that routine prepare felt like pointless terraforming, planning quality was worse than vanilla Claude Code planning, and the harness sometimes assumed the user would do the real work later.
+- 2026 papers pointed in the same direction: stronger upfront problem formulation, requirement-first test contracts, smaller and better-structured planning, and explicit separation of request truth, repo truth, and execution/proof truth.
+
 ## 2.0.9 - 2026-03-18
 
 ### Added

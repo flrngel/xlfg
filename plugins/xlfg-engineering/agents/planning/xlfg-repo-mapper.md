@@ -1,7 +1,7 @@
 ---
 name: xlfg-repo-mapper
 description: Map repo structure + conventions + how to run tests/lint/build. Use at the start of /xlfg.
-model: sonnet
+model: haiku
 effort: medium
 maxTurns: 5
 disallowedTools:

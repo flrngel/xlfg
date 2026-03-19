@@ -1,7 +1,7 @@
 ---
 name: xlfg-env-doctor
 description: Write `env-plan.md` for reliable local verification (ports, healthchecks, reuse, cleanup, anti-hang rules).
-model: sonnet
+model: haiku
 effort: medium
 maxTurns: 5
 disallowedTools:

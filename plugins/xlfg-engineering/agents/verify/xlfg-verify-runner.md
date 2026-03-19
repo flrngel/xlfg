@@ -1,7 +1,7 @@
 ---
 name: xlfg-verify-runner
 description: Execute layered verification commands and capture logs, exit codes, and results artifacts.
-model: sonnet
+model: haiku
 effort: medium
 maxTurns: 4
 ---

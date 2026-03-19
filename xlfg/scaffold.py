@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from .util import append_unique_line, ensure_dir, safe_write
 
-SCAFFOLD_SCHEMA_VERSION = 9
+SCAFFOLD_SCHEMA_VERSION = 10
 
 INDEX_MD = """# xlfg
 
@@ -48,6 +48,8 @@ This keeps retrieval simple: read the tracked brief first for repo-wide truths, 
 
 ## Core workflow contract
 
+Normal `/xlfg` runs should **not** surface a routine prepare/terraform phase. Minimal scaffold sync may happen silently when needed, but the real workflow starts from recall and planning.
+
 Define **what the request really means**, **why this work matters**, **what the real problem is**, and **what to build / test** *before* implementation:
 
 1. `query-contract.md` — direct asks, implied asks, quality requirements, solution constraints, developer intention, and prohibited shallow fixes
@@ -72,6 +74,11 @@ xlfg compounds in two layers:
 3. **Role memory** in `knowledge/agent-memory/` for agents that repeatedly need the same lessons
 4. **Memory ledger** in `knowledge/ledger.jsonl` for append-only, structured durable memory events
 
+Planning state should stay split into:
+- **semantic state** (`query-contract.md`, `why.md`, `diagnosis.md`)
+- **structural state** (`repo-map.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`)
+- **execution state** (`plan.md`, `workboard.md`, `proof-map.md`, `scorecard.md`)
+
 Keep `current-state.md` short and current. Role memory must stay small, typed, and admission-gated. Do not dump raw run summaries there. The ledger is append-only; corrections should supersede old entries rather than silently rewriting them.
 """
 
@@ -79,7 +86,7 @@ QUALITY_BAR_MD = """# xlfg quality bar
 
 Nothing is "done" unless:
 
-- **The request is explicit** (`query-contract.md` exists and keeps direct asks, implied asks, quality requirements, and prohibited shallow fixes visible)
+- **The request is explicit** (`query-contract.md` exists and keeps direct asks, implied asks, quality requirements, prohibited shallow fixes, and semantic commitments visible)
 - **Why is explicit** (`why.md` exists and the run still serves it)
 - **Diagnosis is explicit** (`diagnosis.md` exists)
 - **The root solution is explicit** (`solution-decision.md` exists and records rejected shortcuts)
@@ -92,7 +99,7 @@ Nothing is "done" unless:
 - **Existing behavior is preserved** with relevant guard coverage (Pass → Pass)
 - **Lint / typecheck / build** pass when applicable
 - **User-facing flows are validated** (happy path, alternates, failure path, a11y)
-- **Workboard is current** (`workboard.md` reflects stage / task truth)
+- **Workboard is current** (`workboard.md` reflects stage / task truth and reminds the agent it owns the work)
 - **Proof map is concrete** (`proof-map.md` links required scenarios to evidence or an explicit proof gap)
 - **Unexpected failures are compounded** into failure memory / harness rules / role memory when warranted
 - **No monkey fix is misrepresented as the final solution** (bounded workarounds are labeled honestly)
@@ -643,6 +650,11 @@ If you intentionally want to share a specific run, copy or export the relevant f
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
+    "2.0.10": [
+        "`/xlfg` no longer treats scaffold sync as a routine prepare stage; normal runs start from recall and planning.",
+        "Planning now uses a simpler lead-owned model: fewer routine subagents, three explicit planning states (semantic / structural / execution), and agent-owned execution by default.",
+        "Run templates now record execution ownership explicitly and remove the stale prepare stage from workboard state.",
+    ],
     "2.0.9": [
         "Added `test-readiness.md` to every run scaffold as a hard plan gate before implementation.",
         "Verification now compiles scenario-targeted checks from `test-contract.md` and stays RED when changed scenarios lack practical proof.",
@@ -704,6 +716,10 @@ def _manifest(tool_version: str) -> Dict[str, Any]:
         "current_state_promotion": "default-branch-or-explicit",
         "test_contract_style": "concise-practical-scenarios",
         "test_readiness_gate": "required",
+        "workflow_entry": "recall-plan-implement-verify-review-compound",
+        "prepare_mode": "manual-maintenance-only",
+        "planning_model": "semantic-structural-execution-state",
+        "execution_ownership": "agent-owned-except-human-only",
     }
 
 
@@ -937,7 +953,7 @@ def ensure_scaffold(root: Path, tool_version: str) -> Dict[str, Any]:
     elif status.get("needs_meta_sync"):
         notes.append("Synchronized scaffold metadata to the canonical docs/xlfg/meta.json format.")
     else:
-        notes.append("Scaffold already current; prepare check passed with no migration.")
+        notes.append("Scaffold already current; no migration needed.")
 
     return {
         "created": created,

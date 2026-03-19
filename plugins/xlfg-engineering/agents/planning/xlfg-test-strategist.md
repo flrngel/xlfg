@@ -85,6 +85,7 @@ Include additional scenario cards only when they are truly necessary.
 - Prefer the cheapest check that proves the requirement.
 - Prefer exact flow/state assertions over generic suite breadth.
 - Reserve e2e for flows that truly need it.
+- Default assumption: the agent will execute repo-local fast/ship checks itself. Do not silently rely on the user to perform the important proof later.
 - Explicitly map **interaction variants** (keyboard vs click, Enter vs button) when the UX flow depends on them.
 - Trace every primary changed scenario back to objective IDs and query / intent IDs from `query-contract.md`.
 - Add at least one probe that would fail if the implementation only patched the most obvious entrypoint.

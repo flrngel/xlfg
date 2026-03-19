@@ -51,6 +51,7 @@ You are a task checker for `/xlfg`.
 - Harness honesty: did the implementer avoid fake-green shortcuts?
 - Risk compliance: auth, destructive state, rollback / error handling alignment
 - Scope compliance: only allowed files changed
+- Execution ownership: was core implementation or major verification improperly handed back to the user?
 - Recall fidelity: did the task ignore a relevant warning from `memory-recall.md` or `current-state.md`?
 
 ## System-wide check before ACCEPT
@@ -67,7 +68,7 @@ Ask:
 7. **Did a known recall-derived warning get ignored?**
 8. **Does the task overclaim proof relative to `proof-map.md`?**
 
-If any answer reveals a gap, issue `REVISE`. Missing direct-ask coverage or a shallow one-entry-point patch is automatically `REVISE`.
+If any answer reveals a gap, issue `REVISE`. Missing direct-ask coverage, user-offloaded core work, or a shallow one-entry-point patch is automatically `REVISE`.
 
 ## Output format
 

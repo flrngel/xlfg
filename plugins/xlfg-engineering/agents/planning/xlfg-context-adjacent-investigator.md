@@ -1,7 +1,7 @@
 ---
 name: xlfg-context-adjacent-investigator
 description: Find adjacent requirements implied by the request. Use before planning in /xlfg.
-model: sonnet
+model: haiku
 effort: medium
 maxTurns: 4
 disallowedTools:

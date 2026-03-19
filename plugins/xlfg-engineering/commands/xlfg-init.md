@@ -7,7 +7,7 @@ description: Manual bootstrap / repair for xlfg scaffolding in this repo.
 
 Use this when you want to explicitly bootstrap or repair the xlfg scaffold.
 
-`/xlfg` itself should normally use `/xlfg:prepare`, not force a full init every run.
+`/xlfg` itself should normally start from recall/plan. Use `/xlfg:init` only when you intentionally want a manual bootstrap or repair.
 
 ## Safety + idempotency rules
 

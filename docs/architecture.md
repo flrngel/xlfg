@@ -1,12 +1,9 @@
-# xlfg architecture
+# xlfg architecture (2.0.10)
 
-## Command architecture
-
-`/xlfg` is intentionally a **macro**. It should not hide the workflow in one giant prompt.
+`/xlfg` is now intentionally simple at the top level:
 
 ```text
 /xlfg
-  ├─ /xlfg:prepare
   ├─ /xlfg:recall
   ├─ /xlfg:plan
   ├─ /xlfg:implement
@@ -15,99 +12,74 @@
   └─ /xlfg:compound
 ```
 
-`/xlfg:init` remains available as a manual bootstrap / repair command, but the main workflow should prefer the fast prepare/migrate check.
+`/xlfg:prepare` and `/xlfg:init` still exist, but they are **manual maintenance commands**. They are not the product workflow.
 
-This keeps the workflow debuggable, composable, and easy to re-run from any intermediate stage.
+## The real harness model
 
-## Shared file protocol
-
-Every serious run writes:
-
+### 1) Semantic state
+Keep the request and root problem stable:
+- `query-contract.md`
 - `why.md`
-- `memory-recall.md`
 - `diagnosis.md`
+
+### 2) Structural state
+Keep the repo-facing solution stable:
+- `repo-map.md`
 - `solution-decision.md`
-- `harness-profile.md`
 - `flow-spec.md`
-- `test-contract.md`
 - `env-plan.md`
+
+### 3) Execution state
+Keep task/proof truth stable:
 - `plan.md`
 - `workboard.md`
 - `proof-map.md`
 - `scorecard.md`
 
-These files are the contract shared across planning, implementation, verification, review, and compounding.
+This split is the core architectural change in 2.0.10. It reduces drift by keeping request truth, codebase truth, and execution/proof truth separate.
 
-## Harness profile model
+## Planning model
 
-The harness profile chooses the minimum honest intensity for the run:
+Planning is a **lead-agent synthesis pass** with a small specialist budget.
 
-- `quick`
-- `standard`
-- `deep`
+Default planning specialist order:
+1. query refiner
+2. repo mapper (only if needed)
+3. root-cause analyst
+4. spec author
+5. test strategist
+6. solution architect (only if needed)
 
-The profile controls:
+The lead planner owns:
+- `why.md`
+- `harness-profile.md`
+- `test-readiness.md`
+- `spec.md`
+- `plan.md`
+- `workboard.md`
+- `proof-map.md`
+- `scorecard.md`
 
-- max ordered tasks
-- max checker loops per task
-- max parallel subagents
-- recommended verify mode
-- required review lenses
-- escalation triggers
+## Execution ownership
 
-This is xlfg’s lightweight answer to “execution modes” in larger harness systems.
+By default, the **agent** owns:
+- implementation
+- repo-local config changes needed for correctness
+- tests and test harness updates
+- dev-server orchestration
+- major local verification
 
-## Memory split
+Only escalate to the user for:
+- missing secrets / credentials
+- destructive external or production actions
+- unresolved product decisions that change correctness
 
-- `docs/xlfg/knowledge/` → tracked durable knowledge
-- `docs/xlfg/knowledge/agent-memory/` → tracked role-specific memory
-- `docs/xlfg/runs/` → local episodic evidence
-- `.xlfg/` → ephemeral raw logs
+## Verification model
 
-## Workboard and proof map
+Verification compiles from the predeclared scenario contract first, then adds supplemental repo checks.
 
-Two files became central in 2.0.5:
-
-- `workboard.md` → stage / task truth for the run
-- `proof-map.md` → requirement-to-evidence truth for the run
-
-The workboard answers: *where are we and what is next?*
-
-The proof map answers: *what would count as honest proof, and do we have it yet?*
-
-## Quality placement
-
-Quality is not deferred to the end.
-
-- **Planning** prevents bad direction.
-- **Implementation** prevents bad code from spreading.
-- **Verification** proves the contract.
-- **Review** confirms there are no blind spots.
-- **Compounding** upgrades future runs.
-
-## Progressive agent loading
-
-Not every run needs every planner or reviewer.
-
-The core planning agents always run:
-- why analyst
-- repo mapper
-- root-cause analyst
-- spec author
-- test strategist
-- env doctor
-- solution architect
-- harness profiler
-
-Optional agents should load only when the diagnosis justifies them. This keeps context and runtime cost under control.
-
-## Implementation loop
-
-For each task:
-
-1. `xlfg-test-implementer`
-2. `xlfg-task-implementer`
-3. targeted proof
-4. `xlfg-task-checker`
-
-If the checker rejects the task up to the profile budget without a new diagnosis, stop and update the plan.
+A run is only green when:
+- the promised scenario-targeted proofs actually ran
+- proof-map rows are covered
+- direct asks and non-negotiable implied asks have evidence or explicit approved deferral
+- the evidence still matches the why and root solution
