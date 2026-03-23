@@ -13,122 +13,29 @@ CONTEXT_MD_TEMPLATE = """# Context
 
 {request}
 
-## Source context
-- user request / issue / ticket text:
-- follow-up clarifications already given:
-- repo / service area likely involved:
-
-## Product / user intent
-- who is this for?
-- what problem is changing?
-- what friction or failure is happening now?
-- what false success would still disappoint the user?
+## Repo / product context
+- likely area involved:
+- important files or services:
+- current user or operator pain:
 
 ## Constraints
 - environment / OS:
-- performance:
+- performance / latency:
 - security / privacy:
 - UX / accessibility:
 - delivery constraints:
 
-## Open questions
-- ...
-"""
-
-QUERY_CONTRACT_TEMPLATE = """# Query contract
-
-This file keeps the run honest about **what the request actually means**.
-
-## Work kind
-- `build` | `bugfix` | `research` | `multi`
-
-## Raw request
-- ...
-
-## Objective groups
-- `O1`: ...
-- `O2`: ...
-
-## Direct asks
-- `Q1`: ...
-
-## Implied asks
-- `I1`: ...
-
-## Functionality and quality requirements
-- `R1`: ...
-
-## General solution constraints
-- ...
-
-## Specific solution constraints
-- ...
-
-## Expected behavior / acceptance criteria
-- `A1`: ...
-
-## Reproduction / baseline notes
-- ...
-
-## Non-goals / explicitly not requested
-- ...
-
-## Developer / product intention
-- ...
-
-## Prohibited shallow fixes
-- one-entry-point patch
-- test-only green without real behavior proof
-- disabling / weakening checks to get green
-- local symptom masking that leaves alternate paths broken
-
-## Open ambiguities
-- ...
-
-## Semantic commitments
-- the design / behavior commitments that must survive the whole run:
-- the interfaces / constraints that later tasks must preserve:
-
-## Carry-forward anchor
-- direct asks to keep visible after long trajectories:
-- implied asks that must not be dropped:
-- quality bar that must survive implementation:
-- most dangerous monkey-fix trap:
-"""
-
-WHY_TEMPLATE = """# Why
-
-This file keeps the run anchored to the user and product reason for the work.
-
-## Why this work matters now
-- ...
-
-## User / operator pain today
-- ...
-
-## Better state after this run
-- ...
-
-## Non-negotiable quality bar
-- ...
-
-## Things we must not optimize for
-- superficial green tests
-- a symptom-hiding patch
-- unnecessary fan-out
-- “works on my machine” proof
-
-## Non-goals
+## Known unknowns
 - ...
 """
 
 MEMORY_RECALL_TEMPLATE = """# Memory recall
 
-Summarize only the smallest relevant slice of prior knowledge before planning. This file must make it obvious what was queried, what matched, and what was *not* reused.
+Summarize only the smallest relevant slice of prior knowledge before planning.
 
 ## Queries / sources used
 - current-state.md:
-- typed query or lexical query:
+- lexical / typed query:
 - scopes checked:
 
 ## Strong matches
@@ -141,273 +48,64 @@ Summarize only the smallest relevant slice of prior knowledge before planning. T
 - ...
 
 ## Explicit no-hit statement
-- If nothing relevant matched, say it plainly here.
-"""
-
-DIAGNOSIS_TEMPLATE = """# Diagnosis
-
-## Problem summary
-- ...
-
-## Current behavior / baseline
-- ...
-
-## Causal chain
-1. ...
-2. ...
-3. ...
-
-## Root cause / missing capability
-- ...
-
-## Evidence
-- ...
-
-## Tempting shortcuts to reject
-- ...
-
-## Unknowns
-- ...
-
-## Quick validation probes
-- ...
-"""
-
-SOLUTION_DECISION_TEMPLATE = """# Solution decision
-
-## Options considered
-
-### Option A
-- How it works:
-- Pros:
-- Cons:
-
-### Option B
-- How it works:
-- Pros:
-- Cons:
-
-## Chosen solution
-- ...
-
-## Why this is the root solution
-- ...
-
-## Rejected shortcuts
-- ...
-
-## Disconfirming evidence to watch for
-- What result would prove this design is wrong?
-
-## Subagent evidence used
-- repo-map.md:
-- diagnosis.md:
-- flow-spec.md:
-- test-contract.md:
-- env-plan.md:
-
-## Testing / rollout implications
-- ...
-
-## Task decomposition hints
-- ...
-
-## Future-evolution guard
-- what later follow-up work should still feel easy if this solution is correct:
-"""
-
-HARNESS_PROFILE_TEMPLATE = """# Harness profile
-
-This file chooses the minimum harness intensity that still gives honest proof.
-
-## Selected profile
-- `quick` | `standard` | `deep`
-
-## Research mode
-- `none` | `light` | `heavy`
-
-## Why this profile fits
-- ...
-
-## Work shape
-- single-flow build | bugfix | multi-task | research-heavy
-
-## Planning fan-out budget
-- quick: 0–1 specialist total
-- standard: up to 2 specialists total
-- deep: up to 4 specialists total
-- preferred specialist types:
-- optional specialists only if triggered:
-
-## Execution budget
-- max ordered tasks:
-- max checker loops per task:
-- default implementation path: one implementer, add test/checker only when triggered
-
-## Verification recommendation
-- recommended verify mode: `fast` | `full`
-- scenario classes that must get smoke or e2e:
-
-## Required review lenses
-- security:
-- performance:
-- ux:
-- architecture:
-
-## Escalation rules
-- What conditions force this run to step up to a deeper profile?
-"""
-
-FLOW_SPEC_TEMPLATE = """# Flow spec
-
-This file is the shared **behavior contract** for implementation and verification.
-
-## Summary
-- goal:
-- why this flow matters:
-- non-goals:
-- objective groups covered:
-- query / intent IDs covered:
-
-## State / transition model
-- start state:
-- key transitions:
-- success terminal state:
-- failure terminal state:
-
-## Required scenario cards
-
-### P0-1 — <primary flow name>
-- objective: `O1`
-- query_ids: `Q1 I1 A1`
-- actor:
-- preconditions:
-- practical_steps:
-  1. ...
-  2. ...
-  3. ...
-- interaction_variants:
-  - click path:
-  - keyboard path:
-  - enter vs button:
-- expected_outcome:
-- failure_states:
-- accessibility:
-- telemetry_or_logs:
-- non_goals:
-
-## Existing behavior to preserve
-- ...
+- Say plainly when nothing relevant matched.
 """
 
 SPEC_TEMPLATE = """# Spec
 
-Treat this file as the **run card**. It should be short enough that planning, implementation, verification, and review can all start here.
+Treat this file as the **single source of truth** for the run. Keep it lean enough that planning, implementation, verification, and review can all start here.
 
-## PM summary
-- work kind:
-- current objective:
-- current status:
-- owner: agent
+## Request truth
+- work kind: `build` | `bugfix` | `research` | `multi`
+- raw request: ...
+- direct asks: ...
+- implied asks: ...
+- non-goals: ...
 
-## Objective coverage
-- `O1`: ...
-- `O2`: ...
+## Outcome / why
+- user or operator pain today: ...
+- better state after this run: ...
+- false success to avoid: ...
+- non-negotiable quality bar: ...
 
-## Query / intent coverage
-- `Q1` / `I1` / `A1`: ...
+## Research and context
+- recall summary: ...
+- repo findings: ...
+- external findings: `repo-only` when none
+- key constraints: ...
 
-## Why / user outcome
-- ...
+## Execution shape
+- harness profile: `quick` | `standard` | `deep`
+- research mode: `none` | `light` | `heavy`
+- ownership: `agent unless human-only blocker`
+- verify mode: `fast` | `full`
+- review lenses: ...
+- escalation triggers: ...
 
-## Research summary
-- repo findings:
-- external findings:
-- if no external research was needed, say `repo-only`:
-
-## Diagnosis / risk summary
-- ...
-
-## Chosen solution
-- ...
-
-## Rejected shortcuts
-- ...
-
-## Acceptance criteria
-- ...
+## Solution summary
+- diagnosis / key risk: ...
+- chosen solution: ...
+- rejected shortcuts: ...
 
 ## Task map
 - `T1`: ...
 - `T2`: ...
 
-## Proof strategy
-- primary changed scenarios:
-- fastest honest proof:
-- ship proof:
+## Proof summary
+- changed scenarios that must pass: ...
+- fastest honest proof: ...
+- ship proof: ...
+- readiness target: `READY`
 
-## PM / UX / Engineering / QA / Release notes
-- PM:
-- UX:
-- Engineering:
-- QA:
-- Release / rollback:
+## PM / UX / Engineering / QA / Release
+- PM: ...
+- UX: ...
+- Engineering: ...
+- QA: ...
+- Release / rollback: ...
 
-## Open questions / deferrals
+## Deferrals / open questions
 - ...
-"""
-
-PLAN_TEMPLATE = """# Plan
-
-## Summary
-- ...
-
-## Objectives
-- `O1`: ...
-- `O2`: ...
-
-## Execution ownership
-
-### Agent-owned
-- code changes
-- tests and test harness updates
-- repo-local config changes needed for correctness
-- local dev-server orchestration
-- fast / smoke / e2e / full local verification
-
-### Human-only / approval-gated
-- unavailable secrets / credentials
-- destructive external or production actions
-- ambiguous product decisions that change correctness
-
-## SDLC lanes
-| Lane | Goal | Owner | Status | Notes |
-|---|---|---|---|---|
-| Research | confirm external truth or state `repo-only` | agent | TODO |  |
-| Product / UX | preserve user intent and interaction quality | agent | TODO |  |
-| Engineering | implement the root solution | agent | TODO |  |
-| QA / Proof | prove changed and preserved behavior | agent | TODO |  |
-| Release / Follow-up | rollout, rollback, and known risks | agent | TODO |  |
-
-## Ordered tasks
-- [ ] T1 <task aligned to scenario IDs> | owner: agent | objectives: <O1> | query IDs: <Q1 I1 A1> | scenario IDs: <P0-1> | scope: <...> | checks: <fast_check / ship_check> | disproof probe: <...>
-
-## Test-first rule
-- each changed scenario must have a practical fast check and a ship proof before implementation begins
-- if a task cannot name its proof, return to planning instead of coding
-
-## Definition of done
-- direct asks are covered or explicitly deferred
-- non-negotiable implied asks still hold
-- diagnosis confirmed or intentionally revised
-- root solution implemented (or bounded workaround explicitly approved)
-- spec.md still matches the shipped change
-- test contract satisfied
-- test-readiness verdict stayed READY or was consciously re-approved after plan changes
-- proof map has concrete evidence links for required scenarios and query / intent IDs
-- verification green
-- review green
-- compound completed
 """
 
 TEST_CONTRACT_TEMPLATE = """# Test contract
@@ -464,60 +162,24 @@ TEST_READINESS_TEMPLATE = """# Test readiness
 ## Verdict
 - `READY` | `REVISE`
 
-## Required scenario coverage
-- which direct asks / implied asks are covered by the scenario contracts:
-- which scenarios are still vague or missing:
+## Why this verdict
+- scenario coverage for direct and implied asks:
+- missing or vague proof:
 
 ## Practicality check
-- are the checks cheap enough for iteration?
-- is there a single honest ship proof per changed primary scenario?
-- is the plan relying on “run everything later” instead of concrete proof?
+- is there a cheap feedback loop for iteration?
+- is there a real ship proof for changed behavior?
 
-## Agent ownership check
-- can the agent actually run the promised proofs itself?
-- are any manual steps truly human-only rather than lazy delegation?
+## Human-only blockers
+- list only genuine blockers such as missing secrets or destructive external approvals
 
-## Under-testing risks
+## Fixes required before implementation
 - ...
-
-## Over-testing risks
-- ...
-
-## Missing commands / manual proof gaps
-- ...
-
-## Required fixes before implementation
-- ...
-"""
-
-ENV_PLAN_TEMPLATE = """# Environment plan
-
-## Install
-- ...
-
-## Dev server
-- command:
-- port:
-- healthcheck:
-- reuse if healthy:
-- startup timeout:
-
-## Verification harness rules
-- avoid watch mode
-- capture logs under `.xlfg/`
-- do not start duplicate dev servers
-- check actual environment state, not just process start
-- call out stale-version or stale-bundle traps
-
-## Known failure patterns to watch for
-- port already in use
-- stale server / old bundle
-- missing seed / missing env vars
 """
 
 WORKBOARD_TEMPLATE = """# Workboard
 
-This is the run-level task and stage ledger.
+This is the run-level status ledger.
 
 ## Stage status
 - recall: TODO
@@ -530,15 +192,13 @@ This is the run-level task and stage ledger.
 ## Current next action
 - ...
 
-## Carry-forward anchor
-- re-read `query-contract.md` before each major phase and each task handoff
-- do not drop direct asks or non-negotiable implied asks
-- do not ship a monkey fix as if it were the root solution
+## Single source of truth
+- keep `spec.md` current instead of duplicating the same state across multiple planning files
 
 ## Execution reminder
 - the agent owns implementation, repo-local config changes, and major local verification unless the blocker is truly human-only
-- do not assume the user will run the important proof later
-- start from `spec.md` and dive deeper only when the active task needs it
+- do not ask the user to sequence phase commands or carry the run state for you
+- do not claim GREEN unless changed behavior is actually proven
 
 ## Objectives
 | Objective | Status | Direct asks | Scenarios | Notes |
@@ -548,55 +208,10 @@ This is the run-level task and stage ledger.
 ## Tasks
 | Task | Status | Objectives | Query IDs | Scenario IDs | Owner | Checks | Notes |
 |---|---|---|---|---|---|---|---|
-| T1 | TODO | O1 |  |  |  |  |  |
+| T1 | TODO | O1 |  |  | agent |  |  |
 
-## Scenario coverage
-| Scenario | Status | Fast proof | Ship proof | Evidence |
-|---|---|---|---|---|
-| P0-1 | UNASSESSED |  |  |  |
-
-## Team communication
-| Audience | Latest note | Owner |
-|---|---|---|
-| PM / Stakeholders |  | agent |
-| Engineering |  | agent |
-| QA |  | agent |
-
-## Blockers / escalations
+## Risks / blockers
 - ...
-"""
-
-PROOF_MAP_TEMPLATE = """# Proof map
-
-This file links every required scenario and query / intent clause to concrete evidence.
-
-## Required scenarios
-| Scenario ID | Objective | Query / intent IDs | Requirement kind | Fast proof | Ship phase | Ship proof | Regression guard | Evidence path | Status |
-|---|---|---|---|---|---|---|---|---|---|
-| P0-1 | O1 | Q1 A1 | F2P |  | smoke |  |  |  | UNASSESSED |
-
-## Proof gaps
-- Record any scenario or query / intent clause that is still not honestly proven.
-"""
-
-SCORECARD_TEMPLATE = """# Scorecard
-
-## Objective status
-- `O1`: UNASSESSED | proof: <command or artifact>
-
-## F2P status
-- `P0-1` / `Q1` / `A1`: UNASSESSED | fast: <command> | ship: <command or artifact>
-
-## P2P status
-- `G1` / `I1`: UNASSESSED | proof: <command or artifact>
-
-## PM / Engineering / QA rollup
-- PM: UNASSESSED
-- Engineering: UNASSESSED
-- QA: UNASSESSED
-
-## Notes
-- Update this after verification and review.
 """
 
 
@@ -608,7 +223,7 @@ def generate_run_id(request: str, now: Optional[_dt.datetime] = None) -> str:
 
 
 def create_run(root: Path, request: str, run_id: Optional[str] = None) -> dict:
-    """Create a new xlfg run folder and write initial context."""
+    """Create a new xlfg run folder and write the lean core docs."""
 
     rid = run_id or generate_run_id(request)
 
@@ -617,20 +232,14 @@ def create_run(root: Path, request: str, run_id: Optional[str] = None) -> dict:
 
     ensure_dir(docs_dir)
     ensure_dir(dx_dir)
-    ensure_dir(docs_dir / "context")
     ensure_dir(docs_dir / "tasks")
 
     safe_write(docs_dir / "context.md", CONTEXT_MD_TEMPLATE.format(request=request.strip()))
-    safe_write(docs_dir / "query-contract.md", QUERY_CONTRACT_TEMPLATE)
-    safe_write(docs_dir / "why.md", WHY_TEMPLATE)
     safe_write(docs_dir / "memory-recall.md", MEMORY_RECALL_TEMPLATE)
-    safe_write(docs_dir / "harness-profile.md", HARNESS_PROFILE_TEMPLATE)
     safe_write(docs_dir / "spec.md", SPEC_TEMPLATE)
-    safe_write(docs_dir / "plan.md", PLAN_TEMPLATE)
     safe_write(docs_dir / "test-contract.md", TEST_CONTRACT_TEMPLATE)
     safe_write(docs_dir / "test-readiness.md", TEST_READINESS_TEMPLATE)
     safe_write(docs_dir / "workboard.md", WORKBOARD_TEMPLATE)
-    safe_write(docs_dir / "proof-map.md", PROOF_MAP_TEMPLATE)
 
     return {
         "run_id": rid,

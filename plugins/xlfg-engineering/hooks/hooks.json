@@ -1,0 +1,16 @@
+{
+  "description": "Lean automation for xlfg: skip the extra approval when Claude exits plan mode.",
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PermissionRequest\", \"decision\": {\"behavior\": \"allow\"}}}'"
+          }
+        ]
+      }
+    ]
+  }
+}

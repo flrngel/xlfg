@@ -1,87 +1,54 @@
 ---
 name: xlfg-quality-gates
-description: Apply production readiness gates (why, diagnosis, proof, UX, security, ops) before shipping /xlfg work.
+description: Apply production-readiness gates to an xlfg run without recreating duplicated planning state.
 ---
 
 # xlfg-quality-gates
 
-Use these gates to make `/xlfg` output actually production-ready.
+Use these gates to keep `/xlfg` output production-ready.
 
 ## Definition of done
 
-A run is only “done” when all apply.
+A run is only done when all relevant gates apply.
 
-### Why, diagnosis, and scope
+### Run-card quality
 
-- `memory-recall.md` exists and captures the strongest prior relevant lessons or an explicit no-hit
-- `query-contract.md` exists and preserves direct asks, implied asks, quality requirements, and prohibited shallow fixes
-- `why.md` exists and makes false success explicit
-- `diagnosis.md` exists and identifies the real problem or capability gap
-- `solution-decision.md` exists and records rejected shortcuts
-- `harness-profile.md` exists and is appropriate for the risk
-- `flow-spec.md` exists and matches shipped behavior
-- `test-contract.md` exists, stays concise/practical, and the run followed it honestly
+- `memory-recall.md` exists and captures strong prior lessons or an explicit no-hit
+- `spec.md` is the single source of truth for request truth, why, harness choice, solution, task map, and proof summary
+- `spec.md` makes false success explicit
+- optional docs exist only when they changed a decision (`research.md`, `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `risk.md`)
+- `test-contract.md` exists, stays concise, and the run followed it honestly
 - `test-readiness.md` was `READY` before implementation or the run explicitly returned to planning
-- `env-plan.md` explains how the harness was controlled
-- `workboard.md` reflects the current stage / task truth
-- `proof-map.md` names the exact evidence required for each important scenario
-- non-goals are explicit
+- `workboard.md` reflects stage and task truth
 - no unapproved scope creep
 
 ### Implementation quality
 
-- every task has a `task-brief.md`
-- every task has `test-report.md`, `implementer-report.md`, and `checker-report.md`
-- every task has `Verdict: ACCEPT`
-- no task is accepted via symptom-hiding patch unless explicitly documented as a bounded workaround
-- the implementation still serves `why.md`
+- changed tasks have bounded scope and targeted checks
+- no task is accepted via a symptom-hiding patch unless explicitly documented as a bounded workaround
+- the implementation still serves the user outcome captured in `spec.md`
 
 ### Tests, proof, and verification
 
 - new behavior has F2P proof from scenario-targeted checks declared before coding
-- existing behavior has P2P protection
-- at least one real interaction / integration check exists when the flow crosses boundaries
+- existing behavior has P2P protection when relevant
 - verification ran at least one scenario-targeted proof when changed scenarios existed
-- lint / typecheck / build pass when applicable
 - evidence is written to `verification.md`
-- raw logs exist under `.xlfg/`
-- `scorecard.md` reflects the required scenario status
-- `proof-map.md` has no unresolved required proof gap
-- verification proves actual environment state when required (not just that a command was invoked)
 - green commands do not overrule missing proof
 - uncovered direct asks or non-negotiable implied asks keep the run RED
 
-### UX
+### Review and release
 
-- happy path is obvious
-- alternate interaction paths are checked when relevant
-- failure path is humane and actionable
-- empty / loading states are reasonable
-- keyboard / accessibility is checked for UI work
+- review fan-out stayed proportional to the risk
+- no net-new P0 issue remains after review
+- rollback or follow-up notes exist for risky changes
+- durable lessons were compounded only when verified and reusable
 
-### Security & privacy
-
-- no secrets in code or logs
-- input validation at boundaries
-- authn / authz checked for user-facing or privileged flows
-- sensitive data not logged
-
-### Operations
-
-- monitoring / validation plan exists
-- rollback plan exists for risky changes
-- repeated harness failures are compounded into `failure-memory.md`, `harness-rules.md`, or the relevant role memory file
-- `docs/xlfg/knowledge/current-state.md` is refreshed when the run changes what the next agent should know first
-
-## Sanity check before calling a task or run “done”
+## Sanity check before calling a run done
 
 Ask:
 
-1. Why does this work matter to the user or operator?
-2. What really fires when the flow runs?
-3. Do tests exercise the real chain or only mocks?
-4. Can failure leave stale or orphaned state?
-5. What other interfaces expose the same behavior?
-6. Can the harness produce a fake green result?
-7. Did we fix the real problem or only hide the symptom?
-8. Did the proof map honestly prove the requirement?
+1. Does `spec.md` still describe the shipped change?
+2. Did we prove the real behavior, not just a nearby static check?
+3. Did we fix the root cause instead of hiding the symptom?
+4. Did we avoid spawning extra docs and agents that bought no confidence?

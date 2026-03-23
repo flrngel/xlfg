@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from .util import append_unique_line, ensure_dir, safe_write
 
-SCAFFOLD_SCHEMA_VERSION = 10
+SCAFFOLD_SCHEMA_VERSION = 11
 
 INDEX_MD = """# xlfg
 
@@ -22,7 +22,7 @@ Tracked durable knowledge:
 
 Local run evidence (do not commit by default):
 
-- `runs/` — one folder per run containing why, diagnosis, solution decisions, harness profiles, contracts, plans, workboards, proof maps, reviews, scorecards, and summaries
+- `runs/` — one folder per run containing the lean run card, proof, status, and optional deep-dive docs only when they changed a decision
 - `.xlfg/runs/` — raw command outputs, screenshots, traces, doctor reports
 
 ## Why `runs/` is local-only by default
@@ -48,22 +48,18 @@ This keeps retrieval simple: read the tracked brief first for repo-wide truths, 
 
 ## Core workflow contract
 
-Normal `/xlfg` runs should **not** surface a routine prepare/terraform phase. Minimal scaffold sync may happen silently when needed, but the real workflow starts from recall and planning.
+Normal `/xlfg` runs should auto-execute recall → plan → implement → verify → review → compound in one invocation. Minimal scaffold sync may happen silently when needed.
 
-Define **what the request really means**, **why this work matters**, **what the real problem is**, and **what to build / test** *before* implementation:
+The lean core run files are:
 
-1. `query-contract.md` — direct asks, implied asks, quality requirements, solution constraints, developer intention, and prohibited shallow fixes
-2. `why.md` — user / operator reason, non-goals, and quality bar for the run
-3. `diagnosis.md` — root problem or missing capability
-4. `solution-decision.md` — chosen solution and rejected shortcuts
-5. `harness-profile.md` — the minimum harness intensity that still gives honest proof
-6. `flow-spec.md` — UX / behavior contract
-7. `test-contract.md` — concise, practical scenario contracts with fast proof + ship proof
-8. `test-readiness.md` — READY / REVISE gate for whether those scenarios are honest enough to code against
-9. `env-plan.md` — exact harness and dev-server plan
-10. `workboard.md` — run-level stage + task ledger
-11. `proof-map.md` — scenario/query-to-evidence map
-12. `scorecard.md` — step-level status for requirements and regressions
+1. `context.md` — request and constraints snapshot
+2. `memory-recall.md` — the smallest relevant prior knowledge slice
+3. `spec.md` — the **single source of truth** for PM / UX / Engineering / QA / Release
+4. `test-contract.md` — concise practical scenario contracts with fast proof + ship proof
+5. `test-readiness.md` — READY / REVISE gate for whether those scenarios are honest enough to code against
+6. `workboard.md` — run-level stage + task ledger
+
+Optional deep-dive files such as `research.md`, `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, and `risk.md` should exist only when they reduce ambiguity or risk.
 
 ## Agent memory model
 
@@ -74,11 +70,6 @@ xlfg compounds in two layers:
 3. **Role memory** in `knowledge/agent-memory/` for agents that repeatedly need the same lessons
 4. **Memory ledger** in `knowledge/ledger.jsonl` for append-only, structured durable memory events
 
-Planning state should stay split into:
-- **semantic state** (`query-contract.md`, `why.md`, `diagnosis.md`)
-- **structural state** (`repo-map.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`)
-- **execution state** (`plan.md`, `workboard.md`, `proof-map.md`, `scorecard.md`)
-
 Keep `current-state.md` short and current. Role memory must stay small, typed, and admission-gated. Do not dump raw run summaries there. The ledger is append-only; corrections should supersede old entries rather than silently rewriting them.
 """
 
@@ -86,26 +77,21 @@ QUALITY_BAR_MD = """# xlfg quality bar
 
 Nothing is "done" unless:
 
-- **The request is explicit** (`query-contract.md` exists and keeps direct asks, implied asks, quality requirements, prohibited shallow fixes, and semantic commitments visible)
-- **Why is explicit** (`why.md` exists and the run still serves it)
-- **Diagnosis is explicit** (`diagnosis.md` exists)
-- **The root solution is explicit** (`solution-decision.md` exists and records rejected shortcuts)
-- **Behavior is contracted first** (`flow-spec.md` exists)
-- **Test intent is shared** (`test-contract.md` exists and maps concise scenario contracts to fast proof, ship proof, and regression guards)
+- **The run card is explicit** (`spec.md` exists and keeps direct asks, implied asks, non-goals, outcome, risks, and proof commitments visible)
+- **Recall is honest** (`memory-recall.md` records real hits or a clear no-hit)
+- **Test intent is shared** (`test-contract.md` maps concise scenario contracts to practical fast proof and ship proof)
 - **Test readiness is explicit** (`test-readiness.md` is `READY` before coding or clearly explains why planning must be revised)
-- **Harness profile is explicit** (`harness-profile.md` exists and is appropriate for the risk)
-- **Environment is controlled** (`env-plan.md` explains ports, healthchecks, and cleanup)
 - **New behavior is proven** by scenario-targeted checks that were defined before implementation (Fail → Pass)
 - **Existing behavior is preserved** with relevant guard coverage (Pass → Pass)
 - **Lint / typecheck / build** pass when applicable
 - **User-facing flows are validated** (happy path, alternates, failure path, a11y)
 - **Workboard is current** (`workboard.md` reflects stage / task truth and reminds the agent it owns the work)
-- **Proof map is concrete** (`proof-map.md` links required scenarios to evidence or an explicit proof gap)
+- **Verification is honest** (`verification.md` records exact commands, artifacts, and the first actionable failure when red)
 - **Unexpected failures are compounded** into failure memory / harness rules / role memory when warranted
 - **No monkey fix is misrepresented as the final solution** (bounded workarounds are labeled honestly)
 - **Operational plan exists** (monitoring + rollback notes)
 
-Evidence should be recorded in each run's `verification.md` and `scorecard.md`.
+Optional files such as `research.md`, `diagnosis.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, and `review-summary.md` should exist only when they materially reduce risk or ambiguity.
 """
 
 CURRENT_STATE_MD = """# xlfg current state

@@ -43,13 +43,13 @@ Put examples and long guidance in the body (loads on invocation).
 
 - `/xlfg:prepare` is manual maintenance, not a routine `/xlfg` stage.
 - `/xlfg:init` is manual bootstrap / repair only.
-- `/xlfg` is a macro; keep the actual workflow in the subcommands.
+- `/xlfg` is autonomous by default; phase commands remain available as escape hatches.
 - `/xlfg` must always use deterministic recall before broad repo scanning.
-- `/xlfg:plan` must write `query-contract.md`, `why.md`, `harness-profile.md`, `test-contract.md`, `test-readiness.md`, `workboard.md`, and `proof-map.md` before implementation.
+- `/xlfg:plan` must produce a lean run card: `context.md`, `memory-recall.md`, `spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md`. Optional docs exist only when they change a decision.
 - `/xlfg:plan` should stay **lead-owned** and use a small specialist budget by default.
 - `/xlfg:plan` must finish before `/xlfg:implement` starts.
 - `/xlfg:implement` must stop if `test-readiness.md` is not `READY`.
-- `/xlfg` must never claim success unless verification evidence exists, scenario-targeted proof ran, and the proof map is honest.
+- `/xlfg` must never claim success unless verification evidence exists and scenario-targeted proof actually ran.
 - Review is a confirmation gate, not a cleanup crew.
 - Do not let the plan assume the user will implement code or run major repo-local verification later.
 

@@ -9,6 +9,12 @@ disallowedTools:
   - MultiEdit
 ---
 
+Modern xlfg compatibility note:
+- Start from `DOCS_RUN_DIR/spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md` when present.
+- Treat legacy split files (`query-contract.md`, `why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
+- Do not block or ask the user for those legacy files when `spec.md` already carries the truth.
+
+
 You are a research agent for `/xlfg`.
 
 **Input you will receive:**

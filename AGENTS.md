@@ -4,15 +4,15 @@ Read `NEXT_AGENT_CONTEXT.md` first. It is the bundle-level handoff document and 
 
 ## Core principles
 
-- `/xlfg` is a macro that chains explicit subcommands.
+- `/xlfg` is one autonomous SDLC run by default; phase subcommands are escape hatches only.
 - `/xlfg` must always use deterministic recall before broad repo fan-out.
-- Planning is **why-first** and diagnosis-first.
+- `spec.md` is the run card and single source of truth.
 - Planning must declare concise practical scenario contracts and get `test-readiness.md = READY` before implementation.
 - Planning should load optional agents progressively, not automatically.
 - Implementation must use explicit agents and targeted proof.
 - Verification must run scenario-targeted proof, not only generic repo checks.
 - `workboard.md` is execution truth.
-- `proof-map.md` is proof truth.
+- Verification evidence in `verification.md` is proof truth; `proof-map.md` is optional only when it changes a decision.
 - Review confirms quality; it does not create quality.
 - The repo is the system of record for long-running agent work.
 - The Python CLI is optional implementation support; the plugin workflow is the product.

@@ -8,25 +8,32 @@ from typing import Any, Dict, Iterable, List, Optional
 import tomllib
 
 
-CORE_COMMAND_FILES = [
+LEGACY_CORE_COMMAND_FILES = [
     "xlfg.md",
     "xlfg-plan.md",
     "xlfg-implement.md",
     "xlfg-verify.md",
     "xlfg-review.md",
 ]
+PHASE_COMMAND_FILES = [
+    "xlfg-plan.md",
+    "xlfg-implement.md",
+    "xlfg-verify.md",
+    "xlfg-review.md",
+    "xlfg-compound.md",
+]
 
 WORD_RE = re.compile(r"[A-Za-z0-9_./:-]+")
-FRONTMATTER_RE = re.compile(r"^---\s*$", re.MULTILINE)
 MODEL_RE = re.compile(r"^model:\s*([A-Za-z0-9_-]+)\s*$", re.MULTILINE)
 VERSION_RE = re.compile(r'__version__\s*=\s*"([^"]+)"')
 SAFE_WRITE_RE = re.compile(r'safe_write\(docs_dir / "([^"]+)"')
 READ_DIR_RE = re.compile(r'ensure_dir\(docs_dir / "([^"]+)"\)')
-RUN_ID_RE = re.compile(r"xlfg-[a-z0-9-]+")
 BULLET_RE = re.compile(r"^[-*]\s+")
 CODE_ITEM_RE = re.compile(r"`([^`]+)`|([A-Za-z0-9_.-]+(?:\.md|/))")
 BUDGET_LINE_RE = re.compile(r"^[-*]\s*`?(quick|standard|deep)`?\s*:\s*(.+)$", re.IGNORECASE)
 NUMBER_RE = re.compile(r"(\d+)")
+ALLOWED_TOOLS_RE = re.compile(r"^allowed-tools:\s*(.+)$", re.MULTILINE)
+EFFORT_RE = re.compile(r"^effort:\s*(.+)$", re.MULTILINE)
 
 
 def _read_text(path: Path) -> str:
@@ -86,7 +93,6 @@ def _extract_section_lines(text: str, markers: list[str]) -> list[str]:
         if collecting and not stripped:
             continue
         if collecting and items:
-            # Stop once the list is clearly over.
             break
     return items
 
@@ -109,7 +115,8 @@ def _extract_agent_names(text: str, markers: list[str]) -> list[str]:
     items = _extract_section_lines(text, markers)
     names: list[str] = []
     for line in items:
-        names.extend(RUN_ID_RE.findall(line))
+        for token in re.findall(r"xlfg-[a-z0-9-]+", line):
+            names.append(token)
     return _unique_nonempty(names)
 
 
@@ -177,14 +184,23 @@ def _model_report(root: Path) -> dict[str, Any]:
 def _word_metrics(root: Path) -> dict[str, Any]:
     plugin_root = root / "plugins" / "xlfg-engineering"
     command_texts = {p.name: _read_text(p) for p in sorted((plugin_root / "commands").glob("*.md"))}
-    agent_texts = {str(p.relative_to(plugin_root)): _read_text(p) for p in sorted((plugin_root / "agents").rglob("*.md"))}
     skill_texts = {str(p.relative_to(plugin_root)): _read_text(p) for p in sorted((plugin_root / "skills").rglob("SKILL.md"))}
-    core_commands = sum(_word_count(command_texts.get(name, "")) for name in CORE_COMMAND_FILES)
+    agent_texts = {str(p.relative_to(plugin_root)): _read_text(p) for p in sorted((plugin_root / "agents").rglob("*.md"))}
+
+    primary_skill_text = _read_text(plugin_root / "skills" / "xlfg" / "SKILL.md")
+    primary_command_text = _read_text(plugin_root / "commands" / "xlfg.md")
+    phase_words = sum(_word_count(command_texts.get(name, "")) for name in PHASE_COMMAND_FILES)
+    workflow_words = max(_word_count(primary_skill_text), _word_count(primary_command_text)) + phase_words
+
     return {
-        "core_commands": core_commands,
+        "primary_skill_words": _word_count(primary_skill_text),
+        "primary_command_words": _word_count(primary_command_text),
+        "manual_phase_words": phase_words,
+        "workflow_words": workflow_words,
+        "legacy_core_commands": sum(_word_count(command_texts.get(name, "")) for name in LEGACY_CORE_COMMAND_FILES),
         "all_commands": sum(_word_count(t) for t in command_texts.values()),
-        "all_agents": sum(_word_count(t) for t in agent_texts.values()),
         "all_skills": sum(_word_count(t) for t in skill_texts.values()),
+        "all_agents": sum(_word_count(t) for t in agent_texts.values()),
         "command_files": {name: _word_count(text) for name, text in command_texts.items()},
     }
 
@@ -201,27 +217,59 @@ def _seeded_run_artifacts(root: Path) -> dict[str, Any]:
     }
 
 
-def _features(root: Path) -> dict[str, bool]:
-    plan_text = _read_text(root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-plan.md")
-    implement_text = _read_text(root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-implement.md")
-    verify_text = _read_text(root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-verify.md")
-    review_text = _read_text(root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-review.md")
-    xlfg_text = _read_text(root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md")
-    cli_text = _read_text(root / "xlfg" / "cli.py")
+def _frontmatter_summary(text: str) -> dict[str, Any]:
+    allowed = None
+    m = ALLOWED_TOOLS_RE.search(text)
+    if m:
+        allowed = [item.strip() for item in m.group(1).split(",") if item.strip()]
+    effort = None
+    em = EFFORT_RE.search(text)
+    if em:
+        effort = em.group(1).strip()
     return {
-        "recall": "xlfg:recall" in xlfg_text and "memory-recall.md" in _read_text(root / "xlfg" / "runs.py"),
-        "research_lane": "research.md" in plan_text or "xlfg-researcher" in plan_text,
-        "query_contract": "query-contract.md" in plan_text and "query-contract.md" in _read_text(root / "xlfg" / "runs.py"),
-        "run_card": "run card" in plan_text.lower() or "run card" in implement_text.lower(),
-        "execution_ownership": "Execution ownership" in plan_text or "execution ownership" in _read_text(root / "xlfg" / "runs.py").lower(),
-        "test_contract": "test-contract.md" in plan_text and "test-contract.md" in verify_text,
-        "test_readiness": "test-readiness.md" in plan_text and "test-readiness.md" in implement_text,
-        "proof_map": "proof-map.md" in plan_text and "proof-map.md" in verify_text,
-        "verify": "xlfg:verify" in xlfg_text and (root / "xlfg" / "verify.py").exists(),
-        "review": "xlfg:review" in xlfg_text and review_text.strip() != "",
-        "compound": "/xlfg:compound" in xlfg_text and (root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-compound.md").exists(),
+        "allowed_tools": allowed or [],
+        "effort": effort,
+        "has_hooks": "\nhooks:" in text or text.startswith("hooks:"),
+    }
+
+
+def _features(root: Path) -> dict[str, bool]:
+    plugin_root = root / "plugins" / "xlfg-engineering"
+    main_skill_path = plugin_root / "skills" / "xlfg" / "SKILL.md"
+    main_command_path = plugin_root / "commands" / "xlfg.md"
+    main_skill = _read_text(main_skill_path)
+    main_command = _read_text(main_command_path)
+    plan_text = _read_text(plugin_root / "commands" / "xlfg-plan.md")
+    implement_text = _read_text(plugin_root / "commands" / "xlfg-implement.md")
+    verify_text = _read_text(plugin_root / "commands" / "xlfg-verify.md")
+    review_text = _read_text(plugin_root / "commands" / "xlfg-review.md")
+    compound_text = _read_text(plugin_root / "commands" / "xlfg-compound.md")
+    cli_text = _read_text(root / "xlfg" / "cli.py")
+    plugin_readme = _read_text(plugin_root / "README.md")
+    root_readme = _read_text(root / "README.md")
+    hooks_json = _read_text(plugin_root / "hooks" / "hooks.json")
+    runs_text = _read_text(root / "xlfg" / "runs.py")
+    brief_blob = "\n".join([main_skill, main_command, plan_text, implement_text, verify_text, review_text, compound_text, plugin_readme, root_readme, runs_text])
+    fm = _frontmatter_summary(main_skill or main_command)
+    return {
+        "recall": "memory-recall.md" in brief_blob,
+        "research_lane": "research.md" in brief_blob or "external findings" in runs_text,
+        "run_card": "single source of truth" in brief_blob.lower() or "run card" in brief_blob.lower(),
+        "lean_core_artifacts": _seeded_run_artifacts(root)["file_count"] <= 6,
+        "autonomous_macro": "one autonomous run" in brief_blob.lower() or "do not ask the user to invoke" in brief_blob.lower() or "do **not** ask the user to run phase subcommands" in brief_blob.lower(),
+        "skill_native": main_skill_path.exists(),
+        "standalone_short_name_pack": (root / "standalone" / ".claude" / "skills" / "xlfg" / "SKILL.md").exists(),
+        "consent_reduction": bool(fm["allowed_tools"]) or "ExitPlanMode" in hooks_json or "ExitPlanMode" in main_skill or "ExitPlanMode" in main_command,
+        "skill_hooks": fm["has_hooks"],
+        "plugin_hooks": (plugin_root / "hooks" / "hooks.json").exists(),
+        "hook_auto_exit_plan": "ExitPlanMode" in hooks_json or "ExitPlanMode" in main_skill or "ExitPlanMode" in main_command,
+        "effort_frontmatter": bool(fm["effort"]),
+        "plugin_namespace_documented": "/xlfg-engineering:xlfg" in plugin_readme and "standalone" in plugin_readme.lower() and "/xlfg" in plugin_readme,
+        "verify": bool(verify_text.strip()) and (root / "xlfg" / "verify.py").exists(),
+        "review": bool(review_text.strip()),
+        "compound": bool(compound_text.strip()),
         "benchmark_doc": (root / "docs" / "benchmarking.md").exists(),
-        "audit": "audit" in cli_text and (root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-audit.md").exists(),
+        "audit": "audit" in cli_text and (plugin_root / "commands" / "xlfg-audit.md").exists(),
     }
 
 
@@ -232,30 +280,30 @@ def _phase_metrics(root: Path) -> dict[str, Any]:
     review_text = _read_text(root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-review.md")
 
     plan_required = _extract_markdown_items(plan_text, [
+        "Always create these core files",
+        "Always create these core",
         "Always write these core artifacts",
-        "must produce",
-        "Ensure the run contains at least",
     ])
     impl_reads = _count_list_items(implement_text, [
         "Always read these first",
-        "Read these files first",
+        "Read these first",
         "Read the minimum honest brief first",
     ])
     verify_reads = _count_list_items(verify_text, [
         "Always read these first",
         "Read first (if present)",
-        "Read first",
+        "Read only when needed",
     ])
     review_reads = _count_list_items(review_text, [
         "Always read these first",
         "Read the shortest useful brief",
-        "Always read first",
+        "Read only when a chosen lens needs them",
     ])
-    impl_default_agents = _extract_agent_names(implement_text, ["Default path", "Run these agents in order for the task"])
-    plan_budget = _extract_budget(plan_text, ["Default specialist budget"])
+    impl_default_agents = _extract_agent_names(implement_text, ["Default path"])
+    plan_budget = _extract_budget(plan_text, ["Default specialist budget", "Review budget"])
     review_budget = _extract_budget(review_text, ["Default review budget"])
     if review_budget.get("standard") is None:
-        review_budget["standard"] = len(_extract_agent_names(review_text, ["Run these review agents", "Pick review lenses"])) or None
+        review_budget["standard"] = len(_extract_agent_names(review_text, ["Use security", "Use performance", "Use ux", "Use architecture"])) or 2
 
     return {
         "plan_required_artifacts": plan_required,
@@ -270,22 +318,44 @@ def _phase_metrics(root: Path) -> dict[str, Any]:
     }
 
 
-def _workflow_load_score(*, core_command_words: int, seeded_run_files: int, plan_required_artifacts: int, implement_reads: int, verify_reads: int, review_reads: int, planning_standard_budget: Optional[int], implementation_default_agents: int, review_standard_budget: Optional[int], has_haiku: bool, version_sync_ok: bool) -> dict[str, Any]:
+def _workflow_load_score(
+    *,
+    workflow_words: int,
+    seeded_run_files: int,
+    plan_required_artifacts: int,
+    implement_reads: int,
+    verify_reads: int,
+    review_reads: int,
+    planning_standard_budget: Optional[int],
+    implementation_default_agents: int,
+    review_standard_budget: Optional[int],
+    has_haiku: bool,
+    version_sync_ok: bool,
+    features: dict[str, bool],
+) -> dict[str, Any]:
     components = {
-        "core_prompt_tax": min(30.0, core_command_words / 200.0),
-        "artifact_tax": min(18.0, seeded_run_files * 0.9),
-        "plan_tax": min(14.0, max(0, plan_required_artifacts - 8) * 2.0),
-        "read_tax": min(18.0, max(0, implement_reads - 6) * 1.5 + max(0, verify_reads - 6) * 1.0 + max(0, review_reads - 5) * 1.0),
-        "fanout_tax": min(18.0, max(0, (planning_standard_budget or 0) - 1) * 3.0 + max(0, implementation_default_agents - 1) * 6.0 + max(0, (review_standard_budget or 0) - 2) * 3.0),
-        "routing_tax": 0.0 if has_haiku else 6.0,
-        "hygiene_tax": 0.0 if version_sync_ok else 6.0,
+        "workflow_tax": min(30.0, workflow_words / 220.0),
+        "artifact_tax": min(18.0, seeded_run_files * 1.4),
+        "duplication_tax": min(12.0, max(0, plan_required_artifacts - 6) * 2.0),
+        "read_tax": min(16.0, max(0, implement_reads - 4) * 2.0 + max(0, verify_reads - 4) * 1.5 + max(0, review_reads - 3) * 1.5),
+        "fanout_tax": min(12.0, max(0, (planning_standard_budget or 0) - 2) * 2.0 + max(0, implementation_default_agents - 1) * 6.0 + max(0, (review_standard_budget or 0) - 2) * 2.0),
+        "routing_tax": 0.0 if has_haiku else 5.0,
+        "compatibility_tax": (
+            0.0
+            + (0.0 if features.get("skill_native") else 4.0)
+            + (0.0 if features.get("autonomous_macro") else 4.0)
+            + (0.0 if features.get("consent_reduction") else 4.0)
+            + (0.0 if features.get("effort_frontmatter") else 3.0)
+            + (0.0 if features.get("standalone_short_name_pack") else 2.0)
+        ),
+        "hygiene_tax": 0.0 if version_sync_ok else 5.0,
     }
     score = round(min(100.0, sum(components.values())), 1)
-    if score <= 35:
+    if score <= 30:
         band = "lean"
-    elif score <= 55:
+    elif score <= 50:
         band = "moderate"
-    elif score <= 75:
+    elif score <= 70:
         band = "heavy"
     else:
         band = "overloaded"
@@ -296,46 +366,77 @@ def _coverage_score(features: dict[str, bool], version_sync_ok: bool) -> int:
     score = 0
     score += 10 if features.get("recall") else 0
     score += 10 if features.get("research_lane") else 0
-    score += 10 if features.get("query_contract") else 0
-    score += 8 if features.get("run_card") else 0
-    score += 7 if features.get("execution_ownership") else 0
-    score += 7 if features.get("test_contract") else 0
-    score += 7 if features.get("test_readiness") else 0
-    score += 7 if features.get("proof_map") else 0
-    score += 7 if features.get("verify") else 0
-    score += 7 if features.get("review") else 0
-    score += 5 if features.get("compound") else 0
-    score += 5 if features.get("benchmark_doc") else 0
-    score += 5 if features.get("audit") else 0
-    score += 5 if version_sync_ok else 0
+    score += 10 if features.get("run_card") else 0
+    score += 10 if features.get("lean_core_artifacts") else 0
+    score += 12 if features.get("autonomous_macro") else 0
+    score += 8 if features.get("verify") else 0
+    score += 8 if features.get("review") else 0
+    score += 6 if features.get("compound") else 0
+    score += 6 if features.get("audit") else 0
+    score += 6 if features.get("benchmark_doc") else 0
+    score += 5 if features.get("skill_native") else 0
+    score += 5 if features.get("plugin_namespace_documented") else 0
+    score += 4 if version_sync_ok else 0
     return score
 
 
-def _top_recommendations(*, core_command_words: int, seeded_run_files: int, plan_required_artifacts: int, implement_reads: int, verify_reads: int, review_reads: int, planning_standard_budget: Optional[int], implementation_default_agents: int, review_standard_budget: Optional[int], has_haiku: bool, version_sync_ok: bool, features: dict[str, bool]) -> list[str]:
+def _compatibility_score(features: dict[str, bool]) -> int:
+    score = 0
+    score += 20 if features.get("skill_native") else 0
+    score += 15 if features.get("standalone_short_name_pack") else 0
+    score += 20 if features.get("consent_reduction") else 0
+    score += 10 if features.get("hook_auto_exit_plan") else 0
+    score += 10 if features.get("effort_frontmatter") else 0
+    score += 10 if features.get("plugin_namespace_documented") else 0
+    score += 15 if features.get("autonomous_macro") else 0
+    return score
+
+
+def _top_recommendations(
+    *,
+    workflow_words: int,
+    seeded_run_files: int,
+    plan_required_artifacts: int,
+    implement_reads: int,
+    verify_reads: int,
+    review_reads: int,
+    planning_standard_budget: Optional[int],
+    implementation_default_agents: int,
+    review_standard_budget: Optional[int],
+    has_haiku: bool,
+    version_sync_ok: bool,
+    features: dict[str, bool],
+) -> list[str]:
     recs: list[str] = []
-    if core_command_words > 4500:
-        recs.append("Trim the core command prompts so the macro is lighter than a strong vanilla Claude Code session.")
-    if plan_required_artifacts > 10:
-        recs.append("Collapse mandatory planning artifacts; keep only the run card, plan, proof, and status docs always-on.")
-    if implement_reads > 6 or verify_reads > 6 or review_reads > 5:
-        recs.append("Reduce initial read amplification; start each phase from spec.md plus the proof/status docs and dive deeper only on demand.")
+    if workflow_words > 3200:
+        recs.append("Trim the primary workflow further so xlfg stays lighter than a strong vanilla Claude Code path.")
+    if seeded_run_files > 6:
+        recs.append("Keep only the lean core run files always-on; create supporting docs only when they change a decision.")
+    if plan_required_artifacts > 6:
+        recs.append("Collapse mandatory planning artifacts into spec.md plus proof/status docs.")
+    if implement_reads > 4 or verify_reads > 4 or review_reads > 3:
+        recs.append("Reduce initial read amplification; start each phase from spec.md and only dive deeper on demand.")
     if implementation_default_agents > 1:
-        recs.append("Reduce default per-task fan-out to one implementation agent and make tests/checkers trigger-based.")
+        recs.append("Reduce default fan-out to one implementation owner; make extra agents trigger-based.")
     if (review_standard_budget or 0) > 2:
         recs.append("Cap the standard review budget at one or two lenses instead of routine multi-reviewer fan-out.")
     if (planning_standard_budget or 0) > 2:
-        recs.append("Keep planning specialist budget small; the lead planner should synthesize instead of delegating every thinking step.")
+        recs.append("Keep planning specialist budget small; the lead planner should synthesize instead of delegating every thought.")
     if not has_haiku:
         recs.append("Route read-only exploration and environment triage to lighter models to lower cost and latency.")
-    if not features.get("research_lane"):
-        recs.append("Add a first-class research lane so external truth is handled deliberately instead of informally or not at all.")
-    if not features.get("benchmark_doc") or not features.get("audit"):
-        recs.append("Add deterministic harness auditing plus a live A/B benchmark protocol against vanilla Claude Code.")
+    if not features.get("skill_native"):
+        recs.append("Ship a first-class skill; current Claude Code is skills-first and commands are legacy compatibility.")
+    if not features.get("standalone_short_name_pack"):
+        recs.append("Add a standalone .claude/skills/xlfg pack so users can get a direct /xlfg command without plugin namespacing.")
+    if not features.get("consent_reduction"):
+        recs.append("Add allowed-tools or narrow hooks so /xlfg stops asking for avoidable internal approvals.")
+    if not features.get("plugin_namespace_documented"):
+        recs.append("Document plugin namespacing clearly and show the standalone path for short commands.")
     if not version_sync_ok:
         recs.append("Fix package/plugin version drift so the bundle can be trusted and benchmarked cleanly.")
     if not recs:
-        recs.append("The main remaining opportunity is live A/B evaluation on real Claude Code tasks; the static harness shape is already in good condition.")
-    return recs[:5]
+        recs.append("The main remaining opportunity is live A/B evaluation on real Claude Code tasks; the static harness shape is in strong condition.")
+    return recs[:6]
 
 
 def audit_repo(root: Path) -> Dict[str, Any]:
@@ -348,7 +449,7 @@ def audit_repo(root: Path) -> Dict[str, Any]:
     features = _features(root)
 
     load = _workflow_load_score(
-        core_command_words=words["core_commands"],
+        workflow_words=words["workflow_words"],
         seeded_run_files=seeded["file_count"],
         plan_required_artifacts=phases["plan_required_artifact_count"],
         implement_reads=phases["implement_initial_reads"],
@@ -359,12 +460,14 @@ def audit_repo(root: Path) -> Dict[str, Any]:
         review_standard_budget=phases["review_budget"].get("standard"),
         has_haiku=models["counts"].get("haiku", 0) > 0,
         version_sync_ok=versions["ok"],
+        features=features,
     )
     coverage = _coverage_score(features, versions["ok"])
-    efficiency = round(coverage / max(load["score"], 1.0), 2)
-    if efficiency >= 2.0:
+    compatibility = _compatibility_score(features)
+    efficiency = round((coverage + compatibility / 2.0) / max(load["score"], 1.0), 2)
+    if efficiency >= 2.4:
         efficiency_band = "excellent"
-    elif efficiency >= 1.4:
+    elif efficiency >= 1.6:
         efficiency_band = "strong"
     elif efficiency >= 1.0:
         efficiency_band = "acceptable"
@@ -372,7 +475,7 @@ def audit_repo(root: Path) -> Dict[str, Any]:
         efficiency_band = "poor"
 
     recommendations = _top_recommendations(
-        core_command_words=words["core_commands"],
+        workflow_words=words["workflow_words"],
         seeded_run_files=seeded["file_count"],
         plan_required_artifacts=phases["plan_required_artifact_count"],
         implement_reads=phases["implement_initial_reads"],
@@ -400,6 +503,7 @@ def audit_repo(root: Path) -> Dict[str, Any]:
             "workflow_load_band": load["band"],
             "workflow_load_components": load["components"],
             "sdlc_coverage_score": coverage,
+            "claude_code_compatibility_score": compatibility,
             "efficiency_index": efficiency,
             "efficiency_band": efficiency_band,
         },

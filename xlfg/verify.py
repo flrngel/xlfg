@@ -60,31 +60,32 @@ def _tail(path: Path, max_lines: int = 80) -> str:
 
 
 def _recommended_mode_from_harness_profile(docs_run_dir: Path) -> Literal["fast", "full"]:
-    profile_path = docs_run_dir / "harness-profile.md"
-    try:
-        text = profile_path.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
-        return "full"
-
     selected_profile: Optional[str] = None
     recommended_mode: Optional[str] = None
-    for raw_line in text.splitlines():
-        line = raw_line.strip().lower()
-        if "selected profile" in line:
+
+    for candidate in [docs_run_dir / "harness-profile.md", docs_run_dir / "spec.md"]:
+        try:
+            text = candidate.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
             continue
-        if line.startswith("- `quick`") or line == "- quick":
-            selected_profile = "quick"
-        elif line.startswith("- `standard`") or line == "- standard":
-            selected_profile = "standard"
-        elif line.startswith("- `deep`") or line == "- deep":
-            selected_profile = "deep"
-        if "recommended verify mode" in line:
-            has_fast = "fast" in line
-            has_full = "full" in line
-            if has_fast and not has_full:
-                recommended_mode = "fast"
-            elif has_full and not has_fast:
-                recommended_mode = "full"
+
+        for raw_line in text.splitlines():
+            line = raw_line.strip().lower()
+            if "selected profile" in line:
+                continue
+            if line.startswith("- `quick`") or line == "- quick" or line.startswith("- harness profile: `quick`") or line.startswith("- harness profile: quick"):
+                selected_profile = "quick"
+            elif line.startswith("- `standard`") or line == "- standard" or line.startswith("- harness profile: `standard`") or line.startswith("- harness profile: standard"):
+                selected_profile = "standard"
+            elif line.startswith("- `deep`") or line == "- deep" or line.startswith("- harness profile: `deep`") or line.startswith("- harness profile: deep"):
+                selected_profile = "deep"
+            if "recommended verify mode" in line or "verify mode" in line:
+                has_fast = "fast" in line
+                has_full = "full" in line
+                if has_fast and not has_full:
+                    recommended_mode = "fast"
+                elif has_full and not has_fast:
+                    recommended_mode = "full"
 
     if recommended_mode in {"fast", "full"}:
         return recommended_mode  # type: ignore[return-value]

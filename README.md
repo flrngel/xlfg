@@ -1,56 +1,46 @@
 # xlfg-engineering-plugin
 
-`/xlfg` is an **adaptive research-to-release SDLC harness** for Claude Code.
+`xlfg` is a **skill-first, autonomous, proof-first SDLC harness** for Claude Code.
 
-The core rule in this revision is simple:
+In 2.2.0 the harness was rebuilt around current Claude Code behavior:
 
-> **Let Claude Code stay the orchestrator. Add only the smallest amount of SDLC structure that increases trust: recall what matters, research only when external truth matters, plan the delivery, prove the changed behavior, and keep PM / Engineering / QA aligned in one run card.**
+- **skills first**, with legacy commands kept only as compatibility shims
+- **one autonomous `/xlfg` invocation** instead of human-managed phase choreography
+- **`spec.md` as the single source of truth** instead of many duplicated planning files
+- **conservative permission automation** through `allowed-tools` and a narrow `ExitPlanMode` hook
+- **two install forms**: plugin for team reuse and standalone `.claude/` for short `/xlfg`
 
-This repository includes:
+## What is in this repo
 
-1. A **Claude Code plugin** (in `plugins/xlfg-engineering`) with `/xlfg`, `/xlfg:prepare`, `/xlfg:recall`, `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, `/xlfg:review`, `/xlfg:compound`, and `/xlfg:audit`.
-2. An optional dependency-free **Python helper CLI** (`xlfg`) that can scaffold, recall, doctor, verify, and audit the same file model locally.
-3. A required bundle-level handoff doc: `NEXT_AGENT_CONTEXT.md`.
-4. Benchmarking guidance in `docs/benchmarking.md`.
+1. A **Claude Code plugin** in `plugins/xlfg-engineering/`
+2. A **standalone `.claude/skills/xlfg/` pack** in `standalone/`
+3. A dependency-free **Python helper CLI** (`xlfg`) that can scaffold, recall, doctor, verify, and audit the same file model locally
+4. Benchmarking guidance in `docs/benchmarking.md`
+5. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
 
-## Read this repo in this order
+## Quick start
 
-1. `NEXT_AGENT_CONTEXT.md`
-2. `docs/benchmarking.md`
-3. `plugins/xlfg-engineering/README.md`
-4. `plugins/xlfg-engineering/commands/xlfg.md`
-5. `plugins/xlfg-engineering/commands/xlfg-plan.md`
-6. `xlfg/audit.py`
-7. `xlfg/runs.py`
-8. `tests/test_xlfg.py`
+### Plugin / team install
 
-## Quick start (Claude Code)
+Run the plugin skill:
 
-1. Install the plugin from `plugins/xlfg-engineering`.
-2. In your target repo, run:
-   - `/xlfg "what you want built"`
+- `/xlfg-engineering:xlfg "what you want built"`
 
-Macro flow:
+### Standalone / short-command install
 
-1. `/xlfg:recall`
-2. `/xlfg:plan`
-3. confirm `test-readiness.md` is `READY`
-4. `/xlfg:implement`
-5. `/xlfg:verify`
-6. `/xlfg:review`
-7. `/xlfg:compound`
+Copy `standalone/.claude/skills/xlfg/` into your target repo’s `.claude/skills/xlfg/`, then run:
 
-Use `/xlfg:audit` when you want to measure the harness itself.
+- `/xlfg "what you want built"`
 
-## Why 2.1.0 exists
+## Why 2.2.0 exists
 
-The prior revision already removed the fake `prepare` ritual, but it was still too easy for xlfg to become **heavier than strong vanilla Claude Code**.
+The previous revision was leaner than 2.0.10, but it still made the human do too much workflow coordination and still duplicated planning state across too many files.
 
-This revision tightens three ideas:
+This revision fixes three things:
 
-- `spec.md` is now the **run card** that PM / Engineering / QA all read first
-- research is explicitly part of the SDLC, but **only when needed**
-- subagent use is now **adaptive**, not routine
+- **Autonomy**: `/xlfg` now executes the full SDLC itself.
+- **Deduplication**: `spec.md` absorbs request truth, why, harness choice, plan, and proof summary.
+- **Compatibility**: the package now matches current Claude Code conventions for skills, hooks, namespacing, and effort frontmatter.
 
 ## Local helper CLI
 

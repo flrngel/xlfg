@@ -103,19 +103,24 @@ class TestXLFG(unittest.TestCase):
             self.assertEqual(status_after["repo_scaffold_version"], __version__)
             self.assertFalse(status_after["needs_migration"])
 
-    def test_create_run_seeds_why_profile_and_proof_files(self) -> None:
+    def test_create_run_seeds_lean_core_files_only(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / ".git").mkdir()
             ensure_scaffold(root, __version__)
             run = create_run(root, request="fix login flow")
             run_dir = root / "docs" / "xlfg" / "runs" / run["run_id"]
-            self.assertTrue((run_dir / "query-contract.md").exists())
-            self.assertTrue((run_dir / "why.md").exists())
-            self.assertTrue((run_dir / "harness-profile.md").exists())
-            self.assertTrue((run_dir / "workboard.md").exists())
-            self.assertTrue((run_dir / "proof-map.md").exists())
+            self.assertTrue((run_dir / "context.md").exists())
+            self.assertTrue((run_dir / "memory-recall.md").exists())
+            self.assertTrue((run_dir / "spec.md").exists())
+            self.assertTrue((run_dir / "test-contract.md").exists())
             self.assertTrue((run_dir / "test-readiness.md").exists())
+            self.assertTrue((run_dir / "workboard.md").exists())
+            self.assertFalse((run_dir / "query-contract.md").exists())
+            self.assertFalse((run_dir / "why.md").exists())
+            self.assertFalse((run_dir / "harness-profile.md").exists())
+            self.assertFalse((run_dir / "plan.md").exists())
+            self.assertFalse((run_dir / "proof-map.md").exists())
             self.assertFalse((run_dir / "diagnosis.md").exists())
             self.assertFalse((run_dir / "solution-decision.md").exists())
             self.assertFalse((run_dir / "flow-spec.md").exists())
@@ -124,9 +129,10 @@ class TestXLFG(unittest.TestCase):
             self.assertTrue((run_dir / "tasks").exists())
             workboard = (run_dir / "workboard.md").read_text(encoding="utf-8")
             self.assertNotIn("prepare:", workboard)
-            self.assertIn("Execution reminder", workboard)
-            plan = (run_dir / "plan.md").read_text(encoding="utf-8")
-            self.assertIn("## Execution ownership", plan)
+            self.assertIn("Single source of truth", workboard)
+            self.assertIn("do not ask the user to sequence phase commands", workboard)
+            spec = (run_dir / "spec.md").read_text(encoding="utf-8")
+            self.assertIn("single source of truth", spec.lower())
 
     def test_prepare_scaffold_creates_recall_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -356,22 +362,32 @@ class TestXLFG(unittest.TestCase):
         self.assertEqual(claude_plugin["version"], __version__)
         self.assertEqual(cursor_plugin["version"], __version__)
 
-    def test_audit_reports_load_coverage_and_sync(self) -> None:
+    def test_audit_reports_load_coverage_sync_and_compatibility(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         report = audit_repo(repo_root)
         self.assertTrue(report["version_sync"]["ok"])
         self.assertIn("workflow_load_score", report["scores"])
         self.assertIn("sdlc_coverage_score", report["scores"])
+        self.assertIn("claude_code_compatibility_score", report["scores"])
         self.assertGreater(report["scores"]["efficiency_index"], 0)
         self.assertTrue(report["metrics"]["features"]["research_lane"])
         self.assertTrue(report["metrics"]["features"]["audit"])
+        self.assertTrue(report["metrics"]["features"]["skill_native"])
+        self.assertTrue(report["metrics"]["features"]["autonomous_macro"])
+        self.assertTrue(report["metrics"]["features"]["consent_reduction"])
+        self.assertTrue(report["metrics"]["features"]["standalone_short_name_pack"])
         self.assertGreaterEqual(report["metrics"]["models"]["counts"].get("haiku", 0), 1)
 
-    def test_macro_mentions_profile_driven_verify(self) -> None:
+    def test_main_xlfg_entrypoints_are_autonomous_and_permission_reduced(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        xlfg_md = (repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md").read_text(encoding="utf-8")
-        self.assertIn("harness-profile.md", xlfg_md)
-        self.assertIn("mode-from-harness-profile.md", xlfg_md)
+        skill_md = (repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg" / "SKILL.md").read_text(encoding="utf-8")
+        command_md = (repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        self.assertIn("allowed-tools:", skill_md)
+        self.assertIn("effort: high", skill_md)
+        self.assertIn("ExitPlanMode", skill_md)
+        self.assertIn("one autonomous run", skill_md.lower())
+        self.assertIn("do **not** ask the user to run phase subcommands", command_md.lower())
+        self.assertIn("single source of truth", command_md.lower())
 
 
 if __name__ == "__main__":  # pragma: no cover
