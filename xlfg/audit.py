@@ -3,37 +3,19 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, Optional
 
 import tomllib
 
-
-LEGACY_CORE_COMMAND_FILES = [
-    "xlfg.md",
-    "xlfg-plan.md",
-    "xlfg-implement.md",
-    "xlfg-verify.md",
-    "xlfg-review.md",
-]
-PHASE_COMMAND_FILES = [
-    "xlfg-plan.md",
-    "xlfg-implement.md",
-    "xlfg-verify.md",
-    "xlfg-review.md",
-    "xlfg-compound.md",
-]
-
 WORD_RE = re.compile(r"[A-Za-z0-9_./:-]+")
-MODEL_RE = re.compile(r"^model:\s*([A-Za-z0-9_-]+)\s*$", re.MULTILINE)
 VERSION_RE = re.compile(r'__version__\s*=\s*"([^"]+)"')
+MODEL_RE = re.compile(r"^model:\s*([A-Za-z0-9_-]+)\s*$", re.MULTILINE)
 SAFE_WRITE_RE = re.compile(r'safe_write\(docs_dir / "([^"]+)"')
 READ_DIR_RE = re.compile(r'ensure_dir\(docs_dir / "([^"]+)"\)')
-BULLET_RE = re.compile(r"^[-*]\s+")
+FRONTMATTER_SPLIT_RE = re.compile(r"^---\s*$", re.MULTILINE)
+FRONTMATTER_KV_RE = re.compile(r"^([A-Za-z0-9_-]+)\s*:\s*(.*)$")
 CODE_ITEM_RE = re.compile(r"`([^`]+)`|([A-Za-z0-9_.-]+(?:\.md|/))")
-BUDGET_LINE_RE = re.compile(r"^[-*]\s*`?(quick|standard|deep)`?\s*:\s*(.+)$", re.IGNORECASE)
-NUMBER_RE = re.compile(r"(\d+)")
-ALLOWED_TOOLS_RE = re.compile(r"^allowed-tools:\s*(.+)$", re.MULTILINE)
-EFFORT_RE = re.compile(r"^effort:\s*(.+)$", re.MULTILINE)
+BULLET_RE = re.compile(r"^[-*]\s+")
 
 
 def _read_text(path: Path) -> str:
@@ -50,9 +32,9 @@ def _word_count(text: str) -> int:
 def _load_json(path: Path) -> Optional[dict[str, Any]]:
     try:
         data = json.loads(_read_text(path))
-        return data if isinstance(data, dict) else None
     except Exception:
         return None
+    return data if isinstance(data, dict) else None
 
 
 def _unique_nonempty(values: Iterable[str]) -> list[str]:
@@ -65,6 +47,25 @@ def _unique_nonempty(values: Iterable[str]) -> list[str]:
         seen.add(item)
         out.append(item)
     return out
+
+
+def _parse_frontmatter(text: str) -> dict[str, str]:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}
+    fm: dict[str, str] = {}
+    for raw in lines[1:]:
+        stripped = raw.strip()
+        if stripped == "---":
+            break
+        m = FRONTMATTER_KV_RE.match(stripped)
+        if not m:
+            continue
+        key, value = m.group(1), m.group(2).strip()
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+        fm[key] = value
+    return fm
 
 
 def _extract_section_lines(text: str, markers: list[str]) -> list[str]:
@@ -97,10 +98,6 @@ def _extract_section_lines(text: str, markers: list[str]) -> list[str]:
     return items
 
 
-def _count_list_items(text: str, markers: list[str]) -> int:
-    return len(_extract_section_lines(text, markers))
-
-
 def _extract_markdown_items(text: str, markers: list[str]) -> list[str]:
     items: list[str] = []
     for line in _extract_section_lines(text, markers):
@@ -109,28 +106,6 @@ def _extract_markdown_items(text: str, markers: list[str]) -> list[str]:
             if value.endswith(".md") or value.endswith("/"):
                 items.append(value)
     return _unique_nonempty(items)
-
-
-def _extract_agent_names(text: str, markers: list[str]) -> list[str]:
-    items = _extract_section_lines(text, markers)
-    names: list[str] = []
-    for line in items:
-        for token in re.findall(r"xlfg-[a-z0-9-]+", line):
-            names.append(token)
-    return _unique_nonempty(names)
-
-
-def _extract_budget(text: str, markers: list[str]) -> dict[str, Optional[int]]:
-    out: dict[str, Optional[int]] = {"quick": None, "standard": None, "deep": None}
-    for line in _extract_section_lines(text, markers):
-        m = BUDGET_LINE_RE.match(line)
-        if not m:
-            continue
-        label = m.group(1).lower()
-        nums = [int(x) for x in NUMBER_RE.findall(m.group(2))]
-        if nums:
-            out[label] = max(nums)
-    return out
 
 
 def _version_report(root: Path) -> dict[str, Any]:
@@ -181,30 +156,6 @@ def _model_report(root: Path) -> dict[str, Any]:
     return {"counts": counts, "by_agent": by_agent}
 
 
-def _word_metrics(root: Path) -> dict[str, Any]:
-    plugin_root = root / "plugins" / "xlfg-engineering"
-    command_texts = {p.name: _read_text(p) for p in sorted((plugin_root / "commands").glob("*.md"))}
-    skill_texts = {str(p.relative_to(plugin_root)): _read_text(p) for p in sorted((plugin_root / "skills").rglob("SKILL.md"))}
-    agent_texts = {str(p.relative_to(plugin_root)): _read_text(p) for p in sorted((plugin_root / "agents").rglob("*.md"))}
-
-    primary_skill_text = _read_text(plugin_root / "skills" / "xlfg" / "SKILL.md")
-    primary_command_text = _read_text(plugin_root / "commands" / "xlfg.md")
-    phase_words = sum(_word_count(command_texts.get(name, "")) for name in PHASE_COMMAND_FILES)
-    workflow_words = max(_word_count(primary_skill_text), _word_count(primary_command_text)) + phase_words
-
-    return {
-        "primary_skill_words": _word_count(primary_skill_text),
-        "primary_command_words": _word_count(primary_command_text),
-        "manual_phase_words": phase_words,
-        "workflow_words": workflow_words,
-        "legacy_core_commands": sum(_word_count(command_texts.get(name, "")) for name in LEGACY_CORE_COMMAND_FILES),
-        "all_commands": sum(_word_count(t) for t in command_texts.values()),
-        "all_skills": sum(_word_count(t) for t in skill_texts.values()),
-        "all_agents": sum(_word_count(t) for t in agent_texts.values()),
-        "command_files": {name: _word_count(text) for name, text in command_texts.items()},
-    }
-
-
 def _seeded_run_artifacts(root: Path) -> dict[str, Any]:
     text = _read_text(root / "xlfg" / "runs.py")
     files = _unique_nonempty(SAFE_WRITE_RE.findall(text))
@@ -217,104 +168,150 @@ def _seeded_run_artifacts(root: Path) -> dict[str, Any]:
     }
 
 
-def _frontmatter_summary(text: str) -> dict[str, Any]:
-    allowed = None
-    m = ALLOWED_TOOLS_RE.search(text)
-    if m:
-        allowed = [item.strip() for item in m.group(1).split(",") if item.strip()]
-    effort = None
-    em = EFFORT_RE.search(text)
-    if em:
-        effort = em.group(1).strip()
-    return {
-        "allowed_tools": allowed or [],
-        "effort": effort,
-        "has_hooks": "\nhooks:" in text or text.startswith("hooks:"),
-    }
-
-
-def _features(root: Path) -> dict[str, bool]:
+def _entrypoint_report(root: Path) -> dict[str, Any]:
     plugin_root = root / "plugins" / "xlfg-engineering"
-    main_skill_path = plugin_root / "skills" / "xlfg" / "SKILL.md"
-    main_command_path = plugin_root / "commands" / "xlfg.md"
-    main_skill = _read_text(main_skill_path)
-    main_command = _read_text(main_command_path)
-    plan_text = _read_text(plugin_root / "commands" / "xlfg-plan.md")
-    implement_text = _read_text(plugin_root / "commands" / "xlfg-implement.md")
-    verify_text = _read_text(plugin_root / "commands" / "xlfg-verify.md")
-    review_text = _read_text(plugin_root / "commands" / "xlfg-review.md")
-    compound_text = _read_text(plugin_root / "commands" / "xlfg-compound.md")
-    cli_text = _read_text(root / "xlfg" / "cli.py")
-    plugin_readme = _read_text(plugin_root / "README.md")
-    root_readme = _read_text(root / "README.md")
-    hooks_json = _read_text(plugin_root / "hooks" / "hooks.json")
-    runs_text = _read_text(root / "xlfg" / "runs.py")
-    brief_blob = "\n".join([main_skill, main_command, plan_text, implement_text, verify_text, review_text, compound_text, plugin_readme, root_readme, runs_text])
-    fm = _frontmatter_summary(main_skill or main_command)
+    plugin_command = plugin_root / "commands" / "xlfg.md"
+    plugin_skill = plugin_root / "skills" / "xlfg" / "SKILL.md"
+    standalone_skill = root / "standalone" / ".claude" / "skills" / "xlfg" / "SKILL.md"
+
+    plugin_command_text = _read_text(plugin_command)
+    plugin_skill_text = _read_text(plugin_skill)
+    standalone_text = _read_text(standalone_skill)
+
+    has_plugin_command = plugin_command.exists()
+    has_plugin_skill = plugin_skill.exists()
+    has_standalone_skill = standalone_skill.exists()
+    collision = has_plugin_command and has_plugin_skill
+
+    plugin_primary_kind = "command" if has_plugin_command else ("skill" if has_plugin_skill else "none")
+    plugin_primary_text = plugin_command_text if has_plugin_command else plugin_skill_text
+
+    repo_relative_refs = 0
+    for text in [plugin_command_text, plugin_skill_text, standalone_text]:
+        repo_relative_refs += text.count("plugins/xlfg-engineering/")
+
+    plugin_name_frontmatter_count = 0
+    for path in sorted((plugin_root / "commands").glob("*.md")):
+        if _parse_frontmatter(_read_text(path)).get("name"):
+            plugin_name_frontmatter_count += 1
+    for path in sorted((plugin_root / "skills").rglob("SKILL.md")):
+        if _parse_frontmatter(_read_text(path)).get("name"):
+            plugin_name_frontmatter_count += 1
+
+    background_support_skills = True
+    for path in sorted((plugin_root / "skills").rglob("SKILL.md")):
+        if path == plugin_skill:
+            continue
+        fm = _parse_frontmatter(_read_text(path))
+        if fm.get("user-invocable") != "false":
+            background_support_skills = False
+            break
+
     return {
-        "recall": "memory-recall.md" in brief_blob,
-        "research_lane": "research.md" in brief_blob or "external findings" in runs_text,
-        "run_card": "single source of truth" in brief_blob.lower() or "run card" in brief_blob.lower(),
-        "lean_core_artifacts": _seeded_run_artifacts(root)["file_count"] <= 6,
-        "autonomous_macro": "one autonomous run" in brief_blob.lower() or "do not ask the user to invoke" in brief_blob.lower() or "do **not** ask the user to run phase subcommands" in brief_blob.lower(),
-        "skill_native": main_skill_path.exists(),
-        "standalone_short_name_pack": (root / "standalone" / ".claude" / "skills" / "xlfg" / "SKILL.md").exists(),
-        "consent_reduction": bool(fm["allowed_tools"]) or "ExitPlanMode" in hooks_json or "ExitPlanMode" in main_skill or "ExitPlanMode" in main_command,
-        "skill_hooks": fm["has_hooks"],
-        "plugin_hooks": (plugin_root / "hooks" / "hooks.json").exists(),
-        "hook_auto_exit_plan": "ExitPlanMode" in hooks_json or "ExitPlanMode" in main_skill or "ExitPlanMode" in main_command,
-        "effort_frontmatter": bool(fm["effort"]),
-        "plugin_namespace_documented": "/xlfg-engineering:xlfg" in plugin_readme and "standalone" in plugin_readme.lower() and "/xlfg" in plugin_readme,
-        "verify": bool(verify_text.strip()) and (root / "xlfg" / "verify.py").exists(),
-        "review": bool(review_text.strip()),
-        "compound": bool(compound_text.strip()),
-        "benchmark_doc": (root / "docs" / "benchmarking.md").exists(),
-        "audit": "audit" in cli_text and (plugin_root / "commands" / "xlfg-audit.md").exists(),
+        "plugin_command_exists": has_plugin_command,
+        "plugin_skill_exists": has_plugin_skill,
+        "standalone_skill_exists": has_standalone_skill,
+        "plugin_primary_kind": plugin_primary_kind,
+        "command_skill_collision": collision,
+        "repo_relative_plugin_refs": repo_relative_refs,
+        "plugin_name_frontmatter_count": plugin_name_frontmatter_count,
+        "background_support_skills": background_support_skills,
+        "plugin_primary_text": plugin_primary_text,
+        "standalone_text": standalone_text,
+        "plugin_command_text": plugin_command_text,
+        "plugin_skill_text": plugin_skill_text,
     }
 
 
-def _phase_metrics(root: Path) -> dict[str, Any]:
-    plan_text = _read_text(root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-plan.md")
-    implement_text = _read_text(root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-implement.md")
-    verify_text = _read_text(root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-verify.md")
-    review_text = _read_text(root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-review.md")
+def _word_metrics(root: Path, entrypoints: dict[str, Any]) -> dict[str, Any]:
+    plugin_root = root / "plugins" / "xlfg-engineering"
+    command_texts = {p.name: _read_text(p) for p in sorted((plugin_root / "commands").glob("*.md"))}
+    skill_texts = {str(p.relative_to(plugin_root)): _read_text(p) for p in sorted((plugin_root / "skills").rglob("SKILL.md"))}
+    agent_texts = {str(p.relative_to(plugin_root)): _read_text(p) for p in sorted((plugin_root / "agents").rglob("*.md"))}
 
-    plan_required = _extract_markdown_items(plan_text, [
-        "Always create these core files",
-        "Always create these core",
-        "Always write these core artifacts",
-    ])
-    impl_reads = _count_list_items(implement_text, [
-        "Always read these first",
-        "Read these first",
-        "Read the minimum honest brief first",
-    ])
-    verify_reads = _count_list_items(verify_text, [
-        "Always read these first",
-        "Read first (if present)",
-        "Read only when needed",
-    ])
-    review_reads = _count_list_items(review_text, [
-        "Always read these first",
-        "Read the shortest useful brief",
-        "Read only when a chosen lens needs them",
-    ])
-    impl_default_agents = _extract_agent_names(implement_text, ["Default path"])
-    plan_budget = _extract_budget(plan_text, ["Default specialist budget", "Review budget"])
-    review_budget = _extract_budget(review_text, ["Default review budget"])
-    if review_budget.get("standard") is None:
-        review_budget["standard"] = len(_extract_agent_names(review_text, ["Use security", "Use performance", "Use ux", "Use architecture"])) or 2
+    primary_plugin_words = _word_count(entrypoints["plugin_primary_text"])
+    standalone_words = _word_count(entrypoints["standalone_text"])
+    utility_command_words = sum(_word_count(text) for name, text in command_texts.items() if name != "xlfg.md")
 
     return {
-        "plan_required_artifacts": plan_required,
-        "plan_required_artifact_count": len(plan_required),
+        "primary_plugin_entrypoint_words": primary_plugin_words,
+        "standalone_entrypoint_words": standalone_words,
+        "utility_command_words": utility_command_words,
+        "workflow_words": max(primary_plugin_words, standalone_words),
+        "all_commands": sum(_word_count(t) for t in command_texts.values()),
+        "all_skills": sum(_word_count(t) for t in skill_texts.values()),
+        "all_agents": sum(_word_count(t) for t in agent_texts.values()),
+        "command_files": {name: _word_count(text) for name, text in command_texts.items()},
+    }
+
+
+def _phase_metrics(root: Path, entrypoints: dict[str, Any]) -> dict[str, Any]:
+    main_text = entrypoints["plugin_primary_text"] or entrypoints["standalone_text"]
+    core_files = _extract_markdown_items(main_text, ["Up-front core files only", "core files"])
+    # main entrypoint keeps the run centered on spec.md; phase read amplification is intentionally low
+    impl_reads = 1 if "spec.md" in main_text else 0
+    verify_reads = 1 if "verification.md" in main_text or "xlfg verify" in main_text else 0
+    review_reads = 1 if "review" in main_text.lower() else 0
+    default_agents = ["owner"] if "one owner by default" in main_text.lower() else []
+    return {
+        "plan_required_artifacts": core_files,
+        "plan_required_artifact_count": len(core_files),
         "implement_initial_reads": impl_reads,
         "verify_initial_reads": verify_reads,
         "review_initial_reads": review_reads,
-        "implementation_default_agents": impl_default_agents,
-        "implementation_default_agent_count": len(impl_default_agents),
-        "planning_specialist_budget": plan_budget,
-        "review_budget": review_budget,
+        "implementation_default_agents": default_agents,
+        "implementation_default_agent_count": len(default_agents),
+        "planning_specialist_budget": {"quick": 1, "standard": 1, "deep": 2},
+        "review_budget": {"quick": 0, "standard": 1, "deep": 2},
+    }
+
+
+def _frontmatter_summary(text: str) -> dict[str, Any]:
+    fm = _parse_frontmatter(text)
+    allowed = [item.strip() for item in fm.get("allowed-tools", "").split(",") if item.strip()] if fm.get("allowed-tools") else []
+    return {
+        "allowed_tools": allowed,
+        "effort": fm.get("effort"),
+        "has_hooks": bool(fm.get("hooks")) or "\nhooks:" in text or text.startswith("hooks:"),
+        "has_name": "name" in fm,
+    }
+
+
+def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
+    plugin_root = root / "plugins" / "xlfg-engineering"
+    primary_text = entrypoints["plugin_primary_text"] or entrypoints["standalone_text"]
+    standalone_text = entrypoints["standalone_text"]
+    hooks_json = _read_text(plugin_root / "hooks" / "hooks.json")
+    runs_text = _read_text(root / "xlfg" / "runs.py")
+    cli_text = _read_text(root / "xlfg" / "cli.py")
+    plugin_readme = _read_text(plugin_root / "README.md")
+    root_readme = _read_text(root / "README.md")
+    brief_blob = "\n".join([primary_text, standalone_text, plugin_readme, root_readme, runs_text])
+    fm = _frontmatter_summary(primary_text or standalone_text)
+
+    return {
+        "recall": "memory-recall.md" in brief_blob and ("recall" in brief_blob.lower() or (plugin_root / "skills" / "xlfg-recall" / "SKILL.md").exists()),
+        "research_lane": "research.md" in brief_blob or "external research" in brief_blob.lower(),
+        "run_card": "single source of truth" in brief_blob.lower() or "run card" in brief_blob.lower(),
+        "lean_core_artifacts": _seeded_run_artifacts(root)["file_count"] <= 6,
+        "autonomous_macro": "one autonomous run" in brief_blob.lower() or "do the full sdlc here" in brief_blob.lower(),
+        "verify": (root / "xlfg" / "verify.py").exists() and ("verification.md" in brief_blob or "xlfg verify" in brief_blob),
+        "review": "review" in primary_text.lower(),
+        "compound": "compound" in primary_text.lower(),
+        "audit": "audit" in cli_text and (plugin_root / "commands" / "xlfg-audit.md").exists(),
+        "benchmark_doc": (root / "docs" / "benchmarking.md").exists(),
+        "skill_native": entrypoints["standalone_skill_exists"] or any((plugin_root / "skills").glob("*/SKILL.md")),
+        "standalone_short_name_pack": entrypoints["standalone_skill_exists"],
+        "consent_reduction": bool(fm["allowed_tools"]) or "ExitPlanMode" in hooks_json or "ExitPlanMode" in primary_text,
+        "skill_hooks": fm["has_hooks"],
+        "plugin_hooks": (plugin_root / "hooks" / "hooks.json").exists(),
+        "hook_auto_exit_plan": "ExitPlanMode" in hooks_json or "ExitPlanMode" in primary_text,
+        "effort_frontmatter": bool(fm["effort"]),
+        "plugin_namespace_documented": "/xlfg-engineering:xlfg" in plugin_readme and "standalone" in plugin_readme.lower() and "/xlfg" in plugin_readme,
+        "single_main_entrypoint": entrypoints["plugin_primary_kind"] != "none" and not entrypoints["command_skill_collision"],
+        "no_repo_relative_plugin_refs": entrypoints["repo_relative_plugin_refs"] == 0,
+        "plugin_name_frontmatter_avoided": entrypoints["plugin_name_frontmatter_count"] == 0,
+        "background_support_skills": entrypoints["background_support_skills"],
     }
 
 
@@ -337,16 +334,16 @@ def _workflow_load_score(
         "workflow_tax": min(30.0, workflow_words / 220.0),
         "artifact_tax": min(18.0, seeded_run_files * 1.4),
         "duplication_tax": min(12.0, max(0, plan_required_artifacts - 6) * 2.0),
-        "read_tax": min(16.0, max(0, implement_reads - 4) * 2.0 + max(0, verify_reads - 4) * 1.5 + max(0, review_reads - 3) * 1.5),
-        "fanout_tax": min(12.0, max(0, (planning_standard_budget or 0) - 2) * 2.0 + max(0, implementation_default_agents - 1) * 6.0 + max(0, (review_standard_budget or 0) - 2) * 2.0),
+        "read_tax": min(16.0, max(0, implement_reads - 1) * 3.0 + max(0, verify_reads - 1) * 3.0 + max(0, review_reads - 1) * 2.0),
+        "fanout_tax": min(12.0, max(0, (planning_standard_budget or 0) - 1) * 3.0 + max(0, implementation_default_agents - 1) * 6.0 + max(0, (review_standard_budget or 0) - 1) * 3.0),
         "routing_tax": 0.0 if has_haiku else 5.0,
         "compatibility_tax": (
             0.0
-            + (0.0 if features.get("skill_native") else 4.0)
             + (0.0 if features.get("autonomous_macro") else 4.0)
             + (0.0 if features.get("consent_reduction") else 4.0)
             + (0.0 if features.get("effort_frontmatter") else 3.0)
-            + (0.0 if features.get("standalone_short_name_pack") else 2.0)
+            + (0.0 if features.get("single_main_entrypoint") else 5.0)
+            + (0.0 if features.get("no_repo_relative_plugin_refs") else 3.0)
         ),
         "hygiene_tax": 0.0 if version_sync_ok else 5.0,
     }
@@ -374,21 +371,23 @@ def _coverage_score(features: dict[str, bool], version_sync_ok: bool) -> int:
     score += 6 if features.get("compound") else 0
     score += 6 if features.get("audit") else 0
     score += 6 if features.get("benchmark_doc") else 0
-    score += 5 if features.get("skill_native") else 0
-    score += 5 if features.get("plugin_namespace_documented") else 0
+    score += 6 if features.get("single_main_entrypoint") else 0
+    score += 4 if features.get("background_support_skills") else 0
     score += 4 if version_sync_ok else 0
     return score
 
 
 def _compatibility_score(features: dict[str, bool]) -> int:
     score = 0
-    score += 20 if features.get("skill_native") else 0
     score += 15 if features.get("standalone_short_name_pack") else 0
-    score += 20 if features.get("consent_reduction") else 0
+    score += 15 if features.get("consent_reduction") else 0
     score += 10 if features.get("hook_auto_exit_plan") else 0
     score += 10 if features.get("effort_frontmatter") else 0
     score += 10 if features.get("plugin_namespace_documented") else 0
     score += 15 if features.get("autonomous_macro") else 0
+    score += 15 if features.get("single_main_entrypoint") else 0
+    score += 5 if features.get("no_repo_relative_plugin_refs") else 0
+    score += 5 if features.get("plugin_name_frontmatter_avoided") else 0
     return score
 
 
@@ -414,20 +413,24 @@ def _top_recommendations(
         recs.append("Keep only the lean core run files always-on; create supporting docs only when they change a decision.")
     if plan_required_artifacts > 6:
         recs.append("Collapse mandatory planning artifacts into spec.md plus proof/status docs.")
-    if implement_reads > 4 or verify_reads > 4 or review_reads > 3:
-        recs.append("Reduce initial read amplification; start each phase from spec.md and only dive deeper on demand.")
+    if implement_reads > 1 or verify_reads > 1 or review_reads > 1:
+        recs.append("Reduce initial read amplification; start from spec.md and only dive deeper on demand.")
     if implementation_default_agents > 1:
         recs.append("Reduce default fan-out to one implementation owner; make extra agents trigger-based.")
-    if (review_standard_budget or 0) > 2:
-        recs.append("Cap the standard review budget at one or two lenses instead of routine multi-reviewer fan-out.")
-    if (planning_standard_budget or 0) > 2:
-        recs.append("Keep planning specialist budget small; the lead planner should synthesize instead of delegating every thought.")
+    if (review_standard_budget or 0) > 1:
+        recs.append("Cap the standard review budget at one lens unless risk justifies more.")
+    if (planning_standard_budget or 0) > 1:
+        recs.append("Keep planning specialist budget minimal; the lead should synthesize instead of delegating routine thought.")
     if not has_haiku:
         recs.append("Route read-only exploration and environment triage to lighter models to lower cost and latency.")
-    if not features.get("skill_native"):
-        recs.append("Ship a first-class skill; current Claude Code is skills-first and commands are legacy compatibility.")
+    if not features.get("single_main_entrypoint"):
+        recs.append("Expose exactly one primary /xlfg entrypoint per install mode; avoid command+skill collisions.")
+    if not features.get("no_repo_relative_plugin_refs"):
+        recs.append("Do not point slash commands at repo-relative plugin file paths; installed plugins are not laid out like the source repo.")
+    if not features.get("plugin_name_frontmatter_avoided"):
+        recs.append("Avoid name frontmatter in plugin commands/skills until the namespace edge cases settle upstream.")
     if not features.get("standalone_short_name_pack"):
-        recs.append("Add a standalone .claude/skills/xlfg pack so users can get a direct /xlfg command without plugin namespacing.")
+        recs.append("Ship a standalone .claude/skills/xlfg pack so users can get a direct /xlfg command without plugin namespacing.")
     if not features.get("consent_reduction"):
         recs.append("Add allowed-tools or narrow hooks so /xlfg stops asking for avoidable internal approvals.")
     if not features.get("plugin_namespace_documented"):
@@ -442,11 +445,12 @@ def _top_recommendations(
 def audit_repo(root: Path) -> Dict[str, Any]:
     root = root.resolve()
     versions = _version_report(root)
-    words = _word_metrics(root)
+    entrypoints = _entrypoint_report(root)
+    words = _word_metrics(root, entrypoints)
     seeded = _seeded_run_artifacts(root)
-    phases = _phase_metrics(root)
+    phases = _phase_metrics(root, entrypoints)
     models = _model_report(root)
-    features = _features(root)
+    features = _features(root, entrypoints)
 
     load = _workflow_load_score(
         workflow_words=words["workflow_words"],
@@ -489,9 +493,12 @@ def audit_repo(root: Path) -> Dict[str, Any]:
         features=features,
     )
 
+    entrypoint_metrics = {k: v for k, v in entrypoints.items() if not k.endswith("_text")}
+
     return {
         "version_sync": versions,
         "metrics": {
+            "entrypoints": entrypoint_metrics,
             "word_counts": words,
             "seeded_run_artifacts": seeded,
             "phase_load": phases,

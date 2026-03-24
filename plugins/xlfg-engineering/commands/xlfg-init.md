@@ -1,13 +1,12 @@
 ---
-name: xlfg:init
 description: Manual bootstrap / repair for xlfg scaffolding in this repo.
 ---
 
-# /xlfg:init
+# xlfg init
 
 Use this when you want to explicitly bootstrap or repair the xlfg scaffold.
 
-`/xlfg` itself should normally start from recall/plan. Use `/xlfg:init` only when you intentionally want a manual bootstrap or repair.
+`/xlfg` itself should normally sync scaffold quietly. Use this command only when you intentionally want a manual bootstrap or repair.
 
 ## Safety + idempotency rules
 

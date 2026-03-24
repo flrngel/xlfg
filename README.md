@@ -1,20 +1,20 @@
-# xlfg-engineering-plugin
+# xlfg-engineering
 
-`xlfg` is a **skill-first, autonomous, proof-first SDLC harness** for Claude Code.
+`xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-In 2.2.0 the harness was rebuilt around current Claude Code behavior:
+Version 2.3.0 fixes the broken entrypoint behavior from 2.2.0:
 
-- **skills first**, with legacy commands kept only as compatibility shims
-- **one autonomous `/xlfg` invocation** instead of human-managed phase choreography
-- **`spec.md` as the single source of truth** instead of many duplicated planning files
-- **conservative permission automation** through `allowed-tools` and a narrow `ExitPlanMode` hook
-- **two install forms**: plugin for team reuse and standalone `.claude/` for short `/xlfg`
+- the plugin now exposes **one primary `/xlfg` entrypoint per install mode** instead of a colliding command+skill pair
+- the main entrypoint is **self-contained** and no longer points Claude at a repo-relative plugin path that may not exist
+- the plugin form stays namespaced for team reuse, while the standalone `.claude/` pack remains the short `/xlfg` path
+- `spec.md` remains the single source of truth, with only six always-on run files
+- support skills are now background helpers instead of competing user-facing entrypoints
 
 ## What is in this repo
 
-1. A **Claude Code plugin** in `plugins/xlfg-engineering/`
-2. A **standalone `.claude/skills/xlfg/` pack** in `standalone/`
-3. A dependency-free **Python helper CLI** (`xlfg`) that can scaffold, recall, doctor, verify, and audit the same file model locally
+1. A Claude Code plugin in `plugins/xlfg-engineering/`
+2. A standalone `.claude/skills/xlfg/` pack in `standalone/`
+3. A dependency-free Python helper CLI (`xlfg`) that can scaffold, recall, doctor, verify, and audit the same file model locally
 4. Benchmarking guidance in `docs/benchmarking.md`
 5. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
 
@@ -22,7 +22,7 @@ In 2.2.0 the harness was rebuilt around current Claude Code behavior:
 
 ### Plugin / team install
 
-Run the plugin skill:
+Run the plugin command:
 
 - `/xlfg-engineering:xlfg "what you want built"`
 
@@ -32,20 +32,19 @@ Copy `standalone/.claude/skills/xlfg/` into your target repo’s `.claude/skills
 
 - `/xlfg "what you want built"`
 
-## Why 2.2.0 exists
+## Entry model
 
-The previous revision was leaner than 2.0.10, but it still made the human do too much workflow coordination and still duplicated planning state across too many files.
-
-This revision fixes three things:
-
-- **Autonomy**: `/xlfg` now executes the full SDLC itself.
-- **Deduplication**: `spec.md` absorbs request truth, why, harness choice, plan, and proof summary.
-- **Compatibility**: the package now matches current Claude Code conventions for skills, hooks, namespacing, and effort frontmatter.
+- `/xlfg` owns the whole SDLC run.
+- It should not ask the user to run phase subcommands.
+- `spec.md` is the run card and single source of truth.
+- Optional docs exist only when they change a decision or proof.
+- The helper CLI is optional, but when installed it makes scaffold, recall, and verification more deterministic.
 
 ## Local helper CLI
 
 ```bash
 python -m pip install -e .
+xlfg init
 xlfg start "fix login flow"
 xlfg audit
 xlfg verify --mode full

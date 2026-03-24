@@ -376,18 +376,41 @@ class TestXLFG(unittest.TestCase):
         self.assertTrue(report["metrics"]["features"]["autonomous_macro"])
         self.assertTrue(report["metrics"]["features"]["consent_reduction"])
         self.assertTrue(report["metrics"]["features"]["standalone_short_name_pack"])
+        self.assertTrue(report["metrics"]["features"]["single_main_entrypoint"])
+        self.assertTrue(report["metrics"]["features"]["no_repo_relative_plugin_refs"])
+        self.assertTrue(report["metrics"]["features"]["plugin_name_frontmatter_avoided"])
         self.assertGreaterEqual(report["metrics"]["models"]["counts"].get("haiku", 0), 1)
 
-    def test_main_xlfg_entrypoints_are_autonomous_and_permission_reduced(self) -> None:
+    def test_main_xlfg_entrypoints_are_self_contained_and_collision_free(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        skill_md = (repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg" / "SKILL.md").read_text(encoding="utf-8")
-        command_md = (repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md").read_text(encoding="utf-8")
-        self.assertIn("allowed-tools:", skill_md)
-        self.assertIn("effort: high", skill_md)
-        self.assertIn("ExitPlanMode", skill_md)
-        self.assertIn("one autonomous run", skill_md.lower())
-        self.assertIn("do **not** ask the user to run phase subcommands", command_md.lower())
-        self.assertIn("single source of truth", command_md.lower())
+        command_path = repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md"
+        standalone_path = repo_root / "standalone" / ".claude" / "skills" / "xlfg" / "SKILL.md"
+        plugin_skill_path = repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg" / "SKILL.md"
+
+        self.assertTrue(command_path.exists())
+        self.assertTrue(standalone_path.exists())
+        self.assertFalse(plugin_skill_path.exists())
+
+        command_md = command_path.read_text(encoding="utf-8")
+        standalone_md = standalone_path.read_text(encoding="utf-8")
+
+        for text in [command_md, standalone_md]:
+            self.assertIn("allowed-tools:", text)
+            self.assertIn("effort: high", text)
+            self.assertIn("ExitPlanMode", text)
+            self.assertIn("one autonomous run", text.lower())
+            self.assertIn("do **not** ask the user to run phase subcommands", text.lower())
+            self.assertIn("single source of truth", text.lower())
+            self.assertIn("xlfg start", text)
+            self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", text)
+            self.assertNotIn("\nname:", text)
+
+    def test_plugin_support_skills_are_hidden_background_helpers(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        for skill_path in sorted((repo_root / "plugins" / "xlfg-engineering" / "skills").rglob("SKILL.md")):
+            text = skill_path.read_text(encoding="utf-8")
+            self.assertNotIn("\nname:", text)
+            self.assertIn("user-invocable: false", text)
 
 
 if __name__ == "__main__":  # pragma: no cover

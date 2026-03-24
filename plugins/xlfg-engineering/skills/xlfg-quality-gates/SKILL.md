@@ -1,11 +1,11 @@
 ---
-name: xlfg-quality-gates
 description: Apply production-readiness gates to an xlfg run without recreating duplicated planning state.
+user-invocable: false
 ---
 
 # xlfg-quality-gates
 
-Use these gates to keep `/xlfg` output production-ready.
+Use these gates to keep an xlfg run production-ready.
 
 ## Definition of done
 

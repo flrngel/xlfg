@@ -1,6 +1,6 @@
 ---
-name: xlfg-file-context
-description: Use docs/xlfg + .xlfg as the file-based context system for lean, autonomous SDLC runs.
+description: Use docs/xlfg and .xlfg as the file-based context system for lean, autonomous SDLC runs.
+user-invocable: false
 ---
 
 # xlfg-file-context

@@ -1,85 +1,50 @@
-# xlfg architecture (2.0.10)
+# xlfg architecture (2.3.0)
 
-`/xlfg` is now intentionally simple at the top level:
+`/xlfg` is intentionally simple at the top level:
 
 ```text
 /xlfg
-  ├─ /xlfg:recall
-  ├─ /xlfg:plan
-  ├─ /xlfg:implement
-  ├─ /xlfg:verify
-  ├─ /xlfg:review
-  └─ /xlfg:compound
+  └─ one autonomous run
+       recall -> context -> plan -> implement -> verify -> review -> compound
 ```
 
-`/xlfg:prepare` and `/xlfg:init` still exist, but they are **manual maintenance commands**. They are not the product workflow.
+There are two supported install modes:
 
-## The real harness model
+- **Plugin**: `/xlfg-engineering:xlfg`
+- **Standalone**: `/xlfg`
 
-### 1) Semantic state
-Keep the request and root problem stable:
-- `query-contract.md`
-- `why.md`
+The standalone pack is the clearest short-name UX. The plugin form is for shared team distribution and therefore namespaced.
+
+## Run-state architecture
+
+### Core files (always seeded)
+
+- `context.md`
+- `memory-recall.md`
+- `spec.md`
+- `test-contract.md`
+- `test-readiness.md`
+- `workboard.md`
+
+### Optional files (only when they change a decision)
+
+- `research.md`
 - `diagnosis.md`
-
-### 2) Structural state
-Keep the repo-facing solution stable:
-- `repo-map.md`
 - `solution-decision.md`
 - `flow-spec.md`
 - `env-plan.md`
-
-### 3) Execution state
-Keep task/proof truth stable:
-- `plan.md`
-- `workboard.md`
 - `proof-map.md`
-- `scorecard.md`
+- `risk.md`
+- `review-summary.md`
+- `run-summary.md`
+- `compound-summary.md`
 
-This split is the core architectural change in 2.0.10. It reduces drift by keeping request truth, codebase truth, and execution/proof truth separate.
+`verification.md` is written during verification, not seeded up front.
 
-## Planning model
+## Architectural rules
 
-Planning is a **lead-agent synthesis pass** with a small specialist budget.
-
-Default planning specialist order:
-1. query refiner
-2. repo mapper (only if needed)
-3. root-cause analyst
-4. spec author
-5. test strategist
-6. solution architect (only if needed)
-
-The lead planner owns:
-- `why.md`
-- `harness-profile.md`
-- `test-readiness.md`
-- `spec.md`
-- `plan.md`
-- `workboard.md`
-- `proof-map.md`
-- `scorecard.md`
-
-## Execution ownership
-
-By default, the **agent** owns:
-- implementation
-- repo-local config changes needed for correctness
-- tests and test harness updates
-- dev-server orchestration
-- major local verification
-
-Only escalate to the user for:
-- missing secrets / credentials
-- destructive external or production actions
-- unresolved product decisions that change correctness
-
-## Verification model
-
-Verification compiles from the predeclared scenario contract first, then adds supplemental repo checks.
-
-A run is only green when:
-- the promised scenario-targeted proofs actually ran
-- proof-map rows are covered
-- direct asks and non-negotiable implied asks have evidence or explicit approved deferral
-- the evidence still matches the why and root solution
+- `spec.md` is the run card and single source of truth.
+- The main entrypoint owns the whole SDLC run; it should not ask the user to run manual phase slash commands.
+- The helper CLI may be used when installed to make scaffold sync, run creation, recall, doctoring, and verification deterministic.
+- Support skills exist only as background helpers. They should not compete with the main `/xlfg` entrypoint.
+- Entry-point correctness matters: no command+skill collisions for the same slash name, and no repo-relative plugin path assumptions.

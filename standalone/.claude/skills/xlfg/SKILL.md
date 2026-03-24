@@ -1,6 +1,5 @@
 ---
-name: xlfg
-description: Autonomous SDLC operator: understand intent, research only when needed, write a lean run card, implement, verify, review, and compound in one invocation.
+description: Autonomous SDLC run for serious feature, bugfix, investigation, or delivery work. Executes recall, planning, implementation, verification, review, and compounding in one invocation.
 argument-hint: "[feature, bugfix, investigation, or delivery request]"
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, TodoWrite, Task
@@ -14,34 +13,41 @@ hooks:
             echo '{"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {"behavior": "allow"}}}'
 ---
 
-Use this when the user wants a serious feature, bugfix, investigation, or delivery run with PM / Engineering / QA discipline.
+Use this when the user wants a serious engineering run with PM, UX, Engineering, QA, and release discipline.
 
 INPUT: `$ARGUMENTS`
 
-Treat `/xlfg` as **one autonomous run**. Do **not** ask the user to invoke `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, `/xlfg:review`, or `/xlfg:compound`. Do **not** stop for internal phase approvals. Ask the user only for:
+Treat this invocation as **one autonomous run**.
 
-- missing secrets or credentials
-- destructive external actions or production-side approvals
-- correctness-changing product ambiguity you cannot ground from the repo or research
+Non-negotiable behavior:
 
-## Current Claude Code alignment
+- do the full SDLC here: recall → context → plan → implement → verify → review → compound
+- do **not** ask the user to run phase subcommands or sequence the workflow for you
+- do **not** pause for internal phase approvals
+- ask the user only for true human-only blockers: missing secrets, destructive external approvals, or correctness-changing product ambiguity you cannot ground from the repo or research
+- keep `spec.md` as the single source of truth for request truth, chosen solution, task map, proof summary, and PM / UX / Engineering / QA / Release notes
+- do not create duplicated planning files unless they change a decision
 
-- Skills are the primary format. Legacy commands are escape hatches, not the main UX.
-- Keep context small. `spec.md` is the single source of truth.
-- Use built-in Explore or a small read-only subagent only when it materially reduces risk.
-- Use external research only when repo-local truth is insufficient or the user explicitly asked for research.
-- Prefer one owner and one main line of execution. Extra agents are opt-in, not default.
+## Prefer deterministic xlfg helpers when available
+
+If the local helper CLI exists, use it to reduce prompt drift and file-creation mistakes:
+
+1. `xlfg init` (or `xlfg prepare`) to sync scaffold if needed
+2. `xlfg start "$ARGUMENTS"` to create the run and capture `RUN_ID`
+3. `xlfg recall ...` when deterministic memory lookup would help
+4. `xlfg detect` or `xlfg doctor --run <RUN_ID>` when the harness or dev server is unclear
+5. `xlfg verify --run <RUN_ID> --mode <auto|fast|full>` for final proof
+
+If the helper is unavailable, perform the equivalent steps manually.
 
 ## Run model
 
-If scaffold is missing or stale, quietly sync it and continue.
-
-Create `RUN_ID=<YYYYMMDD-HHMMSS>-<slug>` and use:
+Create or capture `RUN_ID=<YYYYMMDD-HHMMSS>-<slug>` and use:
 
 - `DOCS_RUN_DIR=docs/xlfg/runs/<RUN_ID>`
 - `DX_RUN_DIR=.xlfg/runs/<RUN_ID>`
 
-Create only these **core files** up front:
+Up-front core files only:
 
 - `context.md`
 - `memory-recall.md`
@@ -50,7 +56,7 @@ Create only these **core files** up front:
 - `test-readiness.md`
 - `workboard.md`
 
-Create **optional files only if they clearly reduce risk or ambiguity**:
+Create optional files only when they materially reduce risk or ambiguity:
 
 - `research.md`
 - `diagnosis.md`
@@ -63,35 +69,39 @@ Create **optional files only if they clearly reduce risk or ambiguity**:
 - `run-summary.md`
 - `compound-summary.md`
 
+`verification.md` should be created or updated during verification.
+
 ## Spec contract
 
-`spec.md` absorbs the duplicated state that older xlfg revisions spread across many files. It must cover:
+`spec.md` must stay lean but complete enough that implementation, verification, review, and handoff can all start there. It must cover:
 
-- direct asks, implied asks, and non-goals
-- user outcome and false-success warning
-- repo findings and external findings (`repo-only` when none)
-- harness profile and verify mode
+- direct asks, implied asks, and explicit non-goals
+- the user outcome and the false-success trap
+- repo findings and external findings (`repo-only` if none)
+- harness profile and intended verify mode
 - chosen solution and rejected shortcuts
-- task map
-- proof summary
+- concrete task map
+- proof summary and current status
 - PM / UX / Engineering / QA / Release notes
 
-## Execution
+## Execution recipe
 
-1. Recall the smallest relevant prior knowledge and record honest hits or no-hits in `memory-recall.md`.
-2. Explore repo-local context first. Use external research only when needed.
-3. Write a lean `spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md`.
-4. If `test-readiness.md` is not `READY`, fix the plan yourself. Do not hand phase management back to the user.
-5. Implement the solution. Default to one execution owner. Use extra subagents only for hard read-only exploration or a specific review lens.
-6. Run verification. Use the verify mode from `spec.md` when present; otherwise choose the lightest honest proof. Write `verification.md`.
-7. Run review proportional to risk. Write `review-summary.md` only when there are real findings or non-trivial risk.
-8. Compound durable lessons and update repo knowledge.
-9. End with a concise status summary.
+1. Sync scaffold quietly if missing or stale.
+2. Recall the smallest relevant prior knowledge and record strong hits or an explicit no-hit in `memory-recall.md`.
+3. Explore repo-local truth first. Use external research only when repo truth is insufficient or the user explicitly asked for research.
+4. Write or update `context.md`, `spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md`.
+5. If `test-readiness.md` is not `READY`, repair the plan yourself. Do not hand phase management back to the user.
+6. Implement with one owner by default. Use extra subagents only for hard read-only exploration or a specific review lens.
+7. Verify honestly. Prefer the helper verifier when present. If verification fails, fix the first actionable failure and rerun.
+8. Review proportional to risk. Create `review-summary.md` only when there are real findings or non-trivial residual risk.
+9. Compound only verified durable lessons. Promote reusable truth to `docs/xlfg/knowledge/current-state.md`; keep branch-local or run-local lessons in the run when they are not yet durable.
+10. Finish with a concise status summary that includes `RUN_ID`, what changed, proof status, residual risk, and next actions if any.
 
 ## Hard rules
 
-- No duplicated markdown state unless it changes a decision. `spec.md` is the run card.
-- Do not create placeholder docs just because a template exists.
-- Do not ask the user to sequence subcommands or carry the run state for you.
+- This command is the entrypoint. Do not rely on manual `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, `/xlfg:review`, or `/xlfg:compound` choreography.
+- No duplicated markdown state unless it changes a decision.
+- Do not create placeholder docs because a template exists.
 - Do not claim GREEN unless changed behavior was actually proven.
 - Fix the first actionable failure, not the loudest symptom.
+- Prefer repo truth over assumption, and deterministic helpers over prompt-only file ceremony when both are available.

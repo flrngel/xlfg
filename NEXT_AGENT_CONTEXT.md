@@ -1,76 +1,60 @@
 # NEXT_AGENT_CONTEXT
 
-This is the required handoff document for the next intelligent agent continuing work on this repo.
+## Current state (2.3.0)
 
-## 1. Current bundle version
+The main 2.3.0 fix is **entrypoint correctness**.
 
-- **xlfg version:** `2.2.0`
-- this is a **minor** redesign because Claude Code compatibility, autonomy, and run-shape all changed materially
+2.2.0 improved autonomy and deduplication, but it accidentally broke `/xlfg` in real Claude Code installs by doing two unsafe things:
 
-## 2. What changed in 2.2.0
+1. shipping a plugin `command + skill` pair with the same slash name (`xlfg`)
+2. making the command act as a shim that pointed Claude at `plugins/xlfg-engineering/skills/xlfg/SKILL.md`, which is a source-repo path and not a safe assumption after plugin install
 
-This revision is focused on one harder problem:
+2.3.0 fixes both:
 
-> `/xlfg` should feel native to modern Claude Code instead of acting like an older command harness that makes the human schedule the work.
+- the plugin now exposes a **single self-contained command** at `/xlfg-engineering:xlfg`
+- the standalone pack remains the canonical short-name install at `/xlfg`
+- the colliding plugin `skills/xlfg/` entrypoint was removed
+- support skills were kept, but hidden from the slash menu with `user-invocable: false`
+- plugin commands/skills no longer use `name:` frontmatter, which reduces current namespace edge-case risk
+- lint, audit, and tests now explicitly guard against entrypoint collisions and broken repo-relative plugin references
 
-### Main changes
+## What xlfg should be
 
-- `/xlfg` is now **skills-first** and ships a real `skills/xlfg/SKILL.md` entrypoint.
-- a **standalone short-name pack** now ships under `standalone/.claude/skills/xlfg/` so users can get direct `/xlfg` without plugin namespacing.
-- `/xlfg` now runs as **one autonomous SDLC flow** by default; phase commands remain escape hatches only.
-- the run scaffold is now a **lean 6-file core**: `context.md`, `memory-recall.md`, `spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md`.
-- `spec.md` is now the explicit **single source of truth** for PM / UX / Engineering / QA / Release state.
-- internal consent friction was reduced with `allowed-tools`, `effort`, and a narrow `ExitPlanMode` auto-approval hook.
-- the bundle now documents **plugin vs standalone** invocation clearly.
-- high-impact internal memories (`CLAUDE.md`, `AGENTS.md`, scaffold docs, agent prompts) were updated so they no longer assume the old split artifact set is mandatory.
-- the audit now reports a **Claude Code compatibility score** in addition to workflow load and SDLC coverage.
-- plugin manifests, package metadata, docs, and tests were synced to `2.2.0`.
+A serious but lean SDLC exoskeleton for Claude Code:
 
-## 3. The most important conceptual change
+- one invocation
+- one owner
+- one run card (`spec.md`)
+- deterministic recall
+- explicit proof
+- optional research
+- proportional review
+- durable compounding only when verified
 
-The harness should now be understood as:
+## Product truths to preserve
 
-- **Claude Code = orchestrator**
-- **xlfg = thin, skills-native SDLC layer**
+- `/xlfg` should execute the entire workflow itself. Do not make the user run `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, etc.
+- `spec.md` is the single source of truth; optional docs exist only when they change a decision.
+- The helper CLI is optional but valuable. When available, the main entrypoint should prefer it for scaffold sync, run creation, recall, and verification.
+- The plugin form is for team reuse and therefore namespaced.
+- The standalone `.claude/skills/xlfg/` pack is the best short-name UX and the most reliable path when users want direct `/xlfg`.
 
-If a future change makes xlfg feel like a permission-heavy project manager that asks the user to run `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, etc., treat that as a regression.
+## Main files to understand first
 
-## 4. Planning doctrine now
-
-- planning is still proof-first, but not document-heavy
-- `spec.md` should absorb duplicated planning state whenever possible
-- research is part of SDLC only when repo-local truth is insufficient or the user explicitly asks
-- optional artifacts should stay optional and decision-driven
-- one owner is the default; extra agents are trigger-based
-- verification must remain the real quality gate
-
-## 5. Files that matter most now
-
-1. `plugins/xlfg-engineering/skills/xlfg/SKILL.md`
+1. `plugins/xlfg-engineering/commands/xlfg.md`
 2. `standalone/.claude/skills/xlfg/SKILL.md`
-3. `plugins/xlfg-engineering/commands/xlfg.md`
-4. `plugins/xlfg-engineering/hooks/hooks.json`
-5. `plugins/xlfg-engineering/README.md`
-6. `docs/claude-code-2026-compatibility.md`
-7. `docs/benchmarking.md`
-8. `xlfg/runs.py`
-9. `xlfg/audit.py`
-10. `xlfg/verify.py`
-11. `tests/test_xlfg.py`
+3. `xlfg/runs.py`
+4. `xlfg/verify.py`
+5. `xlfg/audit.py`
+6. `tests/test_xlfg.py`
 
-## 6. What not to regress
+## Regression triggers
 
-- do not reintroduce user-managed phase choreography as the default
-- do not make many split planning artifacts mandatory again
-- do not let `spec.md` bloat into unreadable ceremony
-- do not widen hooks or permissions recklessly; keep them narrow and transparent
-- do not drift away from current Claude Code skill/plugin conventions
-- do not let internal docs tell agents to require old files when `spec.md` already carries the truth
-- do not let plugin/package versions drift again
+Treat any of the following as regressions:
 
-## 7. Current known limitations
-
-- the audit score is a transparent surrogate, not a direct token meter from Claude Code itself
-- several deeper historical research docs still describe the old artifact-heavy model; they are now historical context, not the recommended workflow
-- some optional agents still mention legacy files in detailed body text, but they now carry a compatibility note telling them to start from `spec.md` and treat legacy files as optional
-- live A/B evaluation against real Claude Code still must be run outside this repo
+- `/xlfg` asking the user to run or sequence internal phase commands
+- plugin command and plugin skill shipping with the same slash name
+- commands or skills that reference `plugins/xlfg-engineering/...` as if that path exists inside the target repo
+- plugin support skills cluttering the slash menu instead of staying hidden helpers
+- reintroducing duplicated planning state that competes with `spec.md`
+- claiming green without scenario-targeted proof

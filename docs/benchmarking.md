@@ -13,7 +13,7 @@ The repo cannot inspect Claude Code internals such as exact context packing, per
 
 ### Workflow-load inputs
 
-- primary workflow words (main skill or command + manual escape hatches)
+- primary workflow words (primary entrypoint weight plus retained utility commands)
 - seeded core-file count
 - planning required-artifact count
 - initial read counts for implement / verify / review

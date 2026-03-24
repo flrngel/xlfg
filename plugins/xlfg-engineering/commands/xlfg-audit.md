@@ -1,5 +1,4 @@
 ---
-name: xlfg:audit
 description: Audit xlfg workflow load, SDLC coverage, Claude Code compatibility, and benchmark readiness.
 argument-hint: "[repo path | current repo]"
 disable-model-invocation: true
@@ -7,7 +6,7 @@ allowed-tools: Read, Grep, Glob, LS, Bash
 effort: medium
 ---
 
-# /xlfg:audit
+# xlfg audit
 
 Measure the harness itself.
 

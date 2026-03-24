@@ -10,45 +10,42 @@ Every behavior change MUST update:
 4. `pyproject.toml`
 5. `NEXT_AGENT_CONTEXT.md`
 
-Normal evolution should bump **patch** only.
+Normal evolution should bump **patch** unless the public entry model changes materially.
 
 ## Read order for future agents
 
 1. `NEXT_AGENT_CONTEXT.md`
 2. `docs/planning-autonomy-2026-refresh.md`
 3. `README.md`
-4. the command files under `commands/`
+4. `plugins/xlfg-engineering/commands/xlfg.md`
 5. scaffold + tests
 
 Every shipped bundle must contain enough context that the next agent can continue without extra explanation. `NEXT_AGENT_CONTEXT.md` is the required handoff document for this repo.
 
-## Command and agent naming
+## Entry model
 
-- Top-level workflow: `/xlfg`
-- Subcommands use `xlfg:` prefix: `/xlfg:prepare`, `/xlfg:init`, `/xlfg:recall`, `/xlfg:plan`, `/xlfg:implement`, `/xlfg:verify`, ...
-- Planning agents should write contracts or analysis files.
-- Implementation agents should write task-scoped artifacts under `tasks/<task-id>/`.
-- New harness-shaping files should usually be added to the run scaffold **only** if they clarify request truth, execution truth, or proof truth.
+- Public plugin entrypoint: `/xlfg-engineering:xlfg`
+- Public standalone entrypoint: `/xlfg`
+- Support skills under `plugins/xlfg-engineering/skills/` are background helpers and should stay `user-invocable: false`.
+- Do not ship both a plugin command and a plugin skill with the same slash name.
+- Do not point a command at a repo-relative plugin file path. Installed plugins are not laid out like the source repo.
 
 ## Context-budget discipline
 
 Claude Code loads `description:` fields at session start. Keep them short:
 
 - Agents: aim <= 200 characters
-- Skills/commands: aim <= 200 characters
+- Skills/commands: aim <= 220 characters
 
 Put examples and long guidance in the body (loads on invocation).
 
 ## Safety
 
-- `/xlfg:prepare` is manual maintenance, not a routine `/xlfg` stage.
 - `/xlfg:init` is manual bootstrap / repair only.
-- `/xlfg` is autonomous by default; phase commands remain available as escape hatches.
+- `/xlfg` is autonomous by default and should not ask the user to run internal phases.
 - `/xlfg` must always use deterministic recall before broad repo scanning.
-- `/xlfg:plan` must produce a lean run card: `context.md`, `memory-recall.md`, `spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md`. Optional docs exist only when they change a decision.
-- `/xlfg:plan` should stay **lead-owned** and use a small specialist budget by default.
-- `/xlfg:plan` must finish before `/xlfg:implement` starts.
-- `/xlfg:implement` must stop if `test-readiness.md` is not `READY`.
+- `/xlfg` must produce a lean run card: `context.md`, `memory-recall.md`, `spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md`. Optional docs exist only when they change a decision.
+- `/xlfg` must stop and repair the plan if `test-readiness.md` is not `READY`.
 - `/xlfg` must never claim success unless verification evidence exists and scenario-targeted proof actually ran.
 - Review is a confirmation gate, not a cleanup crew.
 - Do not let the plan assume the user will implement code or run major repo-local verification later.

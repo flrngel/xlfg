@@ -4,23 +4,26 @@
 Goals:
 - Catch missing/invalid frontmatter fields
 - Keep description fields short to avoid Claude Code context-budget drops
+- Prevent main-entrypoint command/skill collisions
+- Catch plugin-path references that break after install
+- Avoid plugin `name:` frontmatter until upstream namespace quirks settle
 
 This intentionally avoids external dependencies.
 """
 
 from __future__ import annotations
 
-import os
 import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[1] / "plugins" / "xlfg-engineering"
 
 FRONTMATTER_RE = re.compile(r"^---\s*$")
 KV_RE = re.compile(r"^([A-Za-z0-9_-]+)\s*:\s*(.*)$")
+BROKEN_PLUGIN_PATH_RE = re.compile(r"plugins/xlfg-engineering/")
 
 
 @dataclass
@@ -30,16 +33,11 @@ class LintIssue:
 
 
 def parse_frontmatter(text: str) -> Optional[Dict[str, str]]:
-    """Parse simple YAML frontmatter with scalar key: value lines.
-
-    Returns None if no frontmatter.
-    """
     lines = text.splitlines()
     if not lines or not FRONTMATTER_RE.match(lines[0]):
         return None
 
     fm: Dict[str, str] = {}
-    # find closing ---
     end = None
     for i in range(1, len(lines)):
         if FRONTMATTER_RE.match(lines[i]):
@@ -55,10 +53,8 @@ def parse_frontmatter(text: str) -> Optional[Dict[str, str]]:
             continue
         m = KV_RE.match(line)
         if not m:
-            # ignore non scalar YAML constructs in this minimal linter
             continue
         key, raw_val = m.group(1), m.group(2).strip()
-        # strip quotes
         if (raw_val.startswith('"') and raw_val.endswith('"')) or (
             raw_val.startswith("'") and raw_val.endswith("'")
         ):
@@ -74,15 +70,10 @@ def lint_frontmatter(path: Path, fm: Optional[Dict[str, str]], kind: str) -> Lis
         issues.append(LintIssue(path, f"Missing YAML frontmatter for {kind}"))
         return issues
 
-    name = fm.get("name", "").strip()
     desc = fm.get("description", "").strip()
-
-    if not name:
-        issues.append(LintIssue(path, f"Frontmatter missing 'name' for {kind}"))
     if not desc:
         issues.append(LintIssue(path, f"Frontmatter missing 'description' for {kind}"))
 
-    # description length gate (soft but helpful)
     max_len = 220
     if desc and len(desc) > max_len:
         issues.append(
@@ -92,7 +83,19 @@ def lint_frontmatter(path: Path, fm: Optional[Dict[str, str]], kind: str) -> Lis
             )
         )
 
+    if fm.get("name"):
+        issues.append(
+            LintIssue(
+                path,
+                "Avoid `name:` frontmatter in plugin commands/skills; file or directory names are safer for current Claude Code namespacing.",
+            )
+        )
+
     return issues
+
+
+def _load_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8", errors="ignore")
 
 
 def main() -> int:
@@ -102,17 +105,36 @@ def main() -> int:
 
     issues: List[LintIssue] = []
 
-    # commands
+    command_names = {p.stem for p in sorted((PLUGIN_ROOT / "commands").glob("*.md"))}
+    skill_names = {p.parent.name for p in sorted((PLUGIN_ROOT / "skills").rglob("SKILL.md"))}
+    collisions = sorted(command_names & skill_names)
+    for name in collisions:
+        issues.append(
+            LintIssue(
+                PLUGIN_ROOT,
+                f"Main slash-name collision detected for '{name}'. Do not ship both commands/{name}.md and skills/{name}/SKILL.md in the plugin.",
+            )
+        )
+
     for p in sorted((PLUGIN_ROOT / "commands").glob("*.md")):
-        fm = parse_frontmatter(p.read_text(encoding="utf-8"))
+        text = _load_text(p)
+        fm = parse_frontmatter(text)
         issues.extend(lint_frontmatter(p, fm, "command"))
+        if BROKEN_PLUGIN_PATH_RE.search(text):
+            issues.append(LintIssue(p, "Do not reference repo-relative plugin paths from a command; installed plugins are not laid out like the source repo."))
 
-    # agents
     for p in sorted((PLUGIN_ROOT / "agents").rglob("*.md")):
-        fm = parse_frontmatter(p.read_text(encoding="utf-8"))
-        issues.extend(lint_frontmatter(p, fm, "agent"))
+        fm = parse_frontmatter(_load_text(p))
+        # agent descriptions still matter, but `name` is fine here and often useful
+        if fm is None:
+            issues.append(LintIssue(p, "Missing YAML frontmatter for agent"))
+            continue
+        desc = fm.get("description", "").strip()
+        if not desc:
+            issues.append(LintIssue(p, "Frontmatter missing 'description' for agent"))
+        if desc and len(desc) > 220:
+            issues.append(LintIssue(p, f"description too long ({len(desc)} chars > 220)."))
 
-    # skills
     for skill_dir in sorted((PLUGIN_ROOT / "skills").iterdir()):
         if not skill_dir.is_dir():
             continue
@@ -120,17 +142,13 @@ def main() -> int:
         if not skill_md.exists():
             issues.append(LintIssue(skill_dir, "Missing SKILL.md"))
             continue
-        fm = parse_frontmatter(skill_md.read_text(encoding="utf-8"))
+        text = _load_text(skill_md)
+        fm = parse_frontmatter(text)
         issues.extend(lint_frontmatter(skill_md, fm, "skill"))
-
-        # skill name should match directory name
-        if fm and fm.get("name") and fm.get("name") != skill_dir.name:
-            issues.append(
-                LintIssue(
-                    skill_md,
-                    f"Skill name '{fm.get('name')}' does not match directory '{skill_dir.name}'",
-                )
-            )
+        if BROKEN_PLUGIN_PATH_RE.search(text):
+            issues.append(LintIssue(skill_md, "Do not reference repo-relative plugin paths from a skill; installed plugins are not laid out like the source repo."))
+        if fm and fm.get("user-invocable") != "false" and skill_dir.name.startswith("xlfg-"):
+            issues.append(LintIssue(skill_md, "Support skills should usually be `user-invocable: false` so the main /xlfg entrypoint stays clear."))
 
     if issues:
         print("xlfg plugin lint failed:\n")
