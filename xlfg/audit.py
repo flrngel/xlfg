@@ -16,6 +16,8 @@ FRONTMATTER_SPLIT_RE = re.compile(r"^---\s*$", re.MULTILINE)
 FRONTMATTER_KV_RE = re.compile(r"^([A-Za-z0-9_-]+)\s*:\s*(.*)$")
 CODE_ITEM_RE = re.compile(r"`([^`]+)`|([A-Za-z0-9_.-]+(?:\.md|/))")
 BULLET_RE = re.compile(r"^[-*]\s+")
+PHASE_SKILL_NAME_RE = re.compile(r"xlfg-[a-z-]+-phase")
+LEGACY_TASK_TOOL_RE = re.compile(r"(^|[^A-Za-z])Task([^A-Za-z]|$)")
 
 
 def _read_text(path: Path) -> str:
@@ -207,6 +209,13 @@ def _entrypoint_report(root: Path) -> dict[str, Any]:
             background_support_skills = False
             break
 
+    plugin_phase_skills = sorted(
+        p.parent.name for p in (plugin_root / "skills").rglob("SKILL.md") if p.parent.name.endswith("-phase")
+    )
+    standalone_phase_skills = sorted(
+        p.parent.name for p in (root / "standalone" / ".claude" / "skills").rglob("SKILL.md") if p.parent.name.endswith("-phase")
+    )
+
     return {
         "plugin_command_exists": has_plugin_command,
         "plugin_skill_exists": has_plugin_skill,
@@ -216,6 +225,10 @@ def _entrypoint_report(root: Path) -> dict[str, Any]:
         "repo_relative_plugin_refs": repo_relative_refs,
         "plugin_name_frontmatter_count": plugin_name_frontmatter_count,
         "background_support_skills": background_support_skills,
+        "plugin_phase_skills": plugin_phase_skills,
+        "plugin_phase_skill_count": len(plugin_phase_skills),
+        "standalone_phase_skills": standalone_phase_skills,
+        "standalone_phase_skill_count": len(standalone_phase_skills),
         "plugin_primary_text": plugin_primary_text,
         "standalone_text": standalone_text,
         "plugin_command_text": plugin_command_text,
@@ -309,6 +322,9 @@ def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
         "effort_frontmatter": bool(fm["effort"]),
         "plugin_namespace_documented": "/xlfg-engineering:xlfg" in plugin_readme and "standalone" in plugin_readme.lower() and "/xlfg" in plugin_readme,
         "single_main_entrypoint": entrypoints["plugin_primary_kind"] != "none" and not entrypoints["command_skill_collision"],
+        "batch_phase_skills": entrypoints["plugin_phase_skill_count"] >= 7 and entrypoints["standalone_phase_skill_count"] >= 7 and "Skill(" in (primary_text or standalone_text) and "batch of hidden phase skills" in brief_blob.lower(),
+        "just_in_time_phase_loading": "just-in-time" in brief_blob.lower() or "load only the current phase skill" in brief_blob.lower(),
+        "no_legacy_task_tool": not LEGACY_TASK_TOOL_RE.search(primary_text or standalone_text),
         "no_repo_relative_plugin_refs": entrypoints["repo_relative_plugin_refs"] == 0,
         "plugin_name_frontmatter_avoided": entrypoints["plugin_name_frontmatter_count"] == 0,
         "background_support_skills": entrypoints["background_support_skills"],
@@ -343,6 +359,8 @@ def _workflow_load_score(
             + (0.0 if features.get("consent_reduction") else 4.0)
             + (0.0 if features.get("effort_frontmatter") else 3.0)
             + (0.0 if features.get("single_main_entrypoint") else 5.0)
+            + (0.0 if features.get("batch_phase_skills") else 4.0)
+            + (0.0 if features.get("no_legacy_task_tool") else 3.0)
             + (0.0 if features.get("no_repo_relative_plugin_refs") else 3.0)
         ),
         "hygiene_tax": 0.0 if version_sync_ok else 5.0,
@@ -372,22 +390,27 @@ def _coverage_score(features: dict[str, bool], version_sync_ok: bool) -> int:
     score += 6 if features.get("audit") else 0
     score += 6 if features.get("benchmark_doc") else 0
     score += 6 if features.get("single_main_entrypoint") else 0
+    score += 6 if features.get("batch_phase_skills") else 0
     score += 4 if features.get("background_support_skills") else 0
+    score += 4 if features.get("no_legacy_task_tool") else 0
     score += 4 if version_sync_ok else 0
     return score
 
 
 def _compatibility_score(features: dict[str, bool]) -> int:
     score = 0
-    score += 15 if features.get("standalone_short_name_pack") else 0
-    score += 15 if features.get("consent_reduction") else 0
-    score += 10 if features.get("hook_auto_exit_plan") else 0
-    score += 10 if features.get("effort_frontmatter") else 0
-    score += 10 if features.get("plugin_namespace_documented") else 0
-    score += 15 if features.get("autonomous_macro") else 0
-    score += 15 if features.get("single_main_entrypoint") else 0
-    score += 5 if features.get("no_repo_relative_plugin_refs") else 0
-    score += 5 if features.get("plugin_name_frontmatter_avoided") else 0
+    score += 10 if features.get("standalone_short_name_pack") else 0
+    score += 12 if features.get("consent_reduction") else 0
+    score += 8 if features.get("hook_auto_exit_plan") else 0
+    score += 8 if features.get("effort_frontmatter") else 0
+    score += 8 if features.get("plugin_namespace_documented") else 0
+    score += 12 if features.get("autonomous_macro") else 0
+    score += 12 if features.get("single_main_entrypoint") else 0
+    score += 15 if features.get("batch_phase_skills") else 0
+    score += 5 if features.get("just_in_time_phase_loading") else 0
+    score += 5 if features.get("no_legacy_task_tool") else 0
+    score += 3 if features.get("no_repo_relative_plugin_refs") else 0
+    score += 2 if features.get("plugin_name_frontmatter_avoided") else 0
     return score
 
 
@@ -425,6 +448,10 @@ def _top_recommendations(
         recs.append("Route read-only exploration and environment triage to lighter models to lower cost and latency.")
     if not features.get("single_main_entrypoint"):
         recs.append("Expose exactly one primary /xlfg entrypoint per install mode; avoid command+skill collisions.")
+    if not features.get("batch_phase_skills"):
+        recs.append("Make /xlfg a conductor over hidden phase skills instead of a monolithic prompt or a user-managed command chain.")
+    if not features.get("no_legacy_task_tool"):
+        recs.append("Use current Claude Code tool names such as Skill and WebSearch/WebFetch; do not reintroduce stale Task wording.")
     if not features.get("no_repo_relative_plugin_refs"):
         recs.append("Do not point slash commands at repo-relative plugin file paths; installed plugins are not laid out like the source repo.")
     if not features.get("plugin_name_frontmatter_avoided"):

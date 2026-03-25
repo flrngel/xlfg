@@ -18,7 +18,8 @@ Normal evolution should bump **patch** unless the public entry model changes mat
 2. `docs/planning-autonomy-2026-refresh.md`
 3. `README.md`
 4. `plugins/xlfg-engineering/commands/xlfg.md`
-5. scaffold + tests
+5. `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md`
+6. scaffold + tests
 
 Every shipped bundle must contain enough context that the next agent can continue without extra explanation. `NEXT_AGENT_CONTEXT.md` is the required handoff document for this repo.
 
@@ -26,9 +27,10 @@ Every shipped bundle must contain enough context that the next agent can continu
 
 - Public plugin entrypoint: `/xlfg-engineering:xlfg`
 - Public standalone entrypoint: `/xlfg`
-- Support skills under `plugins/xlfg-engineering/skills/` are background helpers and should stay `user-invocable: false`.
+- Hidden support and phase skills under `plugins/xlfg-engineering/skills/` should stay `user-invocable: false`.
 - Do not ship both a plugin command and a plugin skill with the same slash name.
 - Do not point a command at a repo-relative plugin file path. Installed plugins are not laid out like the source repo.
+- The correct architecture is **one public entrypoint that batches hidden phase skills**.
 
 ## Context-budget discipline
 
@@ -49,6 +51,7 @@ Put examples and long guidance in the body (loads on invocation).
 - `/xlfg` must never claim success unless verification evidence exists and scenario-targeted proof actually ran.
 - Review is a confirmation gate, not a cleanup crew.
 - Do not let the plan assume the user will implement code or run major repo-local verification later.
+- Use current Claude Code tool names in frontmatter (`Skill`, `WebSearch`, `WebFetch`, etc.). Do not reintroduce stale `Task` wording.
 
 ## Docs
 

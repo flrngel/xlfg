@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.0
+
+- Restored the intended architecture: `/xlfg` now batches separated hidden phase skills instead of flattening the whole workflow into one monolithic prompt.
+- Added hidden phase skills for recall, context, planning, implementation, verification, review, and compounding in both the plugin and standalone packs.
+- Kept exactly one public plugin entrypoint (`/xlfg-engineering:xlfg`) and one public standalone entrypoint (`/xlfg`).
+- Switched the entrypoints to current Claude Code tool names, using `Skill` orchestration plus `WebSearch` / `WebFetch` instead of the stale `Task` wording.
+- Updated linting, audit rules, and tests to catch missing phase skills, stale tool names, and loss of batch-skill orchestration.
+- Updated docs and handoff notes so future revisions preserve the public-entrypoint + hidden-phase-skills model.
+
 ## 2.3.0
 
 - Fixed the broken `/xlfg` entrypoint introduced by 2.2.0.

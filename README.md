@@ -2,18 +2,19 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-Version 2.3.0 fixes the broken entrypoint behavior from 2.2.0:
+Version 2.4.0 restores the architecture the workflow actually needed:
 
-- the plugin now exposes **one primary `/xlfg` entrypoint per install mode** instead of a colliding command+skill pair
-- the main entrypoint is **self-contained** and no longer points Claude at a repo-relative plugin path that may not exist
-- the plugin form stays namespaced for team reuse, while the standalone `.claude/` pack remains the short `/xlfg` path
+- `/xlfg` is still the **single public entrypoint**, but it now **batches hidden phase skills** instead of flattening the whole workflow into one giant prompt
+- the plugin form keeps one public namespaced command: `/xlfg-engineering:xlfg`
+- the standalone pack keeps the short `/xlfg` path and now ships the matching hidden phase skills too
 - `spec.md` remains the single source of truth, with only six always-on run files
-- support skills are now background helpers instead of competing user-facing entrypoints
+- hidden phase skills load **just in time**, which matches Claude Code’s current skills model and keeps context smaller than an always-inlined monolith
+- the entrypoints now use current Claude Code tool names such as `Skill`, `WebSearch`, and `WebFetch` instead of the stale `Task` naming
 
 ## What is in this repo
 
 1. A Claude Code plugin in `plugins/xlfg-engineering/`
-2. A standalone `.claude/skills/xlfg/` pack in `standalone/`
+2. A standalone `.claude/skills/` pack in `standalone/`
 3. A dependency-free Python helper CLI (`xlfg`) that can scaffold, recall, doctor, verify, and audit the same file model locally
 4. Benchmarking guidance in `docs/benchmarking.md`
 5. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
@@ -28,14 +29,15 @@ Run the plugin command:
 
 ### Standalone / short-command install
 
-Copy `standalone/.claude/skills/xlfg/` into your target repo’s `.claude/skills/xlfg/`, then run:
+Copy the full `standalone/.claude/skills/` directory into your target repo’s `.claude/skills/`, then run:
 
 - `/xlfg "what you want built"`
 
 ## Entry model
 
 - `/xlfg` owns the whole SDLC run.
-- It should not ask the user to run phase subcommands.
+- It should not ask the user to run phase subcommands or internal skills.
+- It loads hidden phase skills just in time: recall, context, plan, implement, verify, review, compound.
 - `spec.md` is the run card and single source of truth.
 - Optional docs exist only when they change a decision or proof.
 - The helper CLI is optional, but when installed it makes scaffold, recall, and verification more deterministic.

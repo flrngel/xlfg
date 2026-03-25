@@ -7,6 +7,7 @@ Goals:
 - Prevent main-entrypoint command/skill collisions
 - Catch plugin-path references that break after install
 - Avoid plugin `name:` frontmatter until upstream namespace quirks settle
+- Keep `/xlfg` wired to hidden phase skills and current Claude Code tool names
 
 This intentionally avoids external dependencies.
 """
@@ -24,6 +25,16 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[1] / "plugins" / "xlfg-engineerin
 FRONTMATTER_RE = re.compile(r"^---\s*$")
 KV_RE = re.compile(r"^([A-Za-z0-9_-]+)\s*:\s*(.*)$")
 BROKEN_PLUGIN_PATH_RE = re.compile(r"plugins/xlfg-engineering/")
+LEGACY_TASK_RE = re.compile(r"\bTask\b")
+PHASE_SKILLS = [
+    "xlfg-recall-phase",
+    "xlfg-context-phase",
+    "xlfg-plan-phase",
+    "xlfg-implement-phase",
+    "xlfg-verify-phase",
+    "xlfg-review-phase",
+    "xlfg-compound-phase",
+]
 
 
 @dataclass
@@ -122,6 +133,18 @@ def main() -> int:
         issues.extend(lint_frontmatter(p, fm, "command"))
         if BROKEN_PLUGIN_PATH_RE.search(text):
             issues.append(LintIssue(p, "Do not reference repo-relative plugin paths from a command; installed plugins are not laid out like the source repo."))
+        if LEGACY_TASK_RE.search(text) and "Skill(" not in text and p.name == "xlfg.md":
+            issues.append(LintIssue(p, "Main /xlfg entrypoint should batch hidden skills via the modern Skill tool, not rely on stale Task wording."))
+
+    main_entry = _load_text(PLUGIN_ROOT / "commands" / "xlfg.md")
+    for phase in PHASE_SKILLS:
+        if phase not in main_entry:
+            issues.append(LintIssue(PLUGIN_ROOT / "commands" / "xlfg.md", f"Main /xlfg entrypoint must reference hidden phase skill '{phase}'."))
+
+    for phase in PHASE_SKILLS:
+        phase_skill = PLUGIN_ROOT / "skills" / phase / "SKILL.md"
+        if not phase_skill.exists():
+            issues.append(LintIssue(phase_skill, "Missing hidden phase skill."))
 
     for p in sorted((PLUGIN_ROOT / "agents").rglob("*.md")):
         fm = parse_frontmatter(_load_text(p))
@@ -148,7 +171,7 @@ def main() -> int:
         if BROKEN_PLUGIN_PATH_RE.search(text):
             issues.append(LintIssue(skill_md, "Do not reference repo-relative plugin paths from a skill; installed plugins are not laid out like the source repo."))
         if fm and fm.get("user-invocable") != "false" and skill_dir.name.startswith("xlfg-"):
-            issues.append(LintIssue(skill_md, "Support skills should usually be `user-invocable: false` so the main /xlfg entrypoint stays clear."))
+            issues.append(LintIssue(skill_md, "Support and phase skills should usually be `user-invocable: false` so the main /xlfg entrypoint stays clear."))
 
     if issues:
         print("xlfg plugin lint failed:\n")

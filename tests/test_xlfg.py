@@ -377,11 +377,14 @@ class TestXLFG(unittest.TestCase):
         self.assertTrue(report["metrics"]["features"]["consent_reduction"])
         self.assertTrue(report["metrics"]["features"]["standalone_short_name_pack"])
         self.assertTrue(report["metrics"]["features"]["single_main_entrypoint"])
+        self.assertTrue(report["metrics"]["features"]["batch_phase_skills"])
+        self.assertTrue(report["metrics"]["features"]["just_in_time_phase_loading"])
+        self.assertTrue(report["metrics"]["features"]["no_legacy_task_tool"])
         self.assertTrue(report["metrics"]["features"]["no_repo_relative_plugin_refs"])
         self.assertTrue(report["metrics"]["features"]["plugin_name_frontmatter_avoided"])
         self.assertGreaterEqual(report["metrics"]["models"]["counts"].get("haiku", 0), 1)
 
-    def test_main_xlfg_entrypoints_are_self_contained_and_collision_free(self) -> None:
+    def test_main_xlfg_entrypoints_are_self_contained_and_batch_phase_driven(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         command_path = repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md"
         standalone_path = repo_root / "standalone" / ".claude" / "skills" / "xlfg" / "SKILL.md"
@@ -394,16 +397,49 @@ class TestXLFG(unittest.TestCase):
         command_md = command_path.read_text(encoding="utf-8")
         standalone_md = standalone_path.read_text(encoding="utf-8")
 
-        for text in [command_md, standalone_md]:
-            self.assertIn("allowed-tools:", text)
-            self.assertIn("effort: high", text)
-            self.assertIn("ExitPlanMode", text)
-            self.assertIn("one autonomous run", text.lower())
-            self.assertIn("do **not** ask the user to run phase subcommands", text.lower())
-            self.assertIn("single source of truth", text.lower())
-            self.assertIn("xlfg start", text)
-            self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", text)
-            self.assertNotIn("\nname:", text)
+        plugin_phase_names = [
+            "xlfg-engineering:xlfg-recall-phase",
+            "xlfg-engineering:xlfg-context-phase",
+            "xlfg-engineering:xlfg-plan-phase",
+            "xlfg-engineering:xlfg-implement-phase",
+            "xlfg-engineering:xlfg-verify-phase",
+            "xlfg-engineering:xlfg-review-phase",
+            "xlfg-engineering:xlfg-compound-phase",
+        ]
+        standalone_phase_names = [name.replace("xlfg-engineering:", "") for name in plugin_phase_names]
+
+        self.assertIn("allowed-tools:", command_md)
+        self.assertIn("allowed-tools:", standalone_md)
+        self.assertIn("effort: high", command_md)
+        self.assertIn("effort: high", standalone_md)
+        self.assertIn("ExitPlanMode", command_md)
+        self.assertIn("ExitPlanMode", standalone_md)
+        self.assertIn("one autonomous run", command_md.lower())
+        self.assertIn("one autonomous run", standalone_md.lower())
+        self.assertIn("batch of hidden phase skills", command_md.lower())
+        self.assertIn("batch of hidden phase skills", standalone_md.lower())
+        self.assertIn("do not ask the user to run internal skills", command_md.lower())
+        self.assertIn("do not ask the user to run internal skills", standalone_md.lower())
+        self.assertIn("single source of truth", command_md.lower())
+        self.assertIn("single source of truth", standalone_md.lower())
+        self.assertIn("xlfg start", command_md)
+        self.assertIn("xlfg start", standalone_md)
+        self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", command_md)
+        self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", standalone_md)
+        self.assertNotIn("\nname:", command_md)
+        self.assertNotIn("\nname:", standalone_md)
+
+        for phase_name in plugin_phase_names:
+            self.assertIn(phase_name, command_md)
+        for phase_name in standalone_phase_names:
+            self.assertIn(phase_name, standalone_md)
+
+        self.assertIn("Skill(xlfg-engineering:xlfg-recall-phase *)", command_md)
+        self.assertIn("Skill(xlfg-recall-phase *)", standalone_md)
+        self.assertNotIn(" Task", command_md)
+        self.assertNotIn(" Task", standalone_md)
+
+
 
     def test_plugin_support_skills_are_hidden_background_helpers(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

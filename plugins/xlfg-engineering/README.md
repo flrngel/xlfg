@@ -2,17 +2,18 @@
 
 `xlfg-engineering` is an autonomous SDLC harness for modern Claude Code.
 
-The 2.3.0 design target is simple:
+The 2.4.0 design target is simple:
 
-> **One entrypoint, one owner, one run card.**
+> **One public entrypoint, one run card, hidden phase skills loaded just in time.**
 
-## What changed in 2.3.0
+## What changed in 2.4.0
 
-- The plugin now exposes `/xlfg-engineering:xlfg` as a **single self-contained entrypoint**.
-- The broken command→skill indirection was removed.
-- The colliding plugin `skill + command` pair named `xlfg` was removed.
-- Support skills remain, but they are now background helpers instead of primary user-facing entrypoints.
-- The standalone pack still ships the short `/xlfg` command for project-local installs.
+- `/xlfg-engineering:xlfg` is still the single public plugin entrypoint.
+- The entrypoint now **batches separated hidden skills** for recall, context, plan, implement, verify, review, and compound.
+- The standalone pack now ships the same hidden phase skills, so short-name `/xlfg` behaves like the plugin entrypoint.
+- The workflow now uses current Claude Code tool names such as `Skill`, `WebSearch`, and `WebFetch` instead of the stale `Task` naming.
+- Support skills remain hidden background helpers instead of cluttering the slash menu.
+- `spec.md` remains the single source of truth, so phase batching does not reintroduce duplicated planning files.
 
 ## Quick start
 
@@ -24,7 +25,7 @@ Install the plugin and run:
 
 ### Standalone form (short `/xlfg` command)
 
-Copy `standalone/.claude/skills/xlfg/` into your target repo’s `.claude/skills/xlfg/`, then run:
+Copy the full `standalone/.claude/skills/` directory into your target repo’s `.claude/skills/`, then run:
 
 - `/xlfg "fix the login timeout flow"`
 
@@ -56,6 +57,7 @@ Optional only when they add decision value:
 
 - Claude Code stays the orchestrator.
 - `/xlfg` owns the full run and should not ask the human to run internal phases.
+- Hidden phase skills are loaded just in time instead of being inlined into one monolithic entrypoint.
 - `spec.md` carries PM / UX / Engineering / QA truth in one place.
 - Verification must prove changed behavior, not just produce green-looking motion.
 - Extra docs and extra agents are optional, not the default.
