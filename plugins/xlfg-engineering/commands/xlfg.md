@@ -1,6 +1,5 @@
 ---
 description: Autonomous xlfg SDLC run. Batches hidden recall, context, plan, implement, verify, review, and compound skills end-to-end.
-aliases: ["xlfg"]
 argument-hint: "[feature, bugfix, investigation, or delivery request]"
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch, Skill(xlfg-engineering:xlfg-recall-phase *), Skill(xlfg-engineering:xlfg-context-phase *), Skill(xlfg-engineering:xlfg-plan-phase *), Skill(xlfg-engineering:xlfg-implement-phase *), Skill(xlfg-engineering:xlfg-verify-phase *), Skill(xlfg-engineering:xlfg-review-phase *), Skill(xlfg-engineering:xlfg-compound-phase *)
