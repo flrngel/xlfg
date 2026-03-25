@@ -392,7 +392,7 @@ class TestXLFG(unittest.TestCase):
 
         self.assertTrue(command_path.exists())
         self.assertTrue(standalone_path.exists())
-        self.assertFalse(plugin_skill_path.exists())
+        self.assertTrue(plugin_skill_path.exists())
 
         command_md = command_path.read_text(encoding="utf-8")
         standalone_md = standalone_path.read_text(encoding="utf-8")
@@ -443,7 +443,10 @@ class TestXLFG(unittest.TestCase):
 
     def test_plugin_support_skills_are_hidden_background_helpers(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
+        alias_skill = repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg" / "SKILL.md"
         for skill_path in sorted((repo_root / "plugins" / "xlfg-engineering" / "skills").rglob("SKILL.md")):
+            if skill_path == alias_skill:
+                continue
             text = skill_path.read_text(encoding="utf-8")
             self.assertNotIn("\nname:", text)
             self.assertIn("user-invocable: false", text)

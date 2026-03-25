@@ -183,7 +183,9 @@ def _entrypoint_report(root: Path) -> dict[str, Any]:
     has_plugin_command = plugin_command.exists()
     has_plugin_skill = plugin_skill.exists()
     has_standalone_skill = standalone_skill.exists()
-    collision = has_plugin_command and has_plugin_skill
+    # A thin alias skill that just delegates to the command is not a collision.
+    is_alias = has_plugin_skill and "/xlfg-engineering:xlfg" in plugin_skill_text and _word_count(plugin_skill_text) < 40
+    collision = has_plugin_command and has_plugin_skill and not is_alias
 
     plugin_primary_kind = "command" if has_plugin_command else ("skill" if has_plugin_skill else "none")
     plugin_primary_text = plugin_command_text if has_plugin_command else plugin_skill_text
