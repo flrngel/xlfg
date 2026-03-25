@@ -2,12 +2,11 @@
 
 ## Current state (2.4.1)
 
-2.4.1 adds `/xlfg` as a project-level skill alias for `/xlfg-engineering:xlfg`. A thin wrapper at `.claude/skills/xlfg/SKILL.md` delegates to the plugin command, so users can invoke the main entrypoint with just `/xlfg`.
+2.4.1 adds `/xlfg` as an alias for `/xlfg-engineering:xlfg` via the `aliases` command frontmatter field. This means plugin users can invoke the main entrypoint with just `/xlfg` instead of the fully-namespaced `/xlfg-engineering:xlfg`.
 
 2.4.0 restored batch phase skills without re-breaking the entrypoint. 2.3.0 fixed the broken command/skill collision but overcorrected into a monolithic prompt. 2.4.0 kept the good part of 2.3.0 — exactly one public entrypoint per install mode — while restoring the separated-skill architecture.
 
-- the plugin exposes one public command at `/xlfg-engineering:xlfg`
-- a project-level skill at `.claude/skills/xlfg/SKILL.md` aliases `/xlfg` → `/xlfg-engineering:xlfg`
+- the plugin exposes one public command at `/xlfg-engineering:xlfg` with alias `/xlfg`
 - the standalone pack still exposes one public short-name skill at `/xlfg`
 - both entrypoints now batch hidden phase skills in this order:
   1. recall
