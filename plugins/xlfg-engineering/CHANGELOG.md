@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.4.1
+
+- Added `aliases: ["xlfg"]` to the plugin command frontmatter so `/xlfg` can serve as a short alias for `/xlfg-engineering:xlfg`.
+
 ## 2.4.0
 
 - Restored the intended architecture: `/xlfg` now batches separated hidden phase skills instead of flattening the whole workflow into one monolithic prompt.

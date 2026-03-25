@@ -2,7 +2,7 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-Version 2.4.0 restores the architecture the workflow actually needed:
+Version 2.4.1 adds `/xlfg` as an alias for `/xlfg-engineering:xlfg` and restores the architecture the workflow actually needed:
 
 - `/xlfg` is still the **single public entrypoint**, but it now **batches hidden phase skills** instead of flattening the whole workflow into one giant prompt
 - the plugin form keeps one public namespaced command: `/xlfg-engineering:xlfg`
