@@ -2,7 +2,7 @@
 
 ## 2.4.1
 
-- Added a plugin skill at `plugins/xlfg-engineering/skills/xlfg/SKILL.md` so `/xlfg` aliases `/xlfg-engineering:xlfg`.
+- Added a project-level `.claude/skills/xlfg/SKILL.md` wrapper so `/xlfg` invokes `/xlfg-engineering:xlfg`.
 
 ## 2.4.0
 
