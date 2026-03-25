@@ -2,7 +2,7 @@
 
 ## 2.4.1
 
-- Added `aliases: ["xlfg"]` to the plugin command frontmatter so `/xlfg` can serve as a short alias for `/xlfg-engineering:xlfg`.
+- Added a project-level `.claude/skills/xlfg/SKILL.md` wrapper so `/xlfg` invokes `/xlfg-engineering:xlfg`.
 
 ## 2.4.0
 
