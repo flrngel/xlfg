@@ -194,6 +194,9 @@ def _entrypoint_report(root: Path) -> dict[str, Any]:
 
     plugin_name_frontmatter_count = 0
     for path in sorted((plugin_root / "commands").glob("*.md")):
+        # The main command uses name: to register a /xlfg alias; that is intentional.
+        if path == plugin_command:
+            continue
         if _parse_frontmatter(_read_text(path)).get("name"):
             plugin_name_frontmatter_count += 1
     for path in sorted((plugin_root / "skills").rglob("SKILL.md")):

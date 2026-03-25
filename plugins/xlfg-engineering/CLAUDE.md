@@ -25,10 +25,10 @@ Every shipped bundle must contain enough context that the next agent can continu
 
 ## Entry model
 
-- Public plugin entrypoint: `/xlfg-engineering:xlfg`
+- Public plugin entrypoint: `/xlfg-engineering:xlfg` (aliased as `/xlfg` via `name: xlfg` in command frontmatter)
 - Public standalone entrypoint: `/xlfg`
+- The main command uses `name: xlfg` to register `/xlfg` as a short alias. Do not remove it.
 - Hidden support and phase skills under `plugins/xlfg-engineering/skills/` should stay `user-invocable: false`.
-- Do not ship both a plugin command and a plugin skill with the same slash name.
 - Do not point a command at a repo-relative plugin file path. Installed plugins are not laid out like the source repo.
 - The correct architecture is **one public entrypoint that batches hidden phase skills**.
 

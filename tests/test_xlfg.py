@@ -426,7 +426,7 @@ class TestXLFG(unittest.TestCase):
         self.assertIn("xlfg start", standalone_md)
         self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", command_md)
         self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", standalone_md)
-        self.assertNotIn("\nname:", command_md)
+        self.assertIn("\nname: xlfg", command_md)
         self.assertNotIn("\nname:", standalone_md)
 
         for phase_name in plugin_phase_names:
