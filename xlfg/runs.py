@@ -53,14 +53,31 @@ Summarize only the smallest relevant slice of prior knowledge before planning.
 
 SPEC_TEMPLATE = """# Spec
 
-Treat this file as the **single source of truth** for the run. Keep it lean enough that planning, implementation, verification, and review can all start here.
+Treat this file as the **single source of truth** for the run. Keep it lean enough that intent resolution, planning, implementation, verification, and review can all start here.
 
-## Request truth
+## Intent contract
+- resolution: `proceed` | `proceed-with-assumptions` | `needs-user-answer`
 - work kind: `build` | `bugfix` | `research` | `multi`
 - raw request: ...
-- direct asks: ...
-- implied asks: ...
-- non-goals: ...
+- direct asks:
+  - `Q1`: ...
+- implied asks:
+  - `I1`: ...
+- acceptance criteria:
+  - `A1`: ...
+- non-goals:
+  - ...
+- constraints actually requested:
+  - ...
+- assumptions to proceed:
+  - ...
+- blocking ambiguities:
+  - ...
+- carry-forward anchor: ...
+
+## Objective groups
+- `O1` — ...; covers: `Q1 I1`; depends_on: `none`; completion: ...
+- `O2` — ...
 
 ## Outcome / why
 - user or operator pain today: ...
@@ -88,11 +105,12 @@ Treat this file as the **single source of truth** for the run. Keep it lean enou
 - rejected shortcuts: ...
 
 ## Task map
-- `T1`: ...
-- `T2`: ...
+- `T1` — ...; objectives: `O1`; scenarios: `P0-1`; owner: `agent`
+- `T2` — ...
 
 ## Proof summary
-- changed scenarios that must pass: ...
+- objective coverage:
+  - `O1`: `P0-1 G1`
 - fastest honest proof: ...
 - ship proof: ...
 - readiness target: `READY`
@@ -183,6 +201,8 @@ This is the run-level status ledger.
 
 ## Stage status
 - recall: TODO
+- intent: TODO
+- context: TODO
 - plan: TODO
 - implement: TODO
 - verify: TODO
@@ -199,16 +219,17 @@ This is the run-level status ledger.
 - the agent owns implementation, repo-local config changes, and major local verification unless the blocker is truly human-only
 - do not ask the user to sequence phase commands or carry the run state for you
 - do not claim GREEN unless changed behavior is actually proven
+- if a bundled request is only partially complete, say exactly which objectives are done vs blocked
 
-## Objectives
-| Objective | Status | Direct asks | Scenarios | Notes |
-|---|---|---|---|---|
-| O1 | TODO | Q1 | P0-1 |  |
+## Objective ledger
+| Objective | Status | Covers asks | Depends on | Scenarios | Notes |
+|---|---|---|---|---|---|
+| O1 | TODO | Q1 | none | P0-1 |  |
 
 ## Tasks
 | Task | Status | Objectives | Query IDs | Scenario IDs | Owner | Checks | Notes |
 |---|---|---|---|---|---|---|---|
-| T1 | TODO | O1 |  |  | agent |  |  |
+| T1 | TODO | O1 | Q1 A1 | P0-1 | agent |  |  |
 
 ## Risks / blockers
 - ...

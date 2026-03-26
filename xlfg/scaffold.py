@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from .util import append_unique_line, ensure_dir, safe_write
 
-SCAFFOLD_SCHEMA_VERSION = 11
+SCAFFOLD_SCHEMA_VERSION = 12
 
 INDEX_MD = """# xlfg
 
@@ -48,13 +48,13 @@ This keeps retrieval simple: read the tracked brief first for repo-wide truths, 
 
 ## Core workflow contract
 
-Normal `/xlfg` runs should auto-execute recall → plan → implement → verify → review → compound in one invocation. Minimal scaffold sync may happen silently when needed.
+Normal `/xlfg` runs should auto-execute recall → intent → context → plan → implement → verify → review → compound in one invocation. Minimal scaffold sync may happen silently when needed.
 
 The lean core run files are:
 
 1. `context.md` — request and constraints snapshot
 2. `memory-recall.md` — the smallest relevant prior knowledge slice
-3. `spec.md` — the **single source of truth** for PM / UX / Engineering / QA / Release
+3. `spec.md` — the **single source of truth** for the intent contract, PM / UX / Engineering / QA / Release
 4. `test-contract.md` — concise practical scenario contracts with fast proof + ship proof
 5. `test-readiness.md` — READY / REVISE gate for whether those scenarios are honest enough to code against
 6. `workboard.md` — run-level stage + task ledger
@@ -77,7 +77,7 @@ QUALITY_BAR_MD = """# xlfg quality bar
 
 Nothing is "done" unless:
 
-- **The run card is explicit** (`spec.md` exists and keeps direct asks, implied asks, non-goals, outcome, risks, and proof commitments visible)
+- **The run card is explicit** (`spec.md` exists and keeps the intent contract, objective groups, non-goals, outcome, risks, and proof commitments visible)
 - **Recall is honest** (`memory-recall.md` records real hits or a clear no-hit)
 - **Test intent is shared** (`test-contract.md` maps concise scenario contracts to practical fast proof and ship proof)
 - **Test readiness is explicit** (`test-readiness.md` is `READY` before coding or clearly explains why planning must be revised)
@@ -636,6 +636,11 @@ If you intentionally want to share a specific run, copy or export the relevant f
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
+    "2.5.0": [
+        "Intent resolution now lives inside spec.md; xlfg no longer relies on a separate query-contract file during active runs.",
+        "Added a mandatory intent phase before broad repo fan-out so messy prompts are split into objective groups with explicit assumptions or blockers.",
+        "Added xlfg eval-intent plus artifact-graded fixtures so bad prompts can be scored for ask recall, objective splitting, blocker handling, and false assumptions.",
+    ],
     "2.0.10": [
         "`/xlfg` no longer treats scaffold sync as a routine prepare stage; normal runs start from recall and planning.",
         "Planning now uses a simpler lead-owned model: fewer routine subagents, three explicit planning states (semantic / structural / execution), and agent-owned execution by default.",
@@ -702,7 +707,10 @@ def _manifest(tool_version: str) -> Dict[str, Any]:
         "current_state_promotion": "default-branch-or-explicit",
         "test_contract_style": "concise-practical-scenarios",
         "test_readiness_gate": "required",
-        "workflow_entry": "recall-plan-implement-verify-review-compound",
+        "workflow_entry": "recall-intent-context-plan-implement-verify-review-compound",
+        "intent_contract": "spec-md-ssot",
+        "multi_objective_splitter": "objective-groups-in-spec",
+        "intent_eval": "artifact-graded",
         "prepare_mode": "manual-maintenance-only",
         "planning_model": "semantic-structural-execution-state",
         "execution_ownership": "agent-owned-except-human-only",

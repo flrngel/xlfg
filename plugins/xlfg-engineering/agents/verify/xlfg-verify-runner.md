@@ -8,8 +8,8 @@ maxTurns: 4
 
 Modern xlfg compatibility note:
 - Start from `DOCS_RUN_DIR/spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md` when present.
-- Treat legacy split files (`query-contract.md`, `why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
-- Do not block or ask the user for those legacy files when `spec.md` already carries the truth.
+- Treat legacy split files (`why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
+- The intent contract now lives inside `spec.md`; do not recreate a separate intent file or ask the user for one.
 
 
 You run verification commands and capture evidence artifacts.
@@ -20,7 +20,7 @@ You run verification commands and capture evidence artifacts.
 - an ordered list of layered verification commands
 - any notes from `env-plan.md`
 - any repeated failure signatures or wrong-green traps from `memory-recall.md` or `current-state.md`
-- the carry-forward anchor from `query-contract.md`
+- the carry-forward anchor from `spec.md`
 
 **Output requirements (mandatory):**
 - Create `DX_RUN_DIR/verify/<YYYYMMDD-HHMMSS>/`.

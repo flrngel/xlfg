@@ -170,6 +170,31 @@ def _seeded_run_artifacts(root: Path) -> dict[str, Any]:
     }
 
 
+
+
+def _runtime_legacy_query_contract_refs(root: Path) -> dict[str, Any]:
+    targets = [
+        root / "plugins" / "xlfg-engineering" / "commands",
+        root / "plugins" / "xlfg-engineering" / "skills",
+        root / "plugins" / "xlfg-engineering" / "agents",
+        root / "standalone" / ".claude" / "skills",
+        root / "xlfg" / "runs.py",
+    ]
+    refs: list[str] = []
+    for target in targets:
+        if target.is_file():
+            text = _read_text(target)
+            if "query-contract.md" in text:
+                refs.append(str(target.relative_to(root)))
+            continue
+        if not target.exists():
+            continue
+        for path in sorted(target.rglob("*.md")) if target.is_dir() else []:
+            if "query-contract.md" in _read_text(path):
+                refs.append(str(path.relative_to(root)))
+    return {"count": len(refs), "paths": refs}
+
+
 def _entrypoint_report(root: Path) -> dict[str, Any]:
     plugin_root = root / "plugins" / "xlfg-engineering"
     plugin_command = plugin_root / "commands" / "xlfg.md"
@@ -194,9 +219,6 @@ def _entrypoint_report(root: Path) -> dict[str, Any]:
 
     plugin_name_frontmatter_count = 0
     for path in sorted((plugin_root / "commands").glob("*.md")):
-        # The main command uses name: to register a /xlfg alias; that is intentional.
-        if path == plugin_command:
-            continue
         if _parse_frontmatter(_read_text(path)).get("name"):
             plugin_name_frontmatter_count += 1
     for path in sorted((plugin_root / "skills").rglob("SKILL.md")):
@@ -309,12 +331,16 @@ def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
         "recall": "memory-recall.md" in brief_blob and ("recall" in brief_blob.lower() or (plugin_root / "skills" / "xlfg-recall" / "SKILL.md").exists()),
         "research_lane": "research.md" in brief_blob or "external research" in brief_blob.lower(),
         "run_card": "single source of truth" in brief_blob.lower() or "run card" in brief_blob.lower(),
+        "intent_ssot": "intent contract" in runs_text.lower() and _runtime_legacy_query_contract_refs(root)["count"] == 0,
         "lean_core_artifacts": _seeded_run_artifacts(root)["file_count"] <= 6,
         "autonomous_macro": "one autonomous run" in brief_blob.lower() or "do the full sdlc here" in brief_blob.lower(),
+        "mandatory_intent_gate": "xlfg-intent-phase" in primary_text and "needs-user-answer" in primary_text,
+        "multi_objective_splitter": "objective groups" in brief_blob.lower() and "split" in primary_text.lower(),
         "verify": (root / "xlfg" / "verify.py").exists() and ("verification.md" in brief_blob or "xlfg verify" in brief_blob),
         "review": "review" in primary_text.lower(),
         "compound": "compound" in primary_text.lower(),
         "audit": "audit" in cli_text and (plugin_root / "commands" / "xlfg-audit.md").exists(),
+        "intent_eval_suite": "eval-intent" in cli_text and (root / "xlfg" / "intent_eval.py").exists(),
         "benchmark_doc": (root / "docs" / "benchmarking.md").exists(),
         "skill_native": entrypoints["standalone_skill_exists"] or any((plugin_root / "skills").glob("*/SKILL.md")),
         "standalone_short_name_pack": entrypoints["standalone_skill_exists"],
@@ -385,19 +411,24 @@ def _coverage_score(features: dict[str, bool], version_sync_ok: bool) -> int:
     score += 10 if features.get("recall") else 0
     score += 10 if features.get("research_lane") else 0
     score += 10 if features.get("run_card") else 0
+    score += 10 if features.get("intent_ssot") else 0
     score += 10 if features.get("lean_core_artifacts") else 0
     score += 12 if features.get("autonomous_macro") else 0
+    score += 12 if features.get("mandatory_intent_gate") else 0
+    score += 8 if features.get("mandatory_intent_gate") else 0
     score += 8 if features.get("verify") else 0
     score += 8 if features.get("review") else 0
     score += 6 if features.get("compound") else 0
     score += 6 if features.get("audit") else 0
+    score += 6 if features.get("intent_eval_suite") else 0
     score += 6 if features.get("benchmark_doc") else 0
     score += 6 if features.get("single_main_entrypoint") else 0
+    score += 6 if features.get("multi_objective_splitter") else 0
     score += 6 if features.get("batch_phase_skills") else 0
     score += 4 if features.get("background_support_skills") else 0
     score += 4 if features.get("no_legacy_task_tool") else 0
     score += 4 if version_sync_ok else 0
-    return score
+    return min(100, score)
 
 
 def _compatibility_score(features: dict[str, bool]) -> int:
@@ -408,13 +439,15 @@ def _compatibility_score(features: dict[str, bool]) -> int:
     score += 8 if features.get("effort_frontmatter") else 0
     score += 8 if features.get("plugin_namespace_documented") else 0
     score += 12 if features.get("autonomous_macro") else 0
+    score += 8 if features.get("mandatory_intent_gate") else 0
     score += 12 if features.get("single_main_entrypoint") else 0
     score += 15 if features.get("batch_phase_skills") else 0
+    score += 8 if features.get("multi_objective_splitter") else 0
     score += 5 if features.get("just_in_time_phase_loading") else 0
     score += 5 if features.get("no_legacy_task_tool") else 0
     score += 3 if features.get("no_repo_relative_plugin_refs") else 0
     score += 2 if features.get("plugin_name_frontmatter_avoided") else 0
-    return score
+    return min(100, score)
 
 
 def _top_recommendations(
@@ -437,6 +470,12 @@ def _top_recommendations(
         recs.append("Trim the primary workflow further so xlfg stays lighter than a strong vanilla Claude Code path.")
     if seeded_run_files > 6:
         recs.append("Keep only the lean core run files always-on; create supporting docs only when they change a decision.")
+    if not features.get("intent_ssot"):
+        recs.append("Keep intent in spec.md only; remove active query-contract.md usage from runtime prompts and entrypoints.")
+    if not features.get("mandatory_intent_gate"):
+        recs.append("Add a mandatory intent gate before broad repo fan-out so messy queries are split and clarified early.")
+    if not features.get("intent_eval_suite"):
+        recs.append("Ship an intent evaluation harness so bad prompts are scored with artifacts instead of intuition.")
     if plan_required_artifacts > 6:
         recs.append("Collapse mandatory planning artifacts into spec.md plus proof/status docs.")
     if implement_reads > 1 or verify_reads > 1 or review_reads > 1:
@@ -481,6 +520,7 @@ def audit_repo(root: Path) -> Dict[str, Any]:
     phases = _phase_metrics(root, entrypoints)
     models = _model_report(root)
     features = _features(root, entrypoints)
+    runtime_legacy_query_contract_refs = _runtime_legacy_query_contract_refs(root)
 
     load = _workflow_load_score(
         workflow_words=words["workflow_words"],
@@ -534,6 +574,7 @@ def audit_repo(root: Path) -> Dict[str, Any]:
             "phase_load": phases,
             "models": models,
             "features": features,
+        "runtime_legacy_query_contract_refs": runtime_legacy_query_contract_refs,
         },
         "scores": {
             "workflow_load_score": load["score"],

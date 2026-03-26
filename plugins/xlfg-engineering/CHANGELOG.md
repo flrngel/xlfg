@@ -1,8 +1,13 @@
 # Changelog
 
-## 2.4.1
+## 2.5.0
 
-- Restored `name: xlfg` in the plugin command frontmatter so `/xlfg` registers as a short alias for `/xlfg-engineering:xlfg`.
+- Moved active intent handling fully into `spec.md`; runtime prompts no longer depend on a separate query-contract file.
+- Added a mandatory hidden `xlfg-intent-phase` before context fan-out and planning.
+- Upgraded the query-refiner into an intent resolver that writes resolution, asks, acceptance criteria, assumptions, blockers, and objective groups into `spec.md`.
+- Added artifact-graded `xlfg eval-intent` plus bundled messy-prompt fixtures under `evals/intent/`.
+- Extended the run templates so objective groups, task mapping, and partial completion remain legible across messy multi-request runs.
+- Updated audit rules, lint rules, docs, and tests to enforce intent-as-SSOT and zero active runtime dependency on a separate intent file.
 
 ## 2.4.0
 

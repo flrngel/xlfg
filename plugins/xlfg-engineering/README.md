@@ -2,18 +2,18 @@
 
 `xlfg-engineering` is an autonomous SDLC harness for modern Claude Code.
 
-The 2.4.0 design target is simple:
+The 2.5.0 design target is simple:
 
-> **One public entrypoint, one run card, hidden phase skills loaded just in time.**
+> **One public entrypoint, one run card, one intent contract, hidden phase skills loaded just in time.**
 
-## What changed in 2.4.0
+## What changed in 2.5.0
 
-- `/xlfg-engineering:xlfg` is still the single public plugin entrypoint.
-- The entrypoint now **batches separated hidden skills** for recall, context, plan, implement, verify, review, and compound.
-- The standalone pack now ships the same hidden phase skills, so short-name `/xlfg` behaves like the plugin entrypoint.
-- The workflow now uses current Claude Code tool names such as `Skill`, `WebSearch`, and `WebFetch` instead of the stale `Task` naming.
+- `/xlfg-engineering:xlfg` still stays the single public plugin entrypoint.
+- The batch now includes a mandatory **intent phase** before broad repo fan-out.
+- `spec.md` is now the only active home for the intent contract and objective groups.
+- Bundled / messy prompts are split into explicit objective groups with assumptions or blockers called out early.
+- `xlfg eval-intent` scores real run artifacts against fixtures so bad prompts can be measured instead of hand-waved.
 - Support skills remain hidden background helpers instead of cluttering the slash menu.
-- `spec.md` remains the single source of truth, so phase batching does not reintroduce duplicated planning files.
 
 ## Quick start
 
@@ -58,6 +58,9 @@ Optional only when they add decision value:
 - Claude Code stays the orchestrator.
 - `/xlfg` owns the full run and should not ask the human to run internal phases.
 - Hidden phase skills are loaded just in time instead of being inlined into one monolithic entrypoint.
-- `spec.md` carries PM / UX / Engineering / QA truth in one place.
+- `spec.md` carries the intent contract plus PM / UX / Engineering / QA truth in one place.
 - Verification must prove changed behavior, not just produce green-looking motion.
 - Extra docs and extra agents are optional, not the default.
+
+
+Reference intent fixtures ship in `evals/intent/`, and `xlfg eval-intent --suite-dir evals/intent` scores the bundled example artifacts out of the box.

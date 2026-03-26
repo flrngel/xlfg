@@ -1,0 +1,65 @@
+---
+description: Internal xlfg phase skill. Use only during /xlfg runs to resolve messy user intent into a compact contract inside spec.md before broad repo fan-out.
+user-invocable: false
+allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch, Agent
+---
+
+# xlfg-intent-phase
+
+Use only during `/xlfg` orchestration.
+
+Input: `$ARGUMENTS` (`RUN_ID` or `latest`)
+
+## Objective
+
+Resolve the user's request into a compact intent contract inside `spec.md` before broad repo fan-out.
+
+This phase exists because users often provide:
+- incomplete context
+- multiple asks in one message
+- hidden acceptance criteria
+- stale or mistaken assumptions
+- overloaded "and also" requests
+
+## Process
+
+1. Resolve `RUN_ID`, `DOCS_RUN_DIR`, and `DX_RUN_DIR`.
+2. Read only:
+   - `context.md`
+   - `memory-recall.md`
+   - `spec.md`
+   - `workboard.md`
+   - `docs/xlfg/knowledge/current-state.md`
+3. Use lightweight repo reads first. Use targeted web research only when:
+   - a term is unfamiliar or likely stale
+   - the request depends on current external facts
+   - freshness changes the meaning of the request
+4. Use `xlfg-query-refiner` as the primary specialist for this phase. Use no other specialists unless they materially reduce a blocking ambiguity.
+5. Update `spec.md` so the top `Intent contract` and `Objective groups` sections are concrete:
+   - `resolution`: `proceed` | `proceed-with-assumptions` | `needs-user-answer`
+   - stable IDs for direct asks (`Q1`, `Q2`, ...)
+   - stable IDs for implied asks (`I1`, `I2`, ...)
+   - stable IDs for acceptance criteria (`A1`, `A2`, ...)
+   - non-goals, requested constraints, assumptions, blocking ambiguities, and the carry-forward anchor
+   - objective groups (`O1`, `O2`, ...) with covers / depends_on / completion notes
+6. Update `workboard.md` so the objective ledger reflects the same objective groups and the next action is visible.
+
+## Resolution rule
+
+- Default to `proceed` when the request is clear enough to act.
+- Use `proceed-with-assumptions` when the request is implementable and the assumptions are low-risk, explicit, and reversible.
+- Use `needs-user-answer` only when correctness would materially change and repo truth plus current research cannot ground a safe default.
+
+## Blocking-question rule
+
+If `resolution` is `needs-user-answer`:
+- ask at most **three** concise numbered blocking questions
+- state the smallest safe assumptions you refused to make
+- stop the batch after surfacing the blocker
+
+## Guardrails
+
+- Do not recreate a separate intent file.
+- Do not broad-scan the repo until the intent contract exists.
+- When the query bundles multiple asks, split them into the smallest stable objective groups instead of collapsing them into one muddy goal.
+- Keep the carry-forward anchor short enough that later phases can reread it quickly.

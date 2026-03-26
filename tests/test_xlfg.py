@@ -14,6 +14,7 @@ from xlfg.doctor import ensure_dev_server
 from xlfg.runs import create_run
 from xlfg.recall import recall
 from xlfg.contracts import parse_test_readiness_verdict
+from xlfg.intent_eval import grade_intent_artifacts, evaluate_intent_suite
 from xlfg.scaffold import ensure_scaffold, scaffold_status
 from xlfg.verify import verify
 
@@ -133,6 +134,11 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("do not ask the user to sequence phase commands", workboard)
             spec = (run_dir / "spec.md").read_text(encoding="utf-8")
             self.assertIn("single source of truth", spec.lower())
+            self.assertIn("## Intent contract", spec)
+            self.assertIn("## Objective groups", spec)
+            self.assertIn("resolution:", spec)
+            self.assertIn("intent: TODO", workboard)
+            self.assertIn("Objective ledger", workboard)
 
     def test_prepare_scaffold_creates_recall_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -378,11 +384,16 @@ class TestXLFG(unittest.TestCase):
         self.assertTrue(report["metrics"]["features"]["standalone_short_name_pack"])
         self.assertTrue(report["metrics"]["features"]["single_main_entrypoint"])
         self.assertTrue(report["metrics"]["features"]["batch_phase_skills"])
+        self.assertTrue(report["metrics"]["features"]["intent_ssot"])
+        self.assertTrue(report["metrics"]["features"]["mandatory_intent_gate"])
+        self.assertTrue(report["metrics"]["features"]["intent_eval_suite"])
+        self.assertTrue(report["metrics"]["features"]["multi_objective_splitter"])
         self.assertTrue(report["metrics"]["features"]["just_in_time_phase_loading"])
         self.assertTrue(report["metrics"]["features"]["no_legacy_task_tool"])
         self.assertTrue(report["metrics"]["features"]["no_repo_relative_plugin_refs"])
         self.assertTrue(report["metrics"]["features"]["plugin_name_frontmatter_avoided"])
         self.assertGreaterEqual(report["metrics"]["models"]["counts"].get("haiku", 0), 1)
+        self.assertEqual(report["metrics"]["runtime_legacy_query_contract_refs"]["count"], 0)
 
     def test_main_xlfg_entrypoints_are_self_contained_and_batch_phase_driven(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
@@ -399,6 +410,7 @@ class TestXLFG(unittest.TestCase):
 
         plugin_phase_names = [
             "xlfg-engineering:xlfg-recall-phase",
+            "xlfg-engineering:xlfg-intent-phase",
             "xlfg-engineering:xlfg-context-phase",
             "xlfg-engineering:xlfg-plan-phase",
             "xlfg-engineering:xlfg-implement-phase",
@@ -426,7 +438,7 @@ class TestXLFG(unittest.TestCase):
         self.assertIn("xlfg start", standalone_md)
         self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", command_md)
         self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", standalone_md)
-        self.assertIn("\nname: xlfg", command_md)
+        self.assertNotIn("\nname:", command_md)
         self.assertNotIn("\nname:", standalone_md)
 
         for phase_name in plugin_phase_names:
@@ -434,10 +446,160 @@ class TestXLFG(unittest.TestCase):
         for phase_name in standalone_phase_names:
             self.assertIn(phase_name, standalone_md)
 
-        self.assertIn("Skill(xlfg-engineering:xlfg-recall-phase *)", command_md)
-        self.assertIn("Skill(xlfg-recall-phase *)", standalone_md)
+        self.assertIn("Skill(xlfg-engineering:xlfg-intent-phase *)", command_md)
+        self.assertIn("Skill(xlfg-intent-phase *)", standalone_md)
         self.assertNotIn(" Task", command_md)
         self.assertNotIn(" Task", standalone_md)
+
+
+
+    def test_runtime_prompts_do_not_depend_on_query_contract_file(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        runtime_paths = [
+            repo_root / "plugins" / "xlfg-engineering" / "commands",
+            repo_root / "plugins" / "xlfg-engineering" / "skills",
+            repo_root / "plugins" / "xlfg-engineering" / "agents",
+            repo_root / "standalone" / ".claude" / "skills",
+        ]
+        for target in runtime_paths:
+            for path in sorted(target.rglob("*.md")):
+                text = path.read_text(encoding="utf-8")
+                self.assertNotIn("query-contract.md", text, msg=str(path.relative_to(repo_root)))
+
+    def test_intent_eval_scores_multi_objective_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root_dir = Path(td)
+            fixture = {
+                "id": "messy-bundle",
+                "query": "fix the login redirect, keep SSO working, and improve the invalid-password error copy",
+                "expected": {
+                    "work_kind": "multi",
+                    "direct_asks": ["fix the login redirect", "improve the invalid-password error copy"],
+                    "implied_asks": ["keep SSO working"],
+                    "acceptance_criteria": ["successful login lands on dashboard", "invalid password shows the new error copy"],
+                    "objectives": [
+                        "Fix login redirect after successful auth",
+                        "Improve invalid-password error copy without breaking SSO",
+                    ],
+                    "blocking_ambiguities": [],
+                    "forbidden_claims": ["replace the auth provider"],
+                    "max_blocking_questions": 1,
+                },
+            }
+            spec = root_dir / "spec.md"
+            test_contract = root_dir / "test-contract.md"
+            workboard = root_dir / "workboard.md"
+            spec.write_text(
+                """# Spec
+
+## Intent contract
+- resolution: `proceed-with-assumptions`
+- work kind: `multi`
+- raw request: fix the login redirect, keep SSO working, and improve the invalid-password error copy
+- direct asks:
+  - `Q1`: fix the login redirect
+  - `Q2`: improve the invalid-password error copy
+- implied asks:
+  - `I1`: keep SSO working
+- acceptance criteria:
+  - `A1`: successful login lands on dashboard
+  - `A2`: invalid password shows the new error copy
+- non-goals:
+  - replace auth provider
+- constraints actually requested:
+  - preserve current auth stack
+- assumptions to proceed:
+  - SSO callback path should remain unchanged
+- blocking ambiguities:
+  - none
+- carry-forward anchor: preserve SSO while fixing redirect and error copy
+
+## Objective groups
+- `O1` — Fix login redirect after successful auth; covers: `Q1 I1 A1`; depends_on: `none`; completion: successful auth always lands on dashboard
+- `O2` — Improve invalid-password error copy without breaking SSO; covers: `Q2 I1 A2`; depends_on: `O1`; completion: new copy appears and SSO still works
+
+## Task map
+- `T1` — patch auth redirect handler; objectives: `O1`; scenarios: `P0-1`; owner: `agent`
+- `T2` — update invalid-password copy and tests; objectives: `O2`; scenarios: `P0-2`; owner: `agent`
+""",
+                encoding="utf-8",
+            )
+            test_contract.write_text(
+                """# Test contract
+
+## Required scenario contracts
+
+### P0-1 — login redirect
+- objective: `O1`
+- requirement_kind: `F2P`
+- priority: `P0`
+- query_ids: `Q1 I1 A1`
+- practical_steps:
+  1. log in with valid credentials
+- fast_check: python -c "print('redirect ok')"
+- ship_phase: `fast`
+- ship_check: python -c "print('redirect ship ok')"
+- regression_check: python -c "print('redirect guard ok')"
+- manual_smoke: NONE
+- anti_monkey_probe: patching only one callback still leaves SSO broken
+- notes:
+
+### P0-2 — invalid-password copy
+- objective: `O2`
+- requirement_kind: `F2P`
+- priority: `P0`
+- query_ids: `Q2 I1 A2`
+- practical_steps:
+  1. log in with invalid password
+- fast_check: python -c "print('copy ok')"
+- ship_phase: `fast`
+- ship_check: python -c "print('copy ship ok')"
+- regression_check: python -c "print('copy guard ok')"
+- manual_smoke: NONE
+- anti_monkey_probe: copy updates but SSO path regresses
+- notes:
+""",
+                encoding="utf-8",
+            )
+            workboard.write_text(
+                """# Workboard
+
+## Objective ledger
+| Objective | Status | Covers asks | Depends on | Scenarios | Notes |
+|---|---|---|---|---|---|
+| O1 | DONE | Q1 I1 A1 | none | P0-1 |  |
+| O2 | IN_PROGRESS | Q2 I1 A2 | O1 | P0-2 |  |
+
+## Tasks
+| Task | Status | Objectives | Query IDs | Scenario IDs | Owner | Checks | Notes |
+|---|---|---|---|---|---|---|---|
+| T1 | DONE | O1 | Q1 I1 A1 | P0-1 | agent |  |  |
+| T2 | IN_PROGRESS | O2 | Q2 I1 A2 | P0-2 | agent |  |  |
+""",
+                encoding="utf-8",
+            )
+            report = grade_intent_artifacts(
+                fixture=fixture,
+                spec_path=spec,
+                test_contract_path=test_contract,
+                workboard_path=workboard,
+            )
+            self.assertGreaterEqual(report["metrics"]["direct_ask_recall"], 1.0)
+            self.assertGreaterEqual(report["metrics"]["implied_ask_recall"], 1.0)
+            self.assertGreaterEqual(report["metrics"]["objective_split_recall"], 1.0)
+            self.assertGreaterEqual(report["metrics"]["objective_scenario_coverage"], 1.0)
+            self.assertGreaterEqual(report["metrics"]["objective_task_coverage"], 1.0)
+            self.assertEqual(report["metrics"]["false_assumption_rate"], 0.0)
+
+
+    def test_bundled_intent_eval_suite_scores_fixture_artifacts(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        report = evaluate_intent_suite(
+            suite_dir=repo_root / "evals" / "intent",
+            artifacts_root=repo_root / "evals" / "intent" / "artifacts",
+        )
+        self.assertEqual(report["case_count"], 4)
+        self.assertGreaterEqual(report["overall"], 0.95)
 
 
 

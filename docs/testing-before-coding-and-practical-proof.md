@@ -98,7 +98,7 @@ Main lesson:
 
 What xlfg changed because of that:
 
-- `query-contract.md` continues to separate asks/requirements/constraints
+- the intent contract inside `spec.md` continues to separate asks/requirements/constraints
 - scenario contracts in `test-contract.md` now trace back to objective/query IDs more explicitly
 
 #### Patch Validation
@@ -284,7 +284,7 @@ The crucial rule is between 3 and 4:
 
 If xlfg still underperforms in real repos, inspect these in order:
 
-1. did `query-contract.md` miss or under-specify the actual task?
+1. did the intent contract inside `spec.md` miss or under-specify the actual task?
 2. did `flow-spec.md` miss the practical interaction variants?
 3. did `test-contract.md` define only generic repo checks instead of scenario proof?
 4. did `test-readiness.md` incorrectly allow a vague contract to pass?

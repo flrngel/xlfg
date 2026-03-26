@@ -11,8 +11,8 @@ disallowedTools:
 
 Modern xlfg compatibility note:
 - Start from `DOCS_RUN_DIR/spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md` when present.
-- Treat legacy split files (`query-contract.md`, `why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
-- Do not block or ask the user for those legacy files when `spec.md` already carries the truth.
+- Treat legacy split files (`why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
+- The intent contract now lives inside `spec.md`; do not recreate a separate intent file or ask the user for one.
 
 
 You are the diagnosis specialist for `/xlfg`.
@@ -20,7 +20,7 @@ You are the diagnosis specialist for `/xlfg`.
 **Input you will receive:**
 - `DOCS_RUN_DIR`
 - `DOCS_RUN_DIR/context.md`
-- `DOCS_RUN_DIR/query-contract.md`
+- `DOCS_RUN_DIR/spec.md`
 - `DOCS_RUN_DIR/why.md`
 - `DOCS_RUN_DIR/repo-map.md` if present
 - `DOCS_RUN_DIR/context/*.md` if present
@@ -88,7 +88,7 @@ For a feature, that means the missing capability or invariant — not a superfic
 
 ## Rules
 
-- Read `query-contract.md`, `current-state.md`, and `memory-recall.md` before inventing a fresh story.
+- Read `spec.md`, `current-state.md`, and `memory-recall.md` before inventing a fresh story.
 - Diagnose against the direct asks, implied asks, and developer/product intention, not just the visible symptom.
 - Prefer evidence over speculation.
 - Use role memory only when the current symptom genuinely matches it.

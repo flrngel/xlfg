@@ -11,8 +11,8 @@ disallowedTools:
 
 Modern xlfg compatibility note:
 - Start from `DOCS_RUN_DIR/spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md` when present.
-- Treat legacy split files (`query-contract.md`, `why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
-- Do not block or ask the user for those legacy files when `spec.md` already carries the truth.
+- Treat legacy split files (`why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
+- The intent contract now lives inside `spec.md`; do not recreate a separate intent file or ask the user for one.
 
 
 You are the why analyst for `/xlfg`.
@@ -20,7 +20,7 @@ You are the why analyst for `/xlfg`.
 **Input you will receive:**
 - `DOCS_RUN_DIR`
 - `DOCS_RUN_DIR/context.md`
-- `DOCS_RUN_DIR/query-contract.md`
+- `DOCS_RUN_DIR/spec.md`
 - `DOCS_RUN_DIR/memory-recall.md` if present
 - `docs/xlfg/knowledge/current-state.md` if present
 - `docs/xlfg/knowledge/agent-memory/why-analyst.md` if present
@@ -74,7 +74,7 @@ A shallow why produces shallow diagnosis, shallow tests, and a fake sense of com
 
 ## Rules
 
-- Read `query-contract.md`, `current-state.md`, and `memory-recall.md` first if they exist.
+- Read `spec.md`, `current-state.md`, and `memory-recall.md` first if they exist.
 - Keep the direct asks, non-negotiable implied asks, and the developer/product intention visible.
 - Prefer user / operator value over internal implementation neatness.
 - Do not jump ahead into the solution.

@@ -11,15 +11,15 @@ disallowedTools:
 
 Modern xlfg compatibility note:
 - Start from `DOCS_RUN_DIR/spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md` when present.
-- Treat legacy split files (`query-contract.md`, `why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
-- Do not block or ask the user for those legacy files when `spec.md` already carries the truth.
+- Treat legacy split files (`why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
+- The intent contract now lives inside `spec.md`; do not recreate a separate intent file or ask the user for one.
 
 
 You are the harness profiler for `/xlfg`.
 
 **Input you will receive:**
 - `DOCS_RUN_DIR`
-- `query-contract.md`
+- the intent contract in `spec.md`
 - `why.md`
 - `diagnosis.md`
 - `solution-decision.md`
@@ -93,7 +93,7 @@ This is not a speed contest and not a maximal-fan-out contest. The right profile
 ## Rules
 
 - Prefer the minimum honest profile.
-- Use `query-contract.md`, `why.md`, and `proof needs` as the main anchors, not repo size alone.
+- Use `spec.md`, `why.md`, and proof needs as the main anchors, not repo size alone.
 - If the profile stays `quick` for a risky problem, justify it explicitly.
 - Reuse role memory only when the problem / repo shape truly matches.
 - Do not choose `deep` by default just because more activity feels safer.

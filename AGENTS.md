@@ -6,7 +6,8 @@ Read `NEXT_AGENT_CONTEXT.md` first. It is the bundle-level handoff document and 
 
 - `/xlfg` is one autonomous SDLC run by default. Do not reintroduce manual phase slash-command choreography.
 - `/xlfg` must always use deterministic recall before broad repo fan-out.
-- `spec.md` is the run card and single source of truth.
+- `/xlfg` must resolve intent before broad repo/context fan-out.
+- `spec.md` is the run card and single source of truth, including the intent contract and objective groups.
 - Planning must declare concise practical scenario contracts and get `test-readiness.md = READY` before implementation.
 - Planning should load optional agents progressively, not automatically.
 - Implementation must use explicit agents and targeted proof.
@@ -16,6 +17,7 @@ Read `NEXT_AGENT_CONTEXT.md` first. It is the bundle-level handoff document and 
 - Review confirms quality; it does not create quality.
 - The repo is the system of record for long-running agent work.
 - The Python CLI is optional implementation support; the standalone `/xlfg` entrypoint is the clearest UX.
+- Intent quality should be measured with artifact-based evaluation, not vibes.
 
 ## Important paths
 
@@ -25,5 +27,6 @@ Read `NEXT_AGENT_CONTEXT.md` first. It is the bundle-level handoff document and 
 - `plugins/xlfg-engineering/agents/` — subagent prompts
 - `plugins/xlfg-engineering/skills/` — hidden support skills
 - `standalone/.claude/skills/xlfg/` — short `/xlfg` install pack
+- `evals/intent/` — messy-prompt fixtures for artifact grading
 - `xlfg/` — dependency-free helper CLI / scaffold backend
-- `tests/` — regression tests for scaffold, recall, verification, and repo contracts
+- `tests/` — regression tests for scaffold, recall, verification, intent grading, and repo contracts

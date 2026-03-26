@@ -22,7 +22,7 @@ The fix in 2.0.10 is not “more process.” It is **less routine ceremony, bett
 - better natural-language problem statements before the normal agent loop
 
 xlfg keeps this as:
-- `query-contract.md`
+- the intent contract inside `spec.md`
 - recall before wide fan-out
 - a lead-owned plan that starts from request truth, not file edits
 
@@ -49,7 +49,7 @@ xlfg keeps this as:
 - an evolving reasoning knowledge base that accumulates intermediate decisions and constraints
 
 xlfg keeps this as three explicit planning states:
-- **semantic state** — `query-contract.md`, `why.md`, `diagnosis.md`
+- **semantic state** — the intent contract inside `spec.md`, `why.md`, `diagnosis.md`
 - **structural state** — `repo-map.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`
 - **execution state** — `plan.md`, `workboard.md`, `proof-map.md`, `scorecard.md`
 
@@ -160,7 +160,7 @@ This is the simplest useful way to keep the request from drifting and the proof 
 3. Keep execution ownership explicit and biased toward the agent doing the work.
 4. Keep test scenarios concise, practical, and predeclared.
 5. Preserve the semantic / structural / execution state split.
-6. Preserve `query-contract.md` as request truth, `workboard.md` as execution truth, and `proof-map.md` as proof truth.
+6. Preserve the intent contract inside `spec.md` as request truth, `workboard.md` as execution truth, and `proof-map.md` as proof truth.
 
 ## Remaining open questions
 

@@ -8,8 +8,8 @@ maxTurns: 6
 
 Modern xlfg compatibility note:
 - Start from `DOCS_RUN_DIR/spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md` when present.
-- Treat legacy split files (`query-contract.md`, `why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
-- Do not block or ask the user for those legacy files when `spec.md` already carries the truth.
+- Treat legacy split files (`why.md`, `harness-profile.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `scorecard.md`, `plan.md`) as optional compatibility context only.
+- The intent contract now lives inside `spec.md`; do not recreate a separate intent file or ask the user for one.
 
 
 You are the targeted test implementer for `/xlfg`.
@@ -18,7 +18,7 @@ You are the targeted test implementer for `/xlfg`.
 - `DOCS_RUN_DIR`
 - `TASK_ID`
 - `tasks/<task-id>/task-brief.md`
-- `query-contract.md`
+- the intent contract in `spec.md`
 - `why.md`
 - `diagnosis.md`
 - `solution-decision.md`

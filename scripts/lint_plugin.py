@@ -28,6 +28,7 @@ BROKEN_PLUGIN_PATH_RE = re.compile(r"plugins/xlfg-engineering/")
 LEGACY_TASK_RE = re.compile(r"\bTask\b")
 PHASE_SKILLS = [
     "xlfg-recall-phase",
+    "xlfg-intent-phase",
     "xlfg-context-phase",
     "xlfg-plan-phase",
     "xlfg-implement-phase",
@@ -147,7 +148,8 @@ def main() -> int:
             issues.append(LintIssue(phase_skill, "Missing hidden phase skill."))
 
     for p in sorted((PLUGIN_ROOT / "agents").rglob("*.md")):
-        fm = parse_frontmatter(_load_text(p))
+        text = _load_text(p)
+        fm = parse_frontmatter(text)
         # agent descriptions still matter, but `name` is fine here and often useful
         if fm is None:
             issues.append(LintIssue(p, "Missing YAML frontmatter for agent"))
@@ -157,6 +159,8 @@ def main() -> int:
             issues.append(LintIssue(p, "Frontmatter missing 'description' for agent"))
         if desc and len(desc) > 220:
             issues.append(LintIssue(p, f"description too long ({len(desc)} chars > 220)."))
+        if "query-contract.md" in text:
+            issues.append(LintIssue(p, "Active runtime prompts should not depend on query-contract.md; keep the intent contract in spec.md instead."))
 
     for skill_dir in sorted((PLUGIN_ROOT / "skills").iterdir()):
         if not skill_dir.is_dir():
@@ -170,6 +174,8 @@ def main() -> int:
         issues.extend(lint_frontmatter(skill_md, fm, "skill"))
         if BROKEN_PLUGIN_PATH_RE.search(text):
             issues.append(LintIssue(skill_md, "Do not reference repo-relative plugin paths from a skill; installed plugins are not laid out like the source repo."))
+        if "query-contract.md" in text:
+            issues.append(LintIssue(skill_md, "Active runtime skills should not mention query-contract.md; keep the intent contract in spec.md instead."))
         if fm and fm.get("user-invocable") != "false" and skill_dir.name.startswith("xlfg-"):
             issues.append(LintIssue(skill_md, "Support and phase skills should usually be `user-invocable: false` so the main /xlfg entrypoint stays clear."))
 

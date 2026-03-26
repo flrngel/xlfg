@@ -1,8 +1,8 @@
 ---
-description: Autonomous xlfg SDLC run. Batches hidden recall, context, plan, implement, verify, review, and compound skills end-to-end.
+description: Autonomous xlfg SDLC run. Batches hidden recall, intent, context, plan, implement, verify, review, and compound skills end-to-end.
 argument-hint: "[feature, bugfix, investigation, or delivery request]"
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch, Skill(xlfg-recall-phase *), Skill(xlfg-context-phase *), Skill(xlfg-plan-phase *), Skill(xlfg-implement-phase *), Skill(xlfg-verify-phase *), Skill(xlfg-review-phase *), Skill(xlfg-compound-phase *)
+allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch, Skill(xlfg-recall-phase *), Skill(xlfg-intent-phase *), Skill(xlfg-context-phase *), Skill(xlfg-plan-phase *), Skill(xlfg-implement-phase *), Skill(xlfg-verify-phase *), Skill(xlfg-review-phase *), Skill(xlfg-compound-phase *)
 effort: high
 hooks:
   PermissionRequest:
@@ -23,12 +23,14 @@ Treat this invocation as **one autonomous run**.
 
 ## Run contract
 
-- keep `spec.md` as the single source of truth for request truth, chosen solution, task map, proof status, and PM / UX / Engineering / QA / Release notes
+- keep `spec.md` as the single source of truth for intent, chosen solution, task map, proof status, and PM / UX / Engineering / QA / Release notes
+- do **not** recreate a separate intent file; the intent contract now lives inside `spec.md`
 - create optional docs only when they change a decision, proof obligation, or durable lesson
 - do not stop for internal phase approvals
 - ask the user only for true human-only blockers: missing secrets, destructive external approvals, or correctness-changing product ambiguity you cannot ground from the repo or current research
 - prefer repo truth first, then targeted web research when freshness matters or the repo is insufficient
 - prefer the local `xlfg` helper CLI when available
+- for bundled or messy requests, split the work into stable objective groups (`O1`, `O2`, ...) before broad repo fan-out
 
 ## Startup
 
@@ -41,17 +43,20 @@ Treat this invocation as **one autonomous run**.
 Invoke these hidden skills in this exact order, always passing `RUN_ID`:
 
 1. `xlfg-recall-phase`
-2. `xlfg-context-phase`
-3. `xlfg-plan-phase`
-4. `xlfg-implement-phase`
-5. `xlfg-verify-phase`
-6. `xlfg-review-phase`
-7. `xlfg-compound-phase`
+2. `xlfg-intent-phase`
+3. `xlfg-context-phase`
+4. `xlfg-plan-phase`
+5. `xlfg-implement-phase`
+6. `xlfg-verify-phase`
+7. `xlfg-review-phase`
+8. `xlfg-compound-phase`
 
 Use the `Skill` tool to load each phase just-in-time instead of carrying all phase instructions in the entrypoint.
 
 ## Internal loop rules
 
+- Do **not** broad-scan the repo or spawn wide research until `xlfg-intent-phase` has written the intent contract and objective groups in `spec.md`.
+- If the intent phase marks `resolution: needs-user-answer`, stop and ask at most three concise numbered blocking questions. Do not continue to context, planning, or coding until the answer arrives.
 - If `test-readiness.md` is not `READY` after planning, return to `xlfg-context-phase` and `xlfg-plan-phase` yourself until the plan is repaired or a true human-only blocker is explicit.
 - If verification is RED with an actionable fix, go back to `xlfg-implement-phase`, then rerun `xlfg-verify-phase`.
 - If review finds a must-fix issue, go back to `xlfg-implement-phase`, then rerun verify and review.
@@ -59,4 +64,4 @@ Use the `Skill` tool to load each phase just-in-time instead of carrying all pha
 
 ## Completion
 
-Finish with a concise status summary that includes `RUN_ID`, what changed, proof status, residual risk, and follow-ups if any.
+Finish with a concise status summary that includes `RUN_ID`, what changed, proof status, residual risk, objective completion status, and follow-ups if any.

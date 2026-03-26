@@ -33,7 +33,7 @@ This is useful because it is deterministic, transparent, and comparable across x
 
 ## 2) Live A/B evaluation protocol
 
-When real Claude Code access is available, compare **vanilla Claude Code** against **Claude Code + xlfg 2.2.0** on the same task set.
+When real Claude Code access is available, compare **vanilla Claude Code** against **Claude Code + xlfg 2.5.0** on the same task set.
 
 ### Task mix
 
@@ -77,3 +77,49 @@ A new xlfg revision is better only if it either:
 - materially improves proof / regression control on high-risk tasks
 
 Do **not** accept higher workflow load unless it buys clearly better outcomes.
+
+
+## 3) Intent-artifact evaluation (`xlfg eval-intent`)
+
+`xlfg eval-intent` grades the artifacts from a real run against a fixture representing a messy or underspecified prompt.
+
+### What it scores
+
+- `work_kind_match`
+- `direct_ask_recall`
+- `implied_ask_recall`
+- `acceptance_recall`
+- `objective_split_recall`
+- `false_assumption_rate`
+- `blocking_question_budget_ok`
+- `objective_scenario_coverage`
+- `objective_task_coverage`
+- `overall`
+
+### Single-case usage
+
+```bash
+xlfg eval-intent   --fixture evals/intent/messy-bugfix-bundle.json   --run <RUN_ID>
+```
+
+### Suite usage
+
+Bundled reference artifacts are included, so this works out of the box:
+
+```bash
+xlfg eval-intent   --suite-dir evals/intent
+```
+
+To score your own captured runs instead, pass an explicit artifacts root:
+
+```bash
+xlfg eval-intent   --suite-dir evals/intent   --artifacts-root path/to/captured-intent-artifacts
+```
+
+The suite mode expects one folder per fixture ID, each containing:
+
+- `spec.md`
+- `test-contract.md`
+- `workboard.md`
+
+This keeps the metric tied to the real run artifacts instead of asking humans to score the run from memory.

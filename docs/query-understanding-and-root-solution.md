@@ -29,7 +29,7 @@ A March 2026 paper, **CodeScout**, shows that coding agents improve when an unde
 - explicit reproduction / expected behavior
 - reduced non-converging trajectories
 
-xlfg adopts this as `query-contract.md` written by `xlfg-query-refiner` before broad repo fan-out.
+xlfg adopts this as the intent contract inside `spec.md` written by `xlfg-query-refiner` before broad repo fan-out.
 
 ### 2) Requirements and solutions must be separated
 
@@ -40,14 +40,14 @@ A March 2026 requirements-engineering paper argues that prompts blend:
 
 That framing is valuable because coding agents often skip straight to a guessed solution without preserving the requirement itself.
 
-xlfg adopts this decomposition inside `query-contract.md`.
+xlfg adopts this decomposition inside the intent contract inside `spec.md`.
 
 ### 3) Long runs suffer attention decay
 
 Recent terminal-agent work reports that instructions near the start of a long trajectory lose influence as tool calls accumulate.
 
 xlfg adopts a simple version of the remedy:
-- keep a short **carry-forward anchor** inside `query-contract.md`
+- keep a short **carry-forward anchor** inside the intent contract inside `spec.md`
 - force implementation / verification / review to re-read it
 - copy it into `workboard.md` so the lead agent sees it repeatedly
 
@@ -71,7 +71,7 @@ Recent patch-validation work highlights three missing ingredients in false-corre
 
 xlfg therefore adds all three to the run contract:
 - `diagnosis.md`
-- `query-contract.md`
+- the intent contract inside `spec.md`
 - proof / scorecard traceability back to query / intent IDs
 
 ### 6) Skills only help when they are specific and context-compatible
@@ -80,7 +80,7 @@ Recent skill-evaluation work shows that most generic skills do not improve real 
 
 xlfg responds by keeping this upgrade narrow:
 - one new planning agent (`xlfg-query-refiner`)
-- one new run artifact (`query-contract.md`)
+- one new run artifact (the intent contract inside `spec.md`)
 - stronger traceability in existing files
 - no new heavy runtime layer
 
@@ -88,7 +88,7 @@ xlfg responds by keeping this upgrade narrow:
 
 ### New artifact
 
-`query-contract.md`
+the intent contract inside `spec.md`
 
 It records:
 - raw request
@@ -142,7 +142,7 @@ A run is not honestly green if:
 
 When xlfg gets confused, ask in this order:
 
-1. Did `query-contract.md` preserve what the user actually asked for?
+1. Did the intent contract inside `spec.md` preserve what the user actually asked for?
 2. Did the plan map tasks and proofs back to those query IDs?
 3. Did implementation re-read the carry-forward anchor?
 4. Did verification prove the root solution or only the absence of one visible symptom?

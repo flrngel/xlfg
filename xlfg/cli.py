@@ -9,6 +9,7 @@ from . import __version__
 from .audit import audit_repo
 from .detect import detect_commands
 from .doctor import cleanup_dev_server, ensure_dev_server
+from .intent_eval import evaluate_intent_fixture, evaluate_intent_suite
 from .runs import create_run
 from .recall import recall
 from .scaffold import ensure_scaffold, scaffold_status
@@ -48,6 +49,16 @@ def main(argv: list[str] | None = None) -> int:
 
     p_audit = subparsers.add_parser("audit", help="Audit workflow load, SDLC coverage, and benchmark readiness")
     p_audit.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
+
+    p_eval_intent = subparsers.add_parser("eval-intent", help="Score run artifacts against intent fixtures")
+    p_eval_intent.add_argument("--root", default=None, help="Repo root (default: auto-detect)")
+    p_eval_intent.add_argument("--fixture", default=None, help="Fixture JSON path for a single evaluation case")
+    p_eval_intent.add_argument("--suite-dir", default=None, help="Directory of fixture JSON files for suite evaluation")
+    p_eval_intent.add_argument("--run", dest="run_id", default=None, help="Run id under docs/xlfg/runs/ (single-case mode)")
+    p_eval_intent.add_argument("--artifacts-root", default=None, help="Root directory containing per-case artifact folders (suite mode)")
+    p_eval_intent.add_argument("--spec", dest="spec_path", default=None, help="Explicit spec.md path (single-case mode)")
+    p_eval_intent.add_argument("--test-contract", dest="test_contract_path", default=None, help="Explicit test-contract.md path (single-case mode)")
+    p_eval_intent.add_argument("--workboard", dest="workboard_path", default=None, help="Explicit workboard.md path (single-case mode)")
 
     p_recall = subparsers.add_parser("recall", help="Deterministic recall over xlfg knowledge, role memory, and local runs")
     p_recall.add_argument("query", nargs="*", help="Plain topic/date query or typed query document")
@@ -99,6 +110,46 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "audit":
         report = audit_repo(root)
+        _print_json({"root": str(root), **report})
+        return 0
+
+    if args.command == "eval-intent":
+        ensure_scaffold(root, __version__)
+        if args.suite_dir:
+            suite_dir = Path(args.suite_dir).resolve()
+            if args.artifacts_root:
+                artifacts_root = Path(args.artifacts_root).resolve()
+            else:
+                bundled = suite_dir / "artifacts"
+                artifacts_root = bundled if bundled.exists() else (root / ".xlfg" / "intent-evals")
+            report = evaluate_intent_suite(
+                suite_dir=suite_dir,
+                artifacts_root=artifacts_root,
+            )
+            _print_json({"root": str(root), **report})
+            return 0
+        if not args.fixture:
+            raise RuntimeError("Provide --fixture for single-case intent evaluation or --suite-dir for suite mode.")
+        if args.spec_path:
+            spec_path = Path(args.spec_path).resolve()
+            test_contract_path = Path(args.test_contract_path).resolve() if args.test_contract_path else None
+            workboard_path = Path(args.workboard_path).resolve() if args.workboard_path else None
+        else:
+            from .runs import latest_run_id
+
+            rid = args.run_id or latest_run_id(root)
+            if rid is None:
+                raise RuntimeError("No run found. Run `xlfg start ...` first or pass --spec.")
+            docs_run_dir = root / "docs" / "xlfg" / "runs" / rid
+            spec_path = docs_run_dir / "spec.md"
+            test_contract_path = docs_run_dir / "test-contract.md"
+            workboard_path = docs_run_dir / "workboard.md"
+        report = evaluate_intent_fixture(
+            fixture_path=Path(args.fixture).resolve(),
+            spec_path=spec_path,
+            test_contract_path=test_contract_path,
+            workboard_path=workboard_path,
+        )
         _print_json({"root": str(root), **report})
         return 0
 

@@ -1,0 +1,16 @@
+{
+  "install": null,
+  "verify_fast": [],
+  "smoke": [],
+  "e2e": [],
+  "verify_full": [],
+  "dev": {
+    "command": null,
+    "cwd": ".",
+    "port": null,
+    "healthcheck": null,
+    "startup_timeout_sec": 120,
+    "reuse_if_healthy": true
+  },
+  "notes": "Fill in canonical commands and the dev-server contract. xlfg will auto-detect best-effort defaults if this file stays empty. Prefer commands that are non-interactive and prove the real user flow."
+}
