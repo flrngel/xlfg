@@ -2,13 +2,13 @@
 
 `xlfg-engineering` is an autonomous SDLC harness for modern Claude Code.
 
-The 2.5.0 design target is simple:
+The 2.5.1 design target is simple:
 
 > **One public entrypoint, one run card, one intent contract, hidden phase skills loaded just in time.**
 
-## What changed in 2.5.0
+## What changed in 2.5.1
 
-- `/xlfg-engineering:xlfg` still stays the single public plugin entrypoint.
+- `/xlfg-engineering:xlfg` still stays the single public plugin entrypoint, and this baseline keeps the short `/xlfg` alias through `name: xlfg` on the plugin command.
 - The batch now includes a mandatory **intent phase** before broad repo fan-out.
 - `spec.md` is now the only active home for the intent contract and objective groups.
 - Bundled / messy prompts are split into explicit objective groups with assumptions or blockers called out early.

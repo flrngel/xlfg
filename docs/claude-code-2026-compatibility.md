@@ -1,4 +1,4 @@
-# Claude Code 2026 compatibility notes for xlfg 2.5.0
+# Claude Code 2026 compatibility notes for xlfg 2.5.1
 
 This revision keeps xlfg aligned to the current Claude Code mental model while strengthening the input side of the workflow:
 

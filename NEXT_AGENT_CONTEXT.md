@@ -1,12 +1,12 @@
 # NEXT_AGENT_CONTEXT
 
-## Current state (2.5.0)
+## Current state (2.5.1)
 
-The main 2.5.0 fix is **making intent resolution first-class without reintroducing duplicated planning files**.
+The main 2.5.1 fix is **making intent resolution first-class without reintroducing duplicated planning files**.
 
 2.4.0 restored the public-entrypoint + hidden-phase-skills architecture, but it was still weak on messy prompts: bundled asks, missing context, and hidden acceptance criteria could slip through before planning hardened around the wrong interpretation.
 
-2.5.0 keeps the good 2.4.0 shape while fixing that weakness:
+2.5.1 keeps the good 2.4.0 shape while fixing that weakness:
 
 - the plugin still exposes one public command at `/xlfg-engineering:xlfg`
 - the standalone pack still exposes one public short-name skill at `/xlfg`

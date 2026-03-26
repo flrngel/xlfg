@@ -2,9 +2,10 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-Version 2.5.0 strengthens the weakest part of the workflow: **understanding messy user intent before the repo fan-out starts**.
+Version 2.5.1 strengthens the weakest part of the workflow: **understanding messy user intent before the repo fan-out starts**.
 
 - `/xlfg` is still the **single public entrypoint**, and it still **batches hidden phase skills**
+- the plugin command keeps the current short `/xlfg` alias via `name: xlfg`, while the namespaced form remains `/xlfg-engineering:xlfg`
 - the batch now includes a mandatory **intent phase** before context gathering and planning
 - `spec.md` is now the only active home for the **intent contract** and objective groups
 - bundled / messy requests are split into stable objective groups (`O1`, `O2`, ...)

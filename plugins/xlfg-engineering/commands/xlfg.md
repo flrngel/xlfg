@@ -1,4 +1,5 @@
 ---
+name: xlfg
 description: Autonomous xlfg SDLC run. Batches hidden recall, intent, context, plan, implement, verify, review, and compound skills end-to-end.
 argument-hint: "[feature, bugfix, investigation, or delivery request]"
 disable-model-invocation: true

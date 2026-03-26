@@ -95,11 +95,12 @@ def lint_frontmatter(path: Path, fm: Optional[Dict[str, str]], kind: str) -> Lis
             )
         )
 
-    if fm.get("name"):
+    # Keep the main plugin command alias `name: xlfg` from the 2.4.1 baseline; avoid all other plugin name frontmatter.
+    if fm.get("name") and not (kind == "command" and path.name == "xlfg.md"):
         issues.append(
             LintIssue(
                 path,
-                "Avoid `name:` frontmatter in plugin commands/skills; file or directory names are safer for current Claude Code namespacing.",
+                "Avoid `name:` frontmatter in plugin commands/skills except for the intentional main-command alias.",
             )
         )
 

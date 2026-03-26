@@ -25,10 +25,10 @@ Every shipped bundle must contain enough context that the next agent can continu
 
 ## Entry model
 
-- Public plugin entrypoint: `/xlfg-engineering:xlfg`
+- Public plugin entrypoint: `/xlfg-engineering:xlfg` (aliased as `/xlfg` via `name: xlfg` in command frontmatter)
 - Public standalone entrypoint: `/xlfg`
+- The main command uses `name: xlfg` to register `/xlfg` as a short alias. Do not remove it.
 - Hidden support and phase skills under `plugins/xlfg-engineering/skills/` should stay `user-invocable: false`.
-- Do not ship both a plugin command and a plugin skill with the same slash name.
 - Do not point a command at a repo-relative plugin file path. Installed plugins are not laid out like the source repo.
 - The correct architecture is **one public entrypoint that batches hidden phase skills**.
 
@@ -46,6 +46,7 @@ Put examples and long guidance in the body (loads on invocation).
 - `/xlfg:init` is manual bootstrap / repair only.
 - `/xlfg` is autonomous by default and should not ask the user to run internal phases.
 - `/xlfg` must always use deterministic recall before broad repo scanning.
+- `/xlfg` must resolve intent before broad repo/context fan-out; the intent contract lives in `spec.md`.
 - `/xlfg` must produce a lean run card: `context.md`, `memory-recall.md`, `spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md`. Optional docs exist only when they change a decision.
 - `/xlfg` must stop and repair the plan if `test-readiness.md` is not `READY`.
 - `/xlfg` must never claim success unless verification evidence exists and scenario-targeted proof actually ran.

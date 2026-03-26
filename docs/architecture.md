@@ -1,4 +1,4 @@
-# xlfg architecture (2.5.0)
+# xlfg architecture (2.5.1)
 
 `/xlfg` is intentionally simple at the top level:
 

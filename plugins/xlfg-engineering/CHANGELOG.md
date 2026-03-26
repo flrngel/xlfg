@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.5.0
+## 2.5.1
 
 - Moved active intent handling fully into `spec.md`; runtime prompts no longer depend on a separate query-contract file.
 - Added a mandatory hidden `xlfg-intent-phase` before context fan-out and planning.

@@ -219,6 +219,9 @@ def _entrypoint_report(root: Path) -> dict[str, Any]:
 
     plugin_name_frontmatter_count = 0
     for path in sorted((plugin_root / "commands").glob("*.md")):
+        # keep the intentional main-command alias from the 2.4.1 baseline
+        if path == plugin_command:
+            continue
         if _parse_frontmatter(_read_text(path)).get("name"):
             plugin_name_frontmatter_count += 1
     for path in sorted((plugin_root / "skills").rglob("SKILL.md")):
@@ -351,7 +354,7 @@ def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
         "effort_frontmatter": bool(fm["effort"]),
         "plugin_namespace_documented": "/xlfg-engineering:xlfg" in plugin_readme and "standalone" in plugin_readme.lower() and "/xlfg" in plugin_readme,
         "single_main_entrypoint": entrypoints["plugin_primary_kind"] != "none" and not entrypoints["command_skill_collision"],
-        "batch_phase_skills": entrypoints["plugin_phase_skill_count"] >= 7 and entrypoints["standalone_phase_skill_count"] >= 7 and "Skill(" in (primary_text or standalone_text) and "batch of hidden phase skills" in brief_blob.lower(),
+        "batch_phase_skills": entrypoints["plugin_phase_skill_count"] >= 8 and entrypoints["standalone_phase_skill_count"] >= 8 and "Skill(" in (primary_text or standalone_text) and "batch of hidden phase skills" in brief_blob.lower(),
         "just_in_time_phase_loading": "just-in-time" in brief_blob.lower() or "load only the current phase skill" in brief_blob.lower(),
         "no_legacy_task_tool": not LEGACY_TASK_TOOL_RE.search(primary_text or standalone_text),
         "no_repo_relative_plugin_refs": entrypoints["repo_relative_plugin_refs"] == 0,
@@ -415,7 +418,6 @@ def _coverage_score(features: dict[str, bool], version_sync_ok: bool) -> int:
     score += 10 if features.get("lean_core_artifacts") else 0
     score += 12 if features.get("autonomous_macro") else 0
     score += 12 if features.get("mandatory_intent_gate") else 0
-    score += 8 if features.get("mandatory_intent_gate") else 0
     score += 8 if features.get("verify") else 0
     score += 8 if features.get("review") else 0
     score += 6 if features.get("compound") else 0
@@ -497,7 +499,7 @@ def _top_recommendations(
     if not features.get("no_repo_relative_plugin_refs"):
         recs.append("Do not point slash commands at repo-relative plugin file paths; installed plugins are not laid out like the source repo.")
     if not features.get("plugin_name_frontmatter_avoided"):
-        recs.append("Avoid name frontmatter in plugin commands/skills until the namespace edge cases settle upstream.")
+        recs.append("Avoid extra plugin name frontmatter beyond the intentional main-command alias, so namespacing stays predictable.")
     if not features.get("standalone_short_name_pack"):
         recs.append("Ship a standalone .claude/skills/xlfg pack so users can get a direct /xlfg command without plugin namespacing.")
     if not features.get("consent_reduction"):
@@ -574,7 +576,7 @@ def audit_repo(root: Path) -> Dict[str, Any]:
             "phase_load": phases,
             "models": models,
             "features": features,
-        "runtime_legacy_query_contract_refs": runtime_legacy_query_contract_refs,
+            "runtime_legacy_query_contract_refs": runtime_legacy_query_contract_refs,
         },
         "scores": {
             "workflow_load_score": load["score"],

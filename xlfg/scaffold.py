@@ -636,7 +636,7 @@ If you intentionally want to share a specific run, copy or export the relevant f
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
-    "2.5.0": [
+    "2.5.1": [
         "Intent resolution now lives inside spec.md; xlfg no longer relies on a separate query-contract file during active runs.",
         "Added a mandatory intent phase before broad repo fan-out so messy prompts are split into objective groups with explicit assumptions or blockers.",
         "Added xlfg eval-intent plus artifact-graded fixtures so bad prompts can be scored for ask recall, objective splitting, blocker handling, and false assumptions.",
@@ -652,7 +652,7 @@ MIGRATION_NOTES: Dict[str, List[str]] = {
         "Planning and checker-style agents now bias toward concise scenario contracts, minimal context, and bounded execution budgets.",
     ],
     "2.0.8": [
-        "Added `query-contract.md` to every run scaffold.",
+        "Added `query-contract.md` to every run scaffold (historical; active intent handling now lives inside spec.md).",
         "Planning now starts by separating direct asks, implied asks, functionality/quality requirements, and solution constraints before broad repo fan-out.",
         "Implementation, verification, and review now re-read the query carry-forward anchor to reduce request drift and monkey fixes.",
     ],

@@ -33,7 +33,7 @@ This is useful because it is deterministic, transparent, and comparable across x
 
 ## 2) Live A/B evaluation protocol
 
-When real Claude Code access is available, compare **vanilla Claude Code** against **Claude Code + xlfg 2.5.0** on the same task set.
+When real Claude Code access is available, compare **vanilla Claude Code** against **Claude Code + xlfg 2.5.1** on the same task set.
 
 ### Task mix
 
