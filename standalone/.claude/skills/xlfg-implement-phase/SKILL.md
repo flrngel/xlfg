@@ -4,7 +4,6 @@ user-invocable: false
 allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, Agent
 ---
 
-
 # xlfg-implement-phase
 
 Use only during `/xlfg` orchestration.
@@ -13,7 +12,7 @@ Input: `$ARGUMENTS` (`RUN_ID` or `latest`)
 
 ## Objective
 
-Implement the planned change with one owner by default, keep tests aligned, and preserve the run card as truth.
+Implement the planned change with one conductor, specialist task owners, aligned tests, and truthful run-state updates.
 
 ## Process
 
@@ -26,14 +25,16 @@ Implement the planned change with one owner by default, keep tests aligned, and 
    - any optional decision docs that actually exist
    - `docs/xlfg/knowledge/current-state.md`
 3. If `test-readiness.md` is not `READY`, stop implementing and return control to planning immediately.
-4. Use one owner by default. Bring in specialized agents only when they materially help:
-   - `xlfg-task-implementer`
-   - `xlfg-test-implementer`
-   - `xlfg-task-checker`
-5. Implement the smallest coherent set of code and test changes that satisfy the run card.
-6. Run targeted task-level checks as you go.
-7. Update `spec.md` and `workboard.md` when scope, task status, or chosen solution changes.
-8. If the diagnosis or proof contract changes materially, return to planning instead of pushing through a patch.
+4. Keep one conductor, but let specialist implementers own the work lanes:
+   - for each non-trivial task, run `xlfg-task-implementer` explicitly
+   - when tests or proof artifacts must change, run `xlfg-test-implementer`
+   - before marking a task done, run `xlfg-task-checker`
+5. Keep these specialists foregrounded. Treat a missing report or a prep-only response as incomplete work, not success.
+6. The main conductor should coordinate task order, integrate specialist artifacts, and resolve conflicts; it should not bypass the specialist lanes unless the task is truly trivial or the specialist failed twice.
+7. Implement the smallest coherent set of code and test changes that satisfy the run card.
+8. Run targeted task-level checks as you go.
+9. Update `spec.md` and `workboard.md` when scope, task status, or chosen solution changes.
+10. If the diagnosis or proof contract changes materially, return to planning instead of pushing through a patch.
 
 ## Guardrails
 

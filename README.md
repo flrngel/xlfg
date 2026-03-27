@@ -2,7 +2,7 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-Version 2.5.1 strengthens the weakest part of the workflow: **understanding messy user intent before the repo fan-out starts**.
+Version 2.6.0 hardens the next weak layer after intent handling: **specialist subagents now own their lanes more explicitly, produce verifiable artifacts, and are harder for the main flow to ignore or short-circuit**.
 
 - `/xlfg` is still the **single public entrypoint**, and it still **batches hidden phase skills**
 - the plugin command keeps the current short `/xlfg` alias via `name: xlfg`, while the namespaced form remains `/xlfg-engineering:xlfg`
@@ -11,14 +11,18 @@ Version 2.5.1 strengthens the weakest part of the workflow: **understanding mess
 - bundled / messy requests are split into stable objective groups (`O1`, `O2`, ...)
 - the workflow ships an artifact-graded **`xlfg eval-intent`** harness for scoring ask recall, objective splitting, blocker handling, and false assumptions
 - hidden phase skills still load **just in time**, matching Claude Code’s skills model while keeping context small
+- every plugin specialist now has an explicit tool allowlist, proactive delegation description, foreground-only bias, and stronger execution contract
+- review specialists now write lane artifacts under `reviews/`, and the standalone pack now includes `.claude/agents/` parity
 
 ## What is in this repo
 
 1. A Claude Code plugin in `plugins/xlfg-engineering/`
 2. A standalone `.claude/skills/` pack in `standalone/`
 3. A dependency-free Python helper CLI (`xlfg`) that can scaffold, recall, verify, audit, and grade intent artifacts locally
-4. Benchmarking guidance in `docs/benchmarking.md`
-5. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
+4. Research notes on recent subagent / harness hardening in `docs/subagent-hardening-2026.md`
+5. Benchmarking guidance in `docs/benchmarking.md`
+6. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
+
 
 ## Quick start
 
@@ -30,7 +34,7 @@ Run the plugin command:
 
 ### Standalone / short-command install
 
-Copy the full `standalone/.claude/skills/` directory into your target repo’s `.claude/skills/`, then run:
+Copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run:
 
 - `/xlfg "what you want built"`
 

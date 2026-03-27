@@ -611,5 +611,54 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("user-invocable: false", text)
 
 
+    def test_standalone_agent_pack_matches_plugin_agents(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        plugin_agents = sorted((repo_root / "plugins" / "xlfg-engineering" / "agents").rglob("*.md"))
+        standalone_agents = sorted((repo_root / "standalone" / ".claude" / "agents").rglob("*.md"))
+        self.assertGreater(len(plugin_agents), 0)
+        self.assertEqual(len(plugin_agents), len(standalone_agents))
+
+    def test_all_agents_have_proactive_descriptions_tools_and_foreground(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        for agent_path in sorted((repo_root / "plugins" / "xlfg-engineering" / "agents").rglob("*.md")):
+            text = agent_path.read_text(encoding="utf-8")
+            self.assertIn("use proactively", text.lower())
+            self.assertIn("tools:", text)
+            self.assertIn("background: false", text)
+            self.assertIn("## Specialist identity", text)
+            self.assertIn("## Execution contract", text)
+
+    def test_review_agents_write_artifacts_under_reviews_dir(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        expected = {
+            "xlfg-architecture-reviewer.md": "DOCS_RUN_DIR/reviews/architecture-review.md",
+            "xlfg-security-reviewer.md": "DOCS_RUN_DIR/reviews/security-review.md",
+            "xlfg-performance-reviewer.md": "DOCS_RUN_DIR/reviews/performance-review.md",
+            "xlfg-ux-reviewer.md": "DOCS_RUN_DIR/reviews/ux-review.md",
+        }
+        review_root = repo_root / "plugins" / "xlfg-engineering" / "agents" / "review"
+        for filename, artifact in expected.items():
+            text = (review_root / filename).read_text(encoding="utf-8")
+            self.assertIn(artifact, text)
+            self.assertIn("Status: DONE | BLOCKED | FAILED", text)
+
+    def test_audit_reports_subagent_hardening_features(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        report = audit_repo(repo_root)
+        hardening = report["metrics"]["subagent_hardening"]
+        features = report["metrics"]["features"]
+        self.assertEqual(hardening["plugin_agent_count"], 25)
+        self.assertTrue(hardening["standalone_agent_pack"])
+        self.assertEqual(hardening["agents_with_tools_allowlist"], hardening["plugin_agent_count"])
+        self.assertEqual(hardening["agents_with_background_false"], hardening["plugin_agent_count"])
+        self.assertEqual(hardening["agents_with_proactive_description"], hardening["plugin_agent_count"])
+        self.assertEqual(hardening["review_agents_with_report_artifacts"], hardening["review_agent_count"])
+        self.assertTrue(features["explicit_subagent_tools"])
+        self.assertTrue(features["foreground_specialists"])
+        self.assertTrue(features["proactive_delegation_descriptions"])
+        self.assertTrue(features["review_artifact_lane"])
+        self.assertTrue(features["standalone_agent_pack"])
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

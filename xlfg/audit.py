@@ -318,8 +318,65 @@ def _frontmatter_summary(text: str) -> dict[str, Any]:
     }
 
 
+
+
+def _subagent_hardening_report(root: Path) -> dict[str, Any]:
+    plugin_agents = sorted((root / "plugins" / "xlfg-engineering" / "agents").rglob("*.md"))
+    standalone_agents = sorted((root / "standalone" / ".claude" / "agents").rglob("*.md"))
+
+    def _count(predicate):
+        return sum(1 for path in plugin_agents if predicate(path, _read_text(path), _parse_frontmatter(_read_text(path))))
+
+    def _has_tools(path: Path, _text: str, fm: dict[str, str]) -> bool:
+        return bool(fm.get("tools"))
+
+    def _background_false(path: Path, _text: str, fm: dict[str, str]) -> bool:
+        return fm.get("background") == "false"
+
+    def _proactive_desc(path: Path, _text: str, fm: dict[str, str]) -> bool:
+        return "use proactively" in fm.get("description", "").lower()
+
+    def _specialist_identity(path: Path, text: str, _fm: dict[str, str]) -> bool:
+        return "## Specialist identity" in text and "## Execution contract" in text
+
+    def _status_contract(path: Path, text: str, _fm: dict[str, str]) -> bool:
+        return "Status: DONE" in text and "Status: BLOCKED" in text and "Status: FAILED" in text
+
+    review_agents = [p for p in plugin_agents if "/review/" in str(p).replace("\\", "/")]
+    review_paths = {
+        "xlfg-architecture-reviewer": "DOCS_RUN_DIR/reviews/architecture-review.md",
+        "xlfg-security-reviewer": "DOCS_RUN_DIR/reviews/security-review.md",
+        "xlfg-performance-reviewer": "DOCS_RUN_DIR/reviews/performance-review.md",
+        "xlfg-ux-reviewer": "DOCS_RUN_DIR/reviews/ux-review.md",
+    }
+    review_artifact_reports = 0
+    for path in review_agents:
+        text = _read_text(path)
+        name_match = re.search(r"^name:\s*([^\n]+)", text, re.MULTILINE)
+        name = name_match.group(1).strip() if name_match else ""
+        expected = review_paths.get(name)
+        if expected and expected in text:
+            review_artifact_reports += 1
+
+    standalone_parity = len(plugin_agents) == len(standalone_agents) and len(plugin_agents) > 0
+
+    return {
+        "plugin_agent_count": len(plugin_agents),
+        "standalone_agent_count": len(standalone_agents),
+        "standalone_agent_pack": standalone_parity,
+        "agents_with_tools_allowlist": _count(_has_tools),
+        "agents_with_background_false": _count(_background_false),
+        "agents_with_proactive_description": _count(_proactive_desc),
+        "agents_with_specialist_identity_contract": _count(_specialist_identity),
+        "agents_with_status_contract": _count(_status_contract),
+        "review_agents_with_report_artifacts": review_artifact_reports,
+        "review_agent_count": len(review_agents),
+    }
+
+
 def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
     plugin_root = root / "plugins" / "xlfg-engineering"
+    hardening = _subagent_hardening_report(root)
     primary_text = entrypoints["plugin_primary_text"] or entrypoints["standalone_text"]
     standalone_text = entrypoints["standalone_text"]
     hooks_json = _read_text(plugin_root / "hooks" / "hooks.json")
@@ -360,6 +417,13 @@ def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
         "no_repo_relative_plugin_refs": entrypoints["repo_relative_plugin_refs"] == 0,
         "plugin_name_frontmatter_avoided": entrypoints["plugin_name_frontmatter_count"] == 0,
         "background_support_skills": entrypoints["background_support_skills"],
+        "explicit_subagent_tools": hardening["plugin_agent_count"] > 0 and hardening["agents_with_tools_allowlist"] == hardening["plugin_agent_count"],
+        "foreground_specialists": hardening["plugin_agent_count"] > 0 and hardening["agents_with_background_false"] == hardening["plugin_agent_count"],
+        "proactive_delegation_descriptions": hardening["plugin_agent_count"] > 0 and hardening["agents_with_proactive_description"] == hardening["plugin_agent_count"],
+        "specialist_identity_contracts": hardening["plugin_agent_count"] > 0 and hardening["agents_with_specialist_identity_contract"] == hardening["plugin_agent_count"],
+        "status_contracts": hardening["plugin_agent_count"] > 0 and hardening["agents_with_status_contract"] == hardening["plugin_agent_count"],
+        "review_artifact_lane": hardening["review_agent_count"] > 0 and hardening["review_agents_with_report_artifacts"] == hardening["review_agent_count"],
+        "standalone_agent_pack": hardening["standalone_agent_pack"],
     }
 
 
@@ -428,6 +492,12 @@ def _coverage_score(features: dict[str, bool], version_sync_ok: bool) -> int:
     score += 6 if features.get("multi_objective_splitter") else 0
     score += 6 if features.get("batch_phase_skills") else 0
     score += 4 if features.get("background_support_skills") else 0
+    score += 4 if features.get("explicit_subagent_tools") else 0
+    score += 4 if features.get("foreground_specialists") else 0
+    score += 4 if features.get("proactive_delegation_descriptions") else 0
+    score += 4 if features.get("specialist_identity_contracts") else 0
+    score += 4 if features.get("review_artifact_lane") else 0
+    score += 4 if features.get("standalone_agent_pack") else 0
     score += 4 if features.get("no_legacy_task_tool") else 0
     score += 4 if version_sync_ok else 0
     return min(100, score)
@@ -447,6 +517,10 @@ def _compatibility_score(features: dict[str, bool]) -> int:
     score += 8 if features.get("multi_objective_splitter") else 0
     score += 5 if features.get("just_in_time_phase_loading") else 0
     score += 5 if features.get("no_legacy_task_tool") else 0
+    score += 5 if features.get("explicit_subagent_tools") else 0
+    score += 5 if features.get("foreground_specialists") else 0
+    score += 5 if features.get("proactive_delegation_descriptions") else 0
+    score += 5 if features.get("review_artifact_lane") else 0
     score += 3 if features.get("no_repo_relative_plugin_refs") else 0
     score += 2 if features.get("plugin_name_frontmatter_avoided") else 0
     return min(100, score)
@@ -492,6 +566,14 @@ def _top_recommendations(
         recs.append("Route read-only exploration and environment triage to lighter models to lower cost and latency.")
     if not features.get("single_main_entrypoint"):
         recs.append("Expose exactly one primary /xlfg entrypoint per install mode; avoid command+skill collisions.")
+    if not features.get("explicit_subagent_tools"):
+        recs.append("Give every specialist an explicit tool allowlist instead of relying on inherited permissions or prose-only restrictions.")
+    if not features.get("foreground_specialists"):
+        recs.append("Keep phase-critical specialists in the foreground so early stop and silent write failures are easier to detect.")
+    if not features.get("proactive_delegation_descriptions"):
+        recs.append("Make specialist descriptions explicitly proactive so Claude delegates to them more often.")
+    if not features.get("review_artifact_lane"):
+        recs.append("Make each review lens write its own artifact so the conductor can trust and synthesize specialist review instead of ignoring it.")
     if not features.get("batch_phase_skills"):
         recs.append("Make /xlfg a conductor over hidden phase skills instead of a monolithic prompt or a user-managed command chain.")
     if not features.get("no_legacy_task_tool"):
@@ -523,6 +605,7 @@ def audit_repo(root: Path) -> Dict[str, Any]:
     models = _model_report(root)
     features = _features(root, entrypoints)
     runtime_legacy_query_contract_refs = _runtime_legacy_query_contract_refs(root)
+    hardening = _subagent_hardening_report(root)
 
     load = _workflow_load_score(
         workflow_words=words["workflow_words"],
@@ -576,6 +659,7 @@ def audit_repo(root: Path) -> Dict[str, Any]:
             "phase_load": phases,
             "models": models,
             "features": features,
+            "subagent_hardening": hardening,
             "runtime_legacy_query_contract_refs": runtime_legacy_query_contract_refs,
         },
         "scores": {

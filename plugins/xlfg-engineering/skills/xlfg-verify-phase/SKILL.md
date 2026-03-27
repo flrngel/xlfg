@@ -4,7 +4,6 @@ user-invocable: false
 allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write, Agent
 ---
 
-
 # xlfg-verify-phase
 
 Use only during `/xlfg` orchestration.
@@ -28,13 +27,15 @@ Run honest layered proof for the changed behavior and reduce the results into a 
 3. Prefer the helper when available:
    - `xlfg verify --run <RUN_ID> --mode auto`
    - or `fast` / `full` when the run card makes the choice obvious
-4. When the helper is unavailable or insufficient, use the verify specialists:
-   - `xlfg-env-doctor`
-   - `xlfg-verify-runner`
-   - `xlfg-verify-reducer`
-5. Write or update `verification.md` with real evidence.
-6. If verification is RED, write or update `verify-fix-plan.md` with the first actionable failure only.
-7. Update `workboard.md` with the verification status and next action.
+4. When the helper is unavailable or insufficient, use the verify specialists as lane owners:
+   - always run `xlfg-verify-runner`
+   - then always run `xlfg-verify-reducer`
+   - run `xlfg-env-doctor` when the harness is unhealthy or the proof depends on a running app
+5. Keep these specialists foregrounded. Missing verify artifacts mean verification did not actually happen.
+6. Require the verify artifacts to exist before accepting phase completion: `results.json`, `summary.md`, `verification.md`, and any required fix plan. If a specialist returns early without them, retry once or classify the phase as FAILED / RED.
+7. Write or update `verification.md` with real evidence.
+8. If verification is RED, write or update `verify-fix-plan.md` with the first actionable failure only.
+9. Update `workboard.md` with the verification status and next action.
 
 ## Green rule
 

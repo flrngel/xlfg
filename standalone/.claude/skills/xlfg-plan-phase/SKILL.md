@@ -26,15 +26,20 @@ Turn the resolved intent and gathered truth into a lean run card, a practical te
    - `workboard.md`
    - `docs/xlfg/knowledge/current-state.md`
 3. Treat the intent contract in `spec.md` as canonical. Do not recreate a second intent file.
-4. Use only the specialists that materially improve the plan:
-   - `xlfg-why-analyst`
-   - `xlfg-root-cause-analyst` when debugging or symptom-heavy work
-   - `xlfg-solution-architect`
-   - `xlfg-test-strategist`
-   - `xlfg-test-readiness-checker`
-   - `xlfg-risk-assessor` for higher-risk changes
-   - `xlfg-researcher` only if context phase proved that repo truth is insufficient
-5. Update `spec.md` as the single source of truth:
+4. Use specialists as lane owners for plan quality:
+   - always run `xlfg-root-cause-analyst` for bugfixes or symptom-heavy work
+   - always run `xlfg-solution-architect`
+   - always run `xlfg-test-strategist`
+   - always run `xlfg-test-readiness-checker` before implementation
+   - run `xlfg-why-analyst` when user value, UX, or operator impact matters
+   - run `xlfg-spec-author` when scenario-level flow detail is needed
+   - run `xlfg-risk-assessor` for higher-risk changes
+   - run `xlfg-env-doctor` when the proof depends on a running app
+   - run `xlfg-researcher` only if context phase proved that repo truth is insufficient
+   - run `xlfg-brainstorm` only when the intent phase left multiple viable solution directions
+5. Keep specialists foregrounded and require their artifacts before synthesis.
+6. The main conductor should synthesize `spec.md` and the final plan from specialist artifacts instead of replacing those lanes with its own first-pass reasoning.
+7. Update `spec.md` as the single source of truth:
    - keep the intent contract and objective groups accurate
    - fill outcome / why and false-success trap
    - record repo and external findings
@@ -42,10 +47,11 @@ Turn the resolved intent and gathered truth into a lean run card, a practical te
    - record the chosen solution and rejected shortcuts
    - map tasks to objective IDs and scenario IDs
    - keep proof summary and PM / UX / Engineering / QA / Release notes current
-6. Update `test-contract.md` with 1–5 practical scenario contracts total, ensuring each active objective has explicit proof.
-7. Update `test-readiness.md` with a real `READY` or `REVISE` verdict.
-8. Update `workboard.md` so objectives, tasks, blockers, and the next action stay visible.
-9. Create optional docs only when they change a decision or proof obligation: `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `risk.md`.
+8. Update `test-contract.md` with 1–5 practical scenario contracts total, ensuring each active objective has explicit proof.
+9. Update `test-readiness.md` with a real `READY` or `REVISE` verdict.
+10. Update `workboard.md` so objectives, tasks, blockers, and the next action stay visible.
+11. Create optional docs only when they change a decision or proof obligation: `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `risk.md`.
+12. If a required planning specialist returns only setup notes or no artifact, retry once or record the failure before repairing the gap yourself.
 
 ## Readiness rule
 

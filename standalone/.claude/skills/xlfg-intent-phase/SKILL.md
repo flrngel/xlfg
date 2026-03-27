@@ -34,15 +34,17 @@ This phase exists because users often provide:
    - a term is unfamiliar or likely stale
    - the request depends on current external facts
    - freshness changes the meaning of the request
-4. Use `xlfg-query-refiner` as the primary specialist for this phase. Use no other specialists unless they materially reduce a blocking ambiguity.
-5. Update `spec.md` so the top `Intent contract` and `Objective groups` sections are concrete:
+4. Invoke `xlfg-query-refiner` explicitly and treat it as the lane owner for messy-intent resolution. Use no other specialists unless they materially reduce a blocking ambiguity.
+5. Do not run xlfg specialists in background for this workflow. Keep them foregrounded so artifact writes, stop events, and workboard state stay synchronized.
+6. Require the specialist to materially update `spec.md`. If it returns without updating the intent contract, resume or retry it once; if it still fails, record the specialist failure and repair the contract yourself before continuing.
+7. Update `spec.md` so the top `Intent contract` and `Objective groups` sections are concrete:
    - `resolution`: `proceed` | `proceed-with-assumptions` | `needs-user-answer`
    - stable IDs for direct asks (`Q1`, `Q2`, ...)
    - stable IDs for implied asks (`I1`, `I2`, ...)
    - stable IDs for acceptance criteria (`A1`, `A2`, ...)
    - non-goals, requested constraints, assumptions, blocking ambiguities, and the carry-forward anchor
    - objective groups (`O1`, `O2`, ...) with covers / depends_on / completion notes
-6. Update `workboard.md` so the objective ledger reflects the same objective groups and the next action is visible.
+8. Update `workboard.md` so the objective ledger reflects the same objective groups and the next action is visible.
 
 ## Resolution rule
 

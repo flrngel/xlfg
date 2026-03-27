@@ -4,7 +4,6 @@ user-invocable: false
 allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write, Agent
 ---
 
-
 # xlfg-review-phase
 
 Use only during `/xlfg` orchestration.
@@ -28,13 +27,15 @@ Run proportional review after verification, not cleanup theater before it.
    - quick / low risk: 0–1 lens
    - standard: 1–2 lenses
    - deep / high risk: up to 4 lenses
-4. Use the specialized review agents as needed:
+4. Use the specialized review agents as lane owners for the chosen lenses:
    - `xlfg-architecture-reviewer`
    - `xlfg-security-reviewer`
    - `xlfg-performance-reviewer`
    - `xlfg-ux-reviewer`
-5. Write `review-summary.md` only when there are real findings or non-trivial residual risks.
-6. Update `spec.md` and `workboard.md` with must-fix findings or accepted residual risk.
+5. Keep them foregrounded. Each chosen reviewer must write its own artifact under `DOCS_RUN_DIR/reviews/` before the conductor synthesizes `review-summary.md`.
+6. Synthesize `review-summary.md` from the reviewer artifacts. Do not treat an empty or missing reviewer artifact as a clean review.
+7. Write `review-summary.md` only when there are real findings or non-trivial residual risks.
+8. Update `spec.md` and `workboard.md` with must-fix findings or accepted residual risk.
 
 ## Guardrails
 

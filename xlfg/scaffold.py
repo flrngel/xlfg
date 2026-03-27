@@ -636,6 +636,11 @@ If you intentionally want to share a specific run, copy or export the relevant f
 """
 
 MIGRATION_NOTES: Dict[str, List[str]] = {
+    "2.6.0": [
+        "Hardened specialist agents with explicit tool allowlists, proactive delegation descriptions, and foreground-only execution hints.",
+        "Review specialists now write lane artifacts under docs/xlfg/runs/<run>/reviews/ so the conductor can synthesize from real expert output.",
+        "Added standalone .claude/agents parity plus stronger audit and test coverage for subagent execution quality.",
+    ],
     "2.5.1": [
         "Intent resolution now lives inside spec.md; xlfg no longer relies on a separate query-contract file during active runs.",
         "Added a mandatory intent phase before broad repo fan-out so messy prompts are split into objective groups with explicit assumptions or blockers.",

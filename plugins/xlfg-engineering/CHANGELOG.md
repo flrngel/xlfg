@@ -1,13 +1,13 @@
 # Changelog
 
-## 2.5.1
+## 2.6.0
 
-- Moved active intent handling fully into `spec.md`; runtime prompts no longer depend on a separate query-contract file.
-- Added a mandatory hidden `xlfg-intent-phase` before context fan-out and planning.
-- Upgraded the query-refiner into an intent resolver that writes resolution, asks, acceptance criteria, assumptions, blockers, and objective groups into `spec.md`.
-- Added artifact-graded `xlfg eval-intent` plus bundled messy-prompt fixtures under `evals/intent/`.
-- Extended the run templates so objective groups, task mapping, and partial completion remain legible across messy multi-request runs.
-- Updated audit rules, lint rules, docs, and tests to enforce intent-as-SSOT and zero active runtime dependency on a separate intent file.
+- Hardened specialist agents with clearer expert personas, explicit tool allowlists, proactive delegation descriptions, and `background: false` for phase-critical work.
+- Updated the main `/xlfg` conductor and phase skills to treat specialists as lane owners whose artifacts should drive synthesis, not optional advisors.
+- Added explicit artifact-writing review lanes under `docs/xlfg/runs/<run>/reviews/` so architecture, security, performance, and UX review can no longer vanish into summary-only subagent replies.
+- Added standalone `.claude/agents/` parity for the standalone skill pack.
+- Extended audit, lint, docs, and tests to score and enforce subagent hardening, foreground execution, review artifacts, and standalone agent parity.
+- Kept the intent-contract improvements from 2.5.x intact while strengthening the next weak layer in the workflow.
 
 ## 2.4.0
 

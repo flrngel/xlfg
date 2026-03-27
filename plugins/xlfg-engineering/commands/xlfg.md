@@ -28,6 +28,7 @@ Treat this invocation as **one autonomous run**.
 - do **not** recreate a separate intent file; the intent contract now lives inside `spec.md`
 - create optional docs only when they change a decision, proof obligation, or durable lesson
 - do not stop for internal phase approvals
+- treat designated specialists as lane owners whose artifacts should drive synthesis, not optional advisors the main agent can casually ignore
 - ask the user only for true human-only blockers: missing secrets, destructive external approvals, or correctness-changing product ambiguity you cannot ground from the repo or current research
 - prefer repo truth first, then targeted web research when freshness matters or the repo is insufficient
 - prefer the local `xlfg` helper CLI when available
@@ -53,6 +54,12 @@ Invoke these hidden skills in this exact order, always passing `RUN_ID`:
 8. `xlfg-engineering:xlfg-compound-phase`
 
 Use the `Skill` tool to load each phase just-in-time instead of carrying all phase instructions in the entrypoint.
+
+## Specialist execution rule
+
+- Keep xlfg specialists in the foreground; do not rely on background execution for phase-critical work. Recent platform issues have included sync problems, silent write failures, and broken background subagent transport.
+- If a designated specialist returns only preparation notes or fails to produce its required artifact, treat that as incomplete work. Retry once or record the specialist failure before repairing the gap yourself.
+- Prefer the specialist artifact over the main agent's first-pass reasoning for that lane, because the specialist exists to apply a stricter expert lens, not because the main agent is incapable.
 
 ## Internal loop rules
 

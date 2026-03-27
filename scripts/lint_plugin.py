@@ -160,8 +160,22 @@ def main() -> int:
             issues.append(LintIssue(p, "Frontmatter missing 'description' for agent"))
         if desc and len(desc) > 220:
             issues.append(LintIssue(p, f"description too long ({len(desc)} chars > 220)."))
+        if "use proactively" not in desc.lower():
+            issues.append(LintIssue(p, "Agent descriptions should include 'use proactively' to encourage automatic delegation."))
+        if not fm.get("tools"):
+            issues.append(LintIssue(p, "Agent must declare an explicit `tools:` allowlist."))
+        if fm.get("background") != "false":
+            issues.append(LintIssue(p, "Phase-critical plugin agents should set `background: false` to avoid silent background drift."))
+        if "## Specialist identity" not in text or "## Execution contract" not in text:
+            issues.append(LintIssue(p, "Agent prompt must include specialist identity and execution contract sections."))
         if "query-contract.md" in text:
             issues.append(LintIssue(p, "Active runtime prompts should not depend on query-contract.md; keep the intent contract in spec.md instead."))
+
+
+    plugin_agents = sorted((PLUGIN_ROOT / "agents").rglob("*.md"))
+    standalone_agents = sorted((PLUGIN_ROOT.parents[1] / "standalone" / ".claude" / "agents").rglob("*.md"))
+    if len(plugin_agents) != len(standalone_agents):
+        issues.append(LintIssue(PLUGIN_ROOT, "Standalone .claude/agents pack should mirror plugin agent count for parity."))
 
     for skill_dir in sorted((PLUGIN_ROOT / "skills").iterdir()):
         if not skill_dir.is_dir():
