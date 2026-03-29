@@ -2,11 +2,11 @@
 
 `xlfg-engineering` is an autonomous SDLC harness for modern Claude Code.
 
-The 2.6.0 design target is simple:
+The 2.7.0 design target is simple:
 
 > **One public entrypoint, one run card, one intent contract, hidden phase skills loaded just in time, and specialist subagents that actually own their lanes.**
 
-## What changed in 2.6.0
+## What changed in 2.7.0
 
 - `/xlfg-engineering:xlfg` stays the single public plugin entrypoint, and this baseline keeps the short `/xlfg` alias through `name: xlfg` on the plugin command.
 - The batch still includes the mandatory **intent phase**, but now the next weak layer is hardened too: specialist agents have stronger personas, explicit tool allowlists, and foreground-only bias.
@@ -64,3 +64,9 @@ Optional only when they add decision value:
 
 
 Reference intent fixtures ship in `evals/intent/`, and `xlfg eval-intent --suite-dir evals/intent` scores the bundled example artifacts out of the box.
+
+
+## 2.7.0 note
+
+- Main conductor now dispatches specialists with an atomic task packet: one mission, one required artifact, one done check.
+- Progress-only specialist replies are treated as incomplete; the conductor resumes the same specialist once before accepting failure or repairing the lane.

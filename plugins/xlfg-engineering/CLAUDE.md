@@ -63,3 +63,9 @@ The single tracked handoff document in a target repo should be `docs/xlfg/knowle
 Local episodic run evidence should live under `docs/xlfg/runs/`.
 
 Ephemeral logs should live under `.xlfg/` and should be safe to delete.
+
+
+## 2.7.0 note
+
+- Main conductor now dispatches specialists with an atomic task packet: one mission, one required artifact, one done check.
+- Progress-only specialist replies are treated as incomplete; the conductor resumes the same specialist once before accepting failure or repairing the lane.

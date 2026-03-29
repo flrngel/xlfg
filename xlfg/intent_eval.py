@@ -14,7 +14,13 @@ _OBJECTIVE_BULLET_RE = re.compile(
     r"^-\s+`?(O\d+)`?\s*[—-]\s*(.*?)(?:;\s*covers:\s*(.*?))?(?:;\s*depends_on:\s*(.*?))?(?:;\s*completion:\s*(.*))?$"
 )
 _TASK_BULLET_RE = re.compile(
-    r"^-\s+`?(T\d+)`?\s*[—-]\s*(.*?)(?:;\s*objectives:\s*(.*?))?(?:;\s*scenarios:\s*(.*?))?(?:;\s*owner:\s*(.*))?$"
+    r"^-\s+`?(T\d+)`?\s*[—-]\s*(.*?)"
+    r"(?:;\s*objectives:\s*(.*?))?"
+    r"(?:;\s*scenarios:\s*(.*?))?"
+    r"(?:;\s*owner:\s*(.*?))?"
+    r"(?:;\s*scope:\s*(.*?))?"
+    r"(?:;\s*primary_artifact:\s*(.*?))?"
+    r"(?:;\s*done_check:\s*(.*))?$"
 )
 _TOP_BULLET_RE = re.compile(r"^-\s+([^:]+):\s*(.*)$")
 
@@ -156,7 +162,7 @@ def parse_spec_artifact(path: Path) -> Dict[str, Any]:
         m = _TASK_BULLET_RE.match(stripped)
         if not m:
             continue
-        tid, title, objectives, scenarios, owner = m.groups()
+        tid, title, objectives, scenarios, owner, scope, primary_artifact, done_check = m.groups()
         result["task_map"].append(
             {
                 "id": tid,
@@ -164,6 +170,9 @@ def parse_spec_artifact(path: Path) -> Dict[str, Any]:
                 "objectives": _split_ids(objectives or ""),
                 "scenarios": _split_ids(scenarios or ""),
                 "owner": _clean_item(owner or "") or None,
+                "scope": _clean_item(scope or "") or None,
+                "primary_artifact": _clean_item(primary_artifact or "") or None,
+                "done_check": _clean_item(done_check or "") or None,
             }
         )
 

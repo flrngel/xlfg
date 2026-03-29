@@ -24,6 +24,7 @@ Treat this invocation as **one autonomous run**.
 
 ## Run contract
 
+- divide specialist work into atomic task packets: one clear mission in, one required artifact out
 - keep `spec.md` as the single source of truth for intent, chosen solution, task map, proof status, and PM / UX / Engineering / QA / Release notes
 - do **not** recreate a separate intent file; the intent contract now lives inside `spec.md`
 - create optional docs only when they change a decision, proof obligation, or durable lesson
@@ -58,8 +59,16 @@ Use the `Skill` tool to load each phase just-in-time instead of carrying all pha
 ## Specialist execution rule
 
 - Keep xlfg specialists in the foreground; do not rely on background execution for phase-critical work. Recent platform issues have included sync problems, silent write failures, and broken background subagent transport.
-- If a designated specialist returns only preparation notes or fails to produce its required artifact, treat that as incomplete work. Retry once or record the specialist failure before repairing the gap yourself.
 - Prefer the specialist artifact over the main agent's first-pass reasoning for that lane, because the specialist exists to apply a stricter expert lens, not because the main agent is incapable.
+
+## Specialist completion barrier
+
+- Every specialist dispatch must be an **atomic packet** with one mission, one primary output artifact, one file scope, and one honest done check.
+- Do not accept chat-only progress updates as completion. “I'm going to …”, “here is my plan …”, or “I prepared the context …” all count as **INCOMPLETE** until the promised artifact exists and the scoped work is actually done.
+- A specialist lane is complete only when the required artifact exists, starts with `Status: DONE` or `Status: BLOCKED` or `Status: FAILED`, and contains concrete edits, findings, checks, logs, or cited facts.
+- If a specialist returns early without the artifact or only with setup notes, resume the **same specialist** with the same packet when possible so it can continue from its prior state. If resume is unavailable, re-dispatch the same packet once.
+- Only after a second incomplete return should you mark the specialist lane failed or repair the gap yourself.
+- If a task packet spans multiple unrelated outputs, split it before delegation rather than hoping one specialist will self-scope perfectly.
 
 ## Internal loop rules
 

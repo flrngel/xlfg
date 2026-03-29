@@ -1,8 +1,8 @@
 # Next agent context
 
-## Current state (2.6.0)
+## Current state (2.7.0)
 
-The main 2.6.0 change is **subagent hardening after the 2.5.x intent-contract work**.
+The main 2.7.0 change is **subagent hardening after the 2.5.x intent-contract work**.
 
 What changed:
 - specialist agents now have explicit tool allowlists instead of mostly inheriting tools
@@ -23,3 +23,9 @@ If you continue from here:
 - do not flatten back into one monolithic prompt
 - do not reintroduce duplicated intent docs
 - if you add more hardening, prefer evals and artifact checks over more prose
+
+
+## 2.7.0 note
+
+- Main conductor now dispatches specialists with an atomic task packet: one mission, one required artifact, one done check.
+- Progress-only specialist replies are treated as incomplete; the conductor resumes the same specialist once before accepting failure or repairing the lane.

@@ -34,9 +34,9 @@ This phase exists because users often provide:
    - a term is unfamiliar or likely stale
    - the request depends on current external facts
    - freshness changes the meaning of the request
-4. Invoke `xlfg-query-refiner` explicitly and treat it as the lane owner for messy-intent resolution. Use no other specialists unless they materially reduce a blocking ambiguity.
+4. Invoke `xlfg-query-refiner` explicitly and treat it as the lane owner for messy-intent resolution. Give it one atomic mission: resolve the intent contract in `spec.md` and nothing else. Use no other specialists unless they materially reduce a blocking ambiguity.
 5. Do not run xlfg specialists in background for this workflow. Keep them foregrounded so artifact writes, stop events, and workboard state stay synchronized.
-6. Require the specialist to materially update `spec.md`. If it returns without updating the intent contract, resume or retry it once; if it still fails, record the specialist failure and repair the contract yourself before continuing.
+6. Require the specialist to materially update `spec.md`. If it returns without updating the intent contract, or returns only with setup notes, resume the same specialist once with the same mission packet; if that still fails, record the specialist failure and repair the contract yourself before continuing.
 7. Update `spec.md` so the top `Intent contract` and `Objective groups` sections are concrete:
    - `resolution`: `proceed` | `proceed-with-assumptions` | `needs-user-answer`
    - stable IDs for direct asks (`Q1`, `Q2`, ...)
@@ -62,6 +62,6 @@ If `resolution` is `needs-user-answer`:
 ## Guardrails
 
 - Do not recreate a separate intent file.
-- Do not broad-scan the repo until the intent contract exists.
+- Do not broad-scan the repo until the intent contract exists. One clear input and one clear output are the rule for this lane.
 - When the query bundles multiple asks, split them into the smallest stable objective groups instead of collapsing them into one muddy goal.
 - Keep the carry-forward anchor short enough that later phases can reread it quickly.

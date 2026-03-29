@@ -32,7 +32,7 @@ Run proportional review after verification, not cleanup theater before it.
    - `xlfg-security-reviewer`
    - `xlfg-performance-reviewer`
    - `xlfg-ux-reviewer`
-5. Keep them foregrounded. Each chosen reviewer must write its own artifact under `DOCS_RUN_DIR/reviews/` before the conductor synthesizes `review-summary.md`.
+5. Keep them foregrounded. Each chosen reviewer must write its own artifact under `DOCS_RUN_DIR/reviews/` before the conductor synthesizes `review-summary.md`. If a reviewer returns only a chat summary or setup note, resume the same reviewer once instead of accepting the lane.
 6. Synthesize `review-summary.md` from the reviewer artifacts. Do not treat an empty or missing reviewer artifact as a clean review.
 7. Write `review-summary.md` only when there are real findings or non-trivial residual risks.
 8. Update `spec.md` and `workboard.md` with must-fix findings or accepted residual risk.

@@ -14,7 +14,7 @@ from xlfg.doctor import ensure_dev_server
 from xlfg.runs import create_run
 from xlfg.recall import recall
 from xlfg.contracts import parse_test_readiness_verdict
-from xlfg.intent_eval import grade_intent_artifacts, evaluate_intent_suite
+from xlfg.intent_eval import grade_intent_artifacts, evaluate_intent_suite, parse_spec_artifact
 from xlfg.scaffold import ensure_scaffold, scaffold_status
 from xlfg.verify import verify
 
@@ -137,8 +137,11 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("## Intent contract", spec)
             self.assertIn("## Objective groups", spec)
             self.assertIn("resolution:", spec)
+            self.assertIn("primary_artifact:", spec)
+            self.assertIn("done_check:", spec)
             self.assertIn("intent: TODO", workboard)
             self.assertIn("Objective ledger", workboard)
+            self.assertIn("do not mark a specialist lane done from chat alone", workboard)
 
     def test_prepare_scaffold_creates_recall_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -434,6 +437,10 @@ class TestXLFG(unittest.TestCase):
         self.assertIn("do not ask the user to run internal skills", standalone_md.lower())
         self.assertIn("single source of truth", command_md.lower())
         self.assertIn("single source of truth", standalone_md.lower())
+        self.assertIn("atomic packet", command_md.lower())
+        self.assertIn("atomic packet", standalone_md.lower())
+        self.assertIn("resume the **same specialist**", command_md.lower())
+        self.assertIn("resume the **same specialist**", standalone_md.lower())
         self.assertIn("xlfg start", command_md)
         self.assertIn("xlfg start", standalone_md)
         self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", command_md)
@@ -647,17 +654,81 @@ class TestXLFG(unittest.TestCase):
         report = audit_repo(repo_root)
         hardening = report["metrics"]["subagent_hardening"]
         features = report["metrics"]["features"]
-        self.assertEqual(hardening["plugin_agent_count"], 25)
+        self.assertEqual(hardening["plugin_agent_count"], 26)
         self.assertTrue(hardening["standalone_agent_pack"])
         self.assertEqual(hardening["agents_with_tools_allowlist"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["agents_with_background_false"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["agents_with_proactive_description"], hardening["plugin_agent_count"])
+        self.assertEqual(hardening["agents_with_completion_barrier"], hardening["plugin_agent_count"])
+        self.assertEqual(hardening["agents_with_resume_rule"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["review_agents_with_report_artifacts"], hardening["review_agent_count"])
         self.assertTrue(features["explicit_subagent_tools"])
         self.assertTrue(features["foreground_specialists"])
         self.assertTrue(features["proactive_delegation_descriptions"])
         self.assertTrue(features["review_artifact_lane"])
+        self.assertTrue(features["completion_barrier_contracts"])
+        self.assertTrue(features["resume_ready_specialists"])
+        self.assertTrue(features["atomic_task_packets"])
+        self.assertTrue(features["task_divider_agent"])
         self.assertTrue(features["standalone_agent_pack"])
+
+    def test_plan_phase_and_spec_support_atomic_task_packets(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        plan_phase = (repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-plan-phase" / "SKILL.md").read_text(encoding="utf-8")
+        implement_phase = (repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-implement-phase" / "SKILL.md").read_text(encoding="utf-8")
+        spec_template = (repo_root / "xlfg" / "runs.py").read_text(encoding="utf-8")
+        self.assertIn("xlfg-task-divider", plan_phase)
+        self.assertIn("task-brief.md", plan_phase)
+        self.assertIn("atomic task packet", implement_phase.lower())
+        self.assertIn("primary_artifact", spec_template)
+        self.assertIn("done_check", spec_template)
+
+    def test_all_agents_have_completion_barrier_and_resume_rule(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        for agent_path in sorted((repo_root / "plugins" / "xlfg-engineering" / "agents").rglob("*.md")):
+            text = agent_path.read_text(encoding="utf-8")
+            self.assertIn("## Completion barrier", text)
+            self.assertIn("Do not return a progress update", text)
+            self.assertIn("If the parent resumes you", text)
+
+    def test_intent_eval_parses_extended_task_packet_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            spec = Path(td) / "spec.md"
+            spec.write_text(
+                """# Spec
+
+## Intent contract
+- resolution: `proceed`
+- work kind: `build`
+- raw request: ship login fix
+- direct asks:
+  - `Q1`: ship login fix
+- implied asks:
+  - `I1`: keep auth stable
+- acceptance criteria:
+  - `A1`: login succeeds
+- non-goals:
+  - none
+- constraints actually requested:
+  - preserve auth stack
+- assumptions to proceed:
+  - none
+- blocking ambiguities:
+  - none
+- carry-forward anchor: keep auth stable while fixing login
+
+## Objective groups
+- `O1` — Fix login; covers: `Q1 I1 A1`; depends_on: `none`; completion: login succeeds
+
+## Task map
+- `T1` — Fix redirect logic; objectives: `O1`; scenarios: `P0-1`; owner: `xlfg-task-implementer`; scope: `app/login.ts tests/login.spec.ts`; primary_artifact: `tasks/T1/implementer-report.md`; done_check: `pytest tests/login -q`
+""",
+                encoding="utf-8",
+            )
+            parsed = parse_spec_artifact(spec)
+            self.assertEqual(parsed["task_map"][0]["scope"], "app/login.ts tests/login.spec.ts")
+            self.assertEqual(parsed["task_map"][0]["primary_artifact"], "tasks/T1/implementer-report.md")
+            self.assertEqual(parsed["task_map"][0]["done_check"], "pytest tests/login -q")
 
 
 if __name__ == "__main__":  # pragma: no cover

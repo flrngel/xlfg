@@ -98,6 +98,7 @@ Treat this file as the **single source of truth** for the run. Keep it lean enou
 - verify mode: `fast` | `full`
 - review lenses: ...
 - escalation triggers: ...
+- specialist completion rule: `one atomic packet in, one required artifact out`
 
 ## Solution summary
 - diagnosis / key risk: ...
@@ -105,7 +106,7 @@ Treat this file as the **single source of truth** for the run. Keep it lean enou
 - rejected shortcuts: ...
 
 ## Task map
-- `T1` — ...; objectives: `O1`; scenarios: `P0-1`; owner: `agent`
+- `T1` — ...; objectives: `O1`; scenarios: `P0-1`; owner: `xlfg-task-implementer`; scope: `app/login.ts tests/login.spec.ts`; primary_artifact: `tasks/T1/implementer-report.md`; done_check: `pytest tests/login -q`
 - `T2` — ...
 
 ## Proof summary
@@ -218,6 +219,7 @@ This is the run-level status ledger.
 ## Execution reminder
 - the agent owns implementation, repo-local config changes, and major local verification unless the blocker is truly human-only
 - do not ask the user to sequence phase commands or carry the run state for you
+- do not mark a specialist lane done from chat alone; require the promised artifact and done check
 - do not claim GREEN unless changed behavior is actually proven
 - if a bundled request is only partially complete, say exactly which objectives are done vs blocked
 

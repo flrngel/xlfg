@@ -1,3 +1,9 @@
+## 2.7.0
+
+- Hardened specialist completion with an explicit completion barrier: progress-only returns are not accepted as done.
+- Added atomic task packets and the `xlfg-task-divider` planner so delegation uses one mission, one artifact, and one honest done check.
+- Updated main and phase orchestration to resume the same specialist once before accepting failure or repairing the lane.
+
 # Changelog
 
 ## 2.6.0

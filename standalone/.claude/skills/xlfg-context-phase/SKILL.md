@@ -25,13 +25,13 @@ Gather the repo and product truth needed for an honest plan without exploding co
    - `docs/xlfg/knowledge/current-state.md`
 3. Start from the intent contract already written in `spec.md`. Keep repo exploration scoped to those direct asks, implied asks, objective groups, and blockers.
 4. Explore repo truth first with targeted reads and grep, not broad file hoarding.
-5. Use specialists as true lane owners, not optional advisors:
+5. Use specialists as true lane owners, not optional advisors. Give each one objective context plus one bounded output artifact:
    - always run `xlfg-repo-mapper`
    - run `xlfg-harness-profiler` for any build / bugfix / delivery run
    - run `xlfg-context-adjacent-investigator`, `xlfg-context-constraints-investigator`, and `xlfg-context-unknowns-investigator` whenever the request is bundled, risky, or still assumption-heavy
    - run `xlfg-env-doctor` when local server behavior is relevant
    - run `xlfg-researcher` only when freshness or missing domain knowledge makes repo truth insufficient
-6. Keep these specialists foregrounded. After each specialist returns, verify its expected artifact exists, begins with `Status:`, and contains real findings instead of preparation notes.
+6. Keep these specialists foregrounded. After each specialist returns, verify its expected artifact exists, begins with `Status:`, and contains real findings instead of preparation notes. If it does not, resume the same specialist once before treating the lane as failed.
 7. Use the specialist artifacts as the primary lane evidence. The main conductor should synthesize from them rather than silently redoing their work in chat.
 8. Write or update `context.md` with:
    - relevant repo and product context

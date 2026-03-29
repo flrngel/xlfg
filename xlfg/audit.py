@@ -342,6 +342,12 @@ def _subagent_hardening_report(root: Path) -> dict[str, Any]:
     def _status_contract(path: Path, text: str, _fm: dict[str, str]) -> bool:
         return "Status: DONE" in text and "Status: BLOCKED" in text and "Status: FAILED" in text
 
+    def _completion_barrier(path: Path, text: str, _fm: dict[str, str]) -> bool:
+        return "## Completion barrier" in text and "progress update" in text and "You are complete only when" in text
+
+    def _resume_rule(path: Path, text: str, _fm: dict[str, str]) -> bool:
+        return "If the parent resumes you" in text
+
     review_agents = [p for p in plugin_agents if "/review/" in str(p).replace("\\", "/")]
     review_paths = {
         "xlfg-architecture-reviewer": "DOCS_RUN_DIR/reviews/architecture-review.md",
@@ -369,6 +375,8 @@ def _subagent_hardening_report(root: Path) -> dict[str, Any]:
         "agents_with_proactive_description": _count(_proactive_desc),
         "agents_with_specialist_identity_contract": _count(_specialist_identity),
         "agents_with_status_contract": _count(_status_contract),
+        "agents_with_completion_barrier": _count(_completion_barrier),
+        "agents_with_resume_rule": _count(_resume_rule),
         "review_agents_with_report_artifacts": review_artifact_reports,
         "review_agent_count": len(review_agents),
     }
@@ -423,6 +431,10 @@ def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
         "specialist_identity_contracts": hardening["plugin_agent_count"] > 0 and hardening["agents_with_specialist_identity_contract"] == hardening["plugin_agent_count"],
         "status_contracts": hardening["plugin_agent_count"] > 0 and hardening["agents_with_status_contract"] == hardening["plugin_agent_count"],
         "review_artifact_lane": hardening["review_agent_count"] > 0 and hardening["review_agents_with_report_artifacts"] == hardening["review_agent_count"],
+        "completion_barrier_contracts": hardening["plugin_agent_count"] > 0 and hardening["agents_with_completion_barrier"] == hardening["plugin_agent_count"],
+        "resume_ready_specialists": hardening["plugin_agent_count"] > 0 and hardening["agents_with_resume_rule"] == hardening["plugin_agent_count"] and "resume the **same specialist**" in primary_text.lower(),
+        "atomic_task_packets": "primary_artifact" in runs_text and "done_check" in runs_text and ("task-brief.md" in brief_blob or "task-brief.md" in _read_text(plugin_root / "skills" / "xlfg-plan-phase" / "SKILL.md") or "task-brief.md" in _read_text(plugin_root / "skills" / "xlfg-implement-phase" / "SKILL.md")) and (plugin_root / "agents" / "planning" / "xlfg-task-divider.md").exists(),
+        "task_divider_agent": (plugin_root / "agents" / "planning" / "xlfg-task-divider.md").exists(),
         "standalone_agent_pack": hardening["standalone_agent_pack"],
     }
 
@@ -497,6 +509,10 @@ def _coverage_score(features: dict[str, bool], version_sync_ok: bool) -> int:
     score += 4 if features.get("proactive_delegation_descriptions") else 0
     score += 4 if features.get("specialist_identity_contracts") else 0
     score += 4 if features.get("review_artifact_lane") else 0
+    score += 4 if features.get("completion_barrier_contracts") else 0
+    score += 4 if features.get("resume_ready_specialists") else 0
+    score += 4 if features.get("atomic_task_packets") else 0
+    score += 4 if features.get("task_divider_agent") else 0
     score += 4 if features.get("standalone_agent_pack") else 0
     score += 4 if features.get("no_legacy_task_tool") else 0
     score += 4 if version_sync_ok else 0
@@ -521,6 +537,9 @@ def _compatibility_score(features: dict[str, bool]) -> int:
     score += 5 if features.get("foreground_specialists") else 0
     score += 5 if features.get("proactive_delegation_descriptions") else 0
     score += 5 if features.get("review_artifact_lane") else 0
+    score += 5 if features.get("completion_barrier_contracts") else 0
+    score += 5 if features.get("resume_ready_specialists") else 0
+    score += 5 if features.get("atomic_task_packets") else 0
     score += 3 if features.get("no_repo_relative_plugin_refs") else 0
     score += 2 if features.get("plugin_name_frontmatter_avoided") else 0
     return min(100, score)
@@ -574,6 +593,14 @@ def _top_recommendations(
         recs.append("Make specialist descriptions explicitly proactive so Claude delegates to them more often.")
     if not features.get("review_artifact_lane"):
         recs.append("Make each review lens write its own artifact so the conductor can trust and synthesize specialist review instead of ignoring it.")
+    if not features.get("completion_barrier_contracts"):
+        recs.append("Harden every specialist with an explicit completion barrier so progress notes are never mistaken for finished work.")
+    if not features.get("resume_ready_specialists"):
+        recs.append("Resume the same specialist once on incomplete returns instead of replacing it or accepting setup chatter as completion.")
+    if not features.get("atomic_task_packets"):
+        recs.append("Split delegation into atomic task packets with one mission, one artifact, and one honest done check.")
+    if not features.get("task_divider_agent"):
+        recs.append("Add a task-divider planning specialist so implementation never starts from vague or multi-output tasks.")
     if not features.get("batch_phase_skills"):
         recs.append("Make /xlfg a conductor over hidden phase skills instead of a monolithic prompt or a user-managed command chain.")
     if not features.get("no_legacy_task_tool"):
