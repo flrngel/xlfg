@@ -65,7 +65,8 @@ class TestSubagentStopGuard(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(out, "")
 
-    def test_does_not_reblock_when_stop_hook_already_active(self) -> None:
+    def test_blocks_repeated_stop_when_artifact_still_missing(self) -> None:
+        """After stopHookActive escape removal, guard blocks even on repeated attempts."""
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             transcript = root / "agent.jsonl"
@@ -84,4 +85,6 @@ class TestSubagentStopGuard(unittest.TestCase):
                 }
             )
             self.assertEqual(code, 0)
-            self.assertEqual(out, "")
+            data = json.loads(out)
+            self.assertEqual(data["decision"], "block")
+            self.assertIn(str(artifact), data["reason"])

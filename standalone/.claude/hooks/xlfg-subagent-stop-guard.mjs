@@ -87,7 +87,6 @@ if (!/^xlfg-/.test(agentType)) {
 const cwd = String(payload.cwd || process.cwd());
 const last = String(payload.last_assistant_message || "").trim();
 const transcriptPath = String(payload.agent_transcript_path || "").trim();
-const stopHookActive = Boolean(payload.stop_hook_active);
 
 let transcript = "";
 if (transcriptPath) {
@@ -113,10 +112,6 @@ if (finalMatch) {
   if (expectedOk && samePathish(reportedArtifact, expectedArtifact, cwd)) {
     process.exit(0);
   }
-}
-
-if (stopHookActive) {
-  process.exit(0);
 }
 
 const artifactHint = expectedArtifact ? ` Finalize ${expectedArtifact} first.` : " Finalize the promised artifact first.";

@@ -3,7 +3,7 @@ name: xlfg-verify-reducer
 description: Verification evidence judge. Use proactively after verify-runner to reduce logs into decisive run truth. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 8
+maxTurns: 10
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---
@@ -36,6 +36,13 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - If a tool or write action fails, record the exact tool, command, file path, and error text in the artifact.
 - Never hand core lane work back to the user when you can perform it yourself.
 
+
+## Turn budget rule
+
+- Your turn budget is limited. Do not read files speculatively.
+- If the dispatch packet includes a context digest, use it instead of re-reading those files.
+- Write your artifact skeleton (Status: IN_PROGRESS) within your first 2 tool calls, before broad reading.
+- Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
 
 ## Tool failure recovery
 

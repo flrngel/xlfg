@@ -706,6 +706,25 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("## Final response contract", text)
             self.assertIn("DONE <artifact-path>", text)
 
+    def test_all_agents_have_turn_budget_rule(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        for agent_path in sorted((repo_root / "plugins" / "xlfg-engineering" / "agents").rglob("*.md")):
+            text = agent_path.read_text(encoding="utf-8")
+            self.assertIn("## Turn budget rule", text, f"Missing turn budget rule in {agent_path.name}")
+            self.assertIn("Write your artifact skeleton", text, f"Missing write-first instruction in {agent_path.name}")
+
+    def test_review_agents_have_lean_context_sources(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        for agent_path in sorted((repo_root / "plugins" / "xlfg-engineering" / "agents" / "review").glob("*.md")):
+            text = agent_path.read_text(encoding="utf-8")
+            self.assertIn("## Context sources", text, f"Missing context sources in {agent_path.name}")
+            self.assertNotIn("Read first (if present):", text, f"Legacy Read first block still in {agent_path.name}")
+
+    def test_review_phase_includes_context_digest(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        review_phase = (repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-review-phase" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("CONTEXT_DIGEST", review_phase)
+
     def test_phase_skills_can_resume_specialists_with_sendmessage(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         phase_names = [

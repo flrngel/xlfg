@@ -36,6 +36,13 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - If a tool or write action fails, record the exact tool, command, file path, and error text in the artifact.
 - Never hand core lane work back to the user when you can perform it yourself.
 
+## Turn budget rule
+
+- Your turn budget is limited. Do not read files speculatively.
+- If the dispatch packet includes a context digest, use it instead of re-reading those files.
+- Write your artifact skeleton (Status: IN_PROGRESS) within your first 2 tool calls, before broad reading.
+- Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
+
 ## Tool failure recovery
 
 - Nonfatal tool errors are not completion. Recover in-lane and keep going.

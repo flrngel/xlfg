@@ -75,3 +75,7 @@ Reference intent fixtures ship in `evals/intent/`, and `xlfg eval-intent --suite
 ## 2.7.2 hardening note
 
 The plugin build now ships a plugin-level `SubagentStop` guard. In plugin mode, xlfg specialists are not allowed to stop on setup chatter or missing artifacts; the hook blocks the stop once and forces the specialist to finish the promised artifact or write an explicit `BLOCKED` / `FAILED` artifact instead.
+
+## 2.7.3 turn-budget fix
+
+Production testing found agents exhausting their 8-turn budget on speculative reads and never writing artifacts. Fix: raised maxTurns to 12 for review and heavy-analysis agents, added a "Turn budget rule" to all 26 specialists enforcing write-first behavior, replaced the bloated 14-file "Read first" lists in review agents with lean 3+3 context blocks, removed the `stopHookActive` escape hatch from the stop guard, and added `CONTEXT_DIGEST` to the review-phase dispatch protocol.

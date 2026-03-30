@@ -51,6 +51,11 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 ```
 
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Include a `CONTEXT_DIGEST` block in each review packet that embeds:
+  - The relevant objective(s) and false-success trap from `spec.md`
+  - The verdict and key findings from `verification.md`
+  - The changed file list from implementation
+  This saves the reviewer 3-5 turns of re-reading files the conductor already loaded.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
 

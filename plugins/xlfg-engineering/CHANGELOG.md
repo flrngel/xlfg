@@ -1,3 +1,11 @@
+## 2.7.3
+
+- Fixed sub-agent turn-budget starvation: raised maxTurns from 8 to 12 for review and heavy-analysis planning agents, and to 10 for test-implementer and verify-reducer.
+- Replaced the bloated "Read first" imperative lists in review agents with lean "Context sources" blocks, cutting speculative reads from 14 to 3 core files.
+- Added a "Turn budget rule" section to every specialist's execution contract, enforcing write-first behavior and prohibiting speculative file reads.
+- Removed the stopHookActive escape hatch from the SubagentStop guard so agents cannot bypass artifact completion after a single block.
+- Added CONTEXT_DIGEST to the review-phase dispatch protocol so conductors embed pre-digested context instead of expecting reviewers to re-read everything.
+
 ## 2.7.2
 
 - Added a plugin-level `SubagentStop` guard that blocks xlfg specialists from stopping on progress chatter or missing artifacts, using a bundled hook script instead of prompt text alone.
