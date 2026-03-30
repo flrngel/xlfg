@@ -1,7 +1,7 @@
 ---
 description: Internal xlfg phase skill. Use only during /xlfg runs to resolve messy user intent into a compact contract inside spec.md before broad repo fan-out.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch, Agent
+allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch, Agent, SendMessage
 ---
 
 # xlfg-intent-phase
@@ -36,7 +36,7 @@ This phase exists because users often provide:
    - freshness changes the meaning of the request
 4. Invoke `xlfg-query-refiner` explicitly and treat it as the lane owner for messy-intent resolution. Give it one atomic mission: resolve the intent contract in `spec.md` and nothing else. Use no other specialists unless they materially reduce a blocking ambiguity.
 5. Do not run xlfg specialists in background for this workflow. Keep them foregrounded so artifact writes, stop events, and workboard state stay synchronized.
-6. Require the specialist to materially update `spec.md`. If it returns without updating the intent contract, or returns only with setup notes, resume the same specialist once with the same mission packet; if that still fails, record the specialist failure and repair the contract yourself before continuing.
+6. Require the specialist to materially update `spec.md`. If it returns without updating the intent contract, or returns only with setup notes, use `SendMessage` with the returned agent ID to resume the same specialist once with the same mission packet; if no agent ID is available, re-dispatch the same packet once. Only after the second incomplete return may you record the specialist failure and repair the contract yourself before continuing.
 7. Update `spec.md` so the top `Intent contract` and `Objective groups` sections are concrete:
    - `resolution`: `proceed` | `proceed-with-assumptions` | `needs-user-answer`
    - stable IDs for direct asks (`Q1`, `Q2`, ...)

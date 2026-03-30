@@ -348,6 +348,12 @@ def _subagent_hardening_report(root: Path) -> dict[str, Any]:
     def _resume_rule(path: Path, text: str, _fm: dict[str, str]) -> bool:
         return "If the parent resumes you" in text
 
+    def _artifact_bootstrap(path: Path, text: str, _fm: dict[str, str]) -> bool:
+        return "Status: IN_PROGRESS" in text and "exact artifact path" in text
+
+    def _final_response_contract(path: Path, text: str, _fm: dict[str, str]) -> bool:
+        return "## Final response contract" in text and "DONE <artifact-path>" in text and "Any other final reply shape is invalid" in text
+
     review_agents = [p for p in plugin_agents if "/review/" in str(p).replace("\\", "/")]
     review_paths = {
         "xlfg-architecture-reviewer": "DOCS_RUN_DIR/reviews/architecture-review.md",
@@ -377,6 +383,8 @@ def _subagent_hardening_report(root: Path) -> dict[str, Any]:
         "agents_with_status_contract": _count(_status_contract),
         "agents_with_completion_barrier": _count(_completion_barrier),
         "agents_with_resume_rule": _count(_resume_rule),
+        "agents_with_artifact_bootstrap": _count(_artifact_bootstrap),
+        "agents_with_final_response_contract": _count(_final_response_contract),
         "review_agents_with_report_artifacts": review_artifact_reports,
         "review_agent_count": len(review_agents),
     }
@@ -393,6 +401,7 @@ def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
     plugin_readme = _read_text(plugin_root / "README.md")
     root_readme = _read_text(root / "README.md")
     brief_blob = "\n".join([primary_text, standalone_text, plugin_readme, root_readme, runs_text])
+    phase_skill_blob = "\n".join(_read_text(path) for path in sorted((plugin_root / "skills").rglob("SKILL.md")))
     fm = _frontmatter_summary(primary_text or standalone_text)
 
     return {
@@ -432,7 +441,11 @@ def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
         "status_contracts": hardening["plugin_agent_count"] > 0 and hardening["agents_with_status_contract"] == hardening["plugin_agent_count"],
         "review_artifact_lane": hardening["review_agent_count"] > 0 and hardening["review_agents_with_report_artifacts"] == hardening["review_agent_count"],
         "completion_barrier_contracts": hardening["plugin_agent_count"] > 0 and hardening["agents_with_completion_barrier"] == hardening["plugin_agent_count"],
-        "resume_ready_specialists": hardening["plugin_agent_count"] > 0 and hardening["agents_with_resume_rule"] == hardening["plugin_agent_count"] and "resume the **same specialist**" in primary_text.lower(),
+        "resume_ready_specialists": hardening["plugin_agent_count"] > 0 and hardening["agents_with_resume_rule"] == hardening["plugin_agent_count"] and "sendmessage" in phase_skill_blob.lower(),
+        "artifact_bootstrap_specialists": hardening["plugin_agent_count"] > 0 and hardening["agents_with_artifact_bootstrap"] == hardening["plugin_agent_count"],
+        "final_response_contracts": hardening["plugin_agent_count"] > 0 and hardening["agents_with_final_response_contract"] == hardening["plugin_agent_count"],
+        "phase_sendmessage_resume": "SendMessage" in phase_skill_blob,
+        "review_packet_splitting": "one change cluster plus one review lens" in _read_text(plugin_root / "skills" / "xlfg-review-phase" / "SKILL.md"),
         "atomic_task_packets": "primary_artifact" in runs_text and "done_check" in runs_text and ("task-brief.md" in brief_blob or "task-brief.md" in _read_text(plugin_root / "skills" / "xlfg-plan-phase" / "SKILL.md") or "task-brief.md" in _read_text(plugin_root / "skills" / "xlfg-implement-phase" / "SKILL.md")) and (plugin_root / "agents" / "planning" / "xlfg-task-divider.md").exists(),
         "task_divider_agent": (plugin_root / "agents" / "planning" / "xlfg-task-divider.md").exists(),
         "standalone_agent_pack": hardening["standalone_agent_pack"],

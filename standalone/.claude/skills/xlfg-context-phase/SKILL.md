@@ -1,7 +1,7 @@
 ---
 description: Internal xlfg phase skill. Use only during /xlfg runs to gather repo truth, current constraints, harness facts, and targeted external research when needed.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write, WebSearch, WebFetch, Agent
+allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write, WebSearch, WebFetch, Agent, SendMessage
 ---
 
 # xlfg-context-phase
@@ -31,7 +31,7 @@ Gather the repo and product truth needed for an honest plan without exploding co
    - run `xlfg-context-adjacent-investigator`, `xlfg-context-constraints-investigator`, and `xlfg-context-unknowns-investigator` whenever the request is bundled, risky, or still assumption-heavy
    - run `xlfg-env-doctor` when local server behavior is relevant
    - run `xlfg-researcher` only when freshness or missing domain knowledge makes repo truth insufficient
-6. Keep these specialists foregrounded. After each specialist returns, verify its expected artifact exists, begins with `Status:`, and contains real findings instead of preparation notes. If it does not, resume the same specialist once before treating the lane as failed.
+6. Keep these specialists foregrounded. After each specialist returns, verify its expected artifact exists, begins with `Status:`, and contains real findings instead of preparation notes. If it does not, use `SendMessage` with the returned agent ID to resume the same specialist once before treating the lane as failed. If no agent ID is available, re-dispatch the exact same packet once.
 7. Use the specialist artifacts as the primary lane evidence. The main conductor should synthesize from them rather than silently redoing their work in chat.
 8. Write or update `context.md` with:
    - relevant repo and product context

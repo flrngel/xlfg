@@ -66,8 +66,8 @@ Use the `Skill` tool to load each phase just-in-time instead of carrying all pha
 - Every specialist dispatch must be an **atomic packet** with one mission, one primary output artifact, one file scope, and one honest done check.
 - Do not accept chat-only progress updates as completion. “I'm going to …”, “here is my plan …”, or “I prepared the context …” all count as **INCOMPLETE** until the promised artifact exists and the scoped work is actually done.
 - A specialist lane is complete only when the required artifact exists, starts with `Status: DONE` or `Status: BLOCKED` or `Status: FAILED`, and contains concrete edits, findings, checks, logs, or cited facts.
-- If a specialist returns early without the artifact or only with setup notes, resume the **same specialist** with the same packet when possible so it can continue from its prior state. If resume is unavailable, re-dispatch the same packet once.
-- Only after a second incomplete return should you mark the specialist lane failed or repair the gap yourself.
+- If a specialist returns early without the artifact or only with setup notes, resume the **same specialist** with `SendMessage` using its returned agent ID so it continues from prior state instead of starting over. If no agent ID is available or resume is unavailable, re-dispatch the exact same packet once.
+- Only after a second incomplete return should you mark the specialist lane failed, re-split the task, or repair the gap yourself. Do not bypass the specialist after the first incomplete return.
 - If a task packet spans multiple unrelated outputs, split it before delegation rather than hoping one specialist will self-scope perfectly.
 
 ## Internal loop rules

@@ -23,6 +23,7 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 
 - Do the real lane work now. Do not stop after scoping, preparation, or “here is what I would do.”
 - Use the minimum necessary tools and produce the required artifact for this lane.
+- When this lane owns a dedicated artifact, create it immediately as `Status: IN_PROGRESS` with the exact artifact path, the scoped mission, and a short remaining checklist, then keep updating that same file until it reaches `DONE`, `BLOCKED`, or `FAILED`.
 - Finish in the foreground. Do not rely on background continuation.
 - Ground conclusions in exact file paths, commands, logs, or cited web facts.
 - If you own a dedicated handoff or report artifact, begin it with `Status: DONE` or `Status: BLOCKED` or `Status: FAILED`.
@@ -47,6 +48,17 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
   4. the promised done check ran, or the artifact explicitly records why it could not run
 - If the parent resumes you, continue the unfinished checklist from your prior state instead of re-summarizing setup or starting over.
 - If you wrote only prep, notes, or a plan, you are not done. Continue the lane work before replying.
+- If the parent packet specifies `primary_artifact`, `handoff path`, or an explicit `Write` target, that exact path overrides any default artifact path below.
+
+## Final response contract
+
+- Keep the final chat reply terse. Do not narrate setup, planning, or recap the work in chat.
+- After the artifact is finalized, your final chat reply must be exactly one line in one of these forms:
+  - `DONE <artifact-path>`
+  - `BLOCKED <artifact-path>`
+  - `FAILED <artifact-path>`
+- If you updated only canonical shared files rather than a dedicated lane artifact, use the canonical file path you actually updated.
+- Any other final reply shape is invalid. Keep working until you can reply in this format.
 
 
 

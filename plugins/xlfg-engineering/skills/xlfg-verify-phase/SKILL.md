@@ -1,7 +1,7 @@
 ---
 description: Internal xlfg phase skill. Use only during /xlfg runs to run layered proof, reduce results into verification.md, and surface the first actionable failure.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write, Agent
+allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write, Agent, SendMessage
 ---
 
 # xlfg-verify-phase
@@ -32,7 +32,7 @@ Run honest layered proof for the changed behavior and reduce the results into a 
    - then always run `xlfg-verify-reducer`
    - run `xlfg-env-doctor` when the harness is unhealthy or the proof depends on a running app
 5. Keep these specialists foregrounded. Missing verify artifacts mean verification did not actually happen.
-6. Require the verify artifacts to exist before accepting phase completion: `results.json`, `summary.md`, `verification.md`, and any required fix plan. If a specialist returns early without them or only narrates next steps, resume the same specialist once or classify the phase as FAILED / RED.
+6. Require the verify artifacts to exist before accepting phase completion: `results.json`, `summary.md`, `verification.md`, and any required fix plan. If a specialist returns early without them or only narrates next steps, use `SendMessage` with the returned agent ID to resume the same specialist once. If no agent ID is available, re-dispatch the exact same packet once. Only then may you classify the phase as FAILED / RED.
 7. Write or update `verification.md` with real evidence.
 8. If verification is RED, write or update `verify-fix-plan.md` with the first actionable failure only.
 9. Update `workboard.md` with the verification status and next action.

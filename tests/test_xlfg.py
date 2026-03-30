@@ -661,6 +661,8 @@ class TestXLFG(unittest.TestCase):
         self.assertEqual(hardening["agents_with_proactive_description"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["agents_with_completion_barrier"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["agents_with_resume_rule"], hardening["plugin_agent_count"])
+        self.assertEqual(hardening["agents_with_artifact_bootstrap"], hardening["plugin_agent_count"])
+        self.assertEqual(hardening["agents_with_final_response_contract"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["review_agents_with_report_artifacts"], hardening["review_agent_count"])
         self.assertTrue(features["explicit_subagent_tools"])
         self.assertTrue(features["foreground_specialists"])
@@ -668,6 +670,10 @@ class TestXLFG(unittest.TestCase):
         self.assertTrue(features["review_artifact_lane"])
         self.assertTrue(features["completion_barrier_contracts"])
         self.assertTrue(features["resume_ready_specialists"])
+        self.assertTrue(features["artifact_bootstrap_specialists"])
+        self.assertTrue(features["final_response_contracts"])
+        self.assertTrue(features["phase_sendmessage_resume"])
+        self.assertTrue(features["review_packet_splitting"])
         self.assertTrue(features["atomic_task_packets"])
         self.assertTrue(features["task_divider_agent"])
         self.assertTrue(features["standalone_agent_pack"])
@@ -690,6 +696,29 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("## Completion barrier", text)
             self.assertIn("Do not return a progress update", text)
             self.assertIn("If the parent resumes you", text)
+            self.assertIn("Status: IN_PROGRESS", text)
+            self.assertIn("## Final response contract", text)
+            self.assertIn("DONE <artifact-path>", text)
+
+    def test_phase_skills_can_resume_specialists_with_sendmessage(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        phase_names = [
+            "xlfg-intent-phase",
+            "xlfg-context-phase",
+            "xlfg-plan-phase",
+            "xlfg-implement-phase",
+            "xlfg-verify-phase",
+            "xlfg-review-phase",
+        ]
+        for phase_name in phase_names:
+            text = (repo_root / "plugins" / "xlfg-engineering" / "skills" / phase_name / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("SendMessage", text)
+
+    def test_review_phase_splits_broad_review_packets(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        review_phase = (repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-review-phase" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("one change cluster plus one review lens", review_phase)
+        self.assertIn("architecture-R1.md", review_phase)
 
     def test_intent_eval_parses_extended_task_packet_fields(self) -> None:
         with tempfile.TemporaryDirectory() as td:

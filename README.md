@@ -2,7 +2,7 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-Version 2.7.0 hardens the next weak layer after intent handling: **specialist subagents now own their lanes more explicitly, produce verifiable artifacts, and are harder for the main flow to ignore or short-circuit**.
+Version 2.7.1 hardens the next weak layer after intent handling: **specialist subagents now own their lanes more explicitly, produce verifiable artifacts, and are harder for the main flow to ignore or short-circuit**.
 
 - `/xlfg` is still the **single public entrypoint**, and it still **batches hidden phase skills**
 - the plugin command keeps the current short `/xlfg` alias via `name: xlfg`, while the namespaced form remains `/xlfg-engineering:xlfg`
@@ -64,7 +64,7 @@ xlfg verify --mode full
 MIT
 
 
-## 2.7.0 note
+## 2.7.1 note
 
 - Main conductor now dispatches specialists with an atomic task packet: one mission, one required artifact, one done check.
 - Progress-only specialist replies are treated as incomplete; the conductor resumes the same specialist once before accepting failure or repairing the lane.

@@ -1,7 +1,7 @@
 ---
 description: Internal xlfg phase skill. Use only during /xlfg runs to turn intent plus context into a lean run card, atomic task packets, a practical proof contract, and a READY gate.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, Agent
+allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, Agent, SendMessage
 ---
 
 # xlfg-plan-phase
@@ -38,7 +38,7 @@ Turn the resolved intent and gathered truth into a lean run card, a practical te
    - run `xlfg-env-doctor` when the proof depends on a running app
    - run `xlfg-researcher` only if context phase proved that repo truth is insufficient
    - run `xlfg-brainstorm` only when the intent phase left multiple viable solution directions
-5. Keep specialists foregrounded and require their artifacts before synthesis. Resume the same specialist once if it returns only setup notes or a missing artifact.
+5. Keep specialists foregrounded and require their artifacts before synthesis. If a specialist returns only setup notes or a missing artifact, use `SendMessage` with the returned agent ID to resume the same specialist once. If no agent ID is available, re-dispatch the same packet once.
 6. The main conductor should synthesize `spec.md` and the final plan from specialist artifacts instead of replacing those lanes with its own first-pass reasoning.
 7. Update `spec.md` as the single source of truth:
    - keep the intent contract and objective groups accurate
@@ -53,7 +53,7 @@ Turn the resolved intent and gathered truth into a lean run card, a practical te
 9. Update `test-readiness.md` with a real `READY` or `REVISE` verdict.
 10. Update `workboard.md` so objectives, tasks, blockers, and the next action stay visible. Create or refresh `tasks/<task-id>/task-brief.md` for each active task.
 11. Create optional docs only when they change a decision or proof obligation: `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `risk.md`.
-12. If a required planning specialist returns only setup notes or no artifact, retry once or record the failure before repairing the gap yourself.
+12. If a required planning specialist returns only setup notes or no artifact, retry once via resume or exact re-dispatch before repairing the gap yourself. Do not collapse a broad packet into main-thread guesswork; re-split it first when needed.
 
 ## Readiness rule
 

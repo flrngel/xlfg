@@ -32,7 +32,7 @@ Read `NEXT_AGENT_CONTEXT.md` first. It is the bundle-level handoff document and 
 - `tests/` — regression tests for scaffold, recall, verification, intent grading, and repo contracts
 
 
-## 2.7.0 note
+## 2.7.1 note
 
 - Main conductor now dispatches specialists with an atomic task packet: one mission, one required artifact, one done check.
 - Progress-only specialist replies are treated as incomplete; the conductor resumes the same specialist once before accepting failure or repairing the lane.
