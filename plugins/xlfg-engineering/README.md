@@ -70,3 +70,8 @@ Reference intent fixtures ship in `evals/intent/`, and `xlfg eval-intent --suite
 
 - Main conductor now dispatches specialists with an atomic task packet: one mission, one required artifact, one done check.
 - Progress-only specialist replies are treated as incomplete; the conductor resumes the same specialist once before accepting failure or repairing the lane.
+
+
+## 2.7.2 hardening note
+
+The plugin build now ships a plugin-level `SubagentStop` guard. In plugin mode, xlfg specialists are not allowed to stop on setup chatter or missing artifacts; the hook blocks the stop once and forces the specialist to finish the promised artifact or write an explicit `BLOCKED` / `FAILED` artifact instead.

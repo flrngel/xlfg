@@ -143,6 +143,12 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("Objective ledger", workboard)
             self.assertIn("do not mark a specialist lane done from chat alone", workboard)
 
+    def test_repo_audit_reports_stop_guard_and_packet_headers(self) -> None:
+        report = audit_repo(Path(__file__).resolve().parents[1])
+        self.assertTrue(report["metrics"]["features"]["subagent_stop_guard"])
+        self.assertTrue(report["metrics"]["features"]["packet_header_discipline"])
+        self.assertTrue(report["metrics"]["features"]["sequential_artifact_planning"])
+
     def test_prepare_scaffold_creates_recall_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

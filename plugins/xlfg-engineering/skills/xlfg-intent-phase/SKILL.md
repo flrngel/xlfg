@@ -59,6 +59,22 @@ If `resolution` is `needs-user-answer`:
 - state the smallest safe assumptions you refused to make
 - stop the batch after surfacing the blocker
 
+## Delegation packet rules
+
+- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
+- Every specialist packet must begin with machine-readable headers:
+
+```text
+PRIMARY_ARTIFACT: <exact path>
+FILE_SCOPE: <bounded files or paths>
+DONE_CHECK: <single honest check or NONE>
+RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+```
+
+- Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
+- When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
+
 ## Guardrails
 
 - Do not recreate a separate intent file.

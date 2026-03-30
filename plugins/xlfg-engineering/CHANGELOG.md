@@ -1,3 +1,10 @@
+## 2.7.2
+
+- Added a plugin-level `SubagentStop` guard that blocks xlfg specialists from stopping on progress chatter or missing artifacts, using a bundled hook script instead of prompt text alone.
+- Tightened the conductor and phase skills around artifact-first atomic packets: preseed the lane artifact, pass machine-readable `PRIMARY_ARTIFACT` / `FILE_SCOPE` / `DONE_CHECK` headers, and default planning lanes to sequential dispatch unless packets are truly independent.
+- Hardened every specialist with explicit tool-error recovery rules so directory-read failures, oversized-file reads, and similar nonfatal errors are repaired in-lane instead of being surfaced as premature chat replies.
+- Added tests and audit checks for the stop guard, packet header discipline, and plugin hook wiring.
+
 ## 2.7.1
 
 - Hardened specialist completion with an explicit completion barrier: progress-only returns are not accepted as done.

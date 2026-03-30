@@ -425,6 +425,9 @@ def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
         "skill_hooks": fm["has_hooks"],
         "plugin_hooks": (plugin_root / "hooks" / "hooks.json").exists(),
         "hook_auto_exit_plan": "ExitPlanMode" in hooks_json or "ExitPlanMode" in primary_text,
+        "subagent_stop_guard": "SubagentStop" in hooks_json and "subagent-stop-guard.mjs" in hooks_json and (plugin_root / "scripts" / "subagent-stop-guard.mjs").exists(),
+        "packet_header_discipline": "PRIMARY_ARTIFACT:" in brief_blob and "DONE_CHECK:" in brief_blob and "RETURN_CONTRACT:" in brief_blob,
+        "sequential_artifact_planning": "sequential" in _read_text(plugin_root / "skills" / "xlfg-context-phase" / "SKILL.md").lower() and "sequential" in _read_text(plugin_root / "skills" / "xlfg-plan-phase" / "SKILL.md").lower(),
         "effort_frontmatter": bool(fm["effort"]),
         "plugin_namespace_documented": "/xlfg-engineering:xlfg" in plugin_readme and "standalone" in plugin_readme.lower() and "/xlfg" in plugin_readme,
         "single_main_entrypoint": entrypoints["plugin_primary_kind"] != "none" and not entrypoints["command_skill_collision"],
@@ -516,6 +519,9 @@ def _coverage_score(features: dict[str, bool], version_sync_ok: bool) -> int:
     score += 6 if features.get("single_main_entrypoint") else 0
     score += 6 if features.get("multi_objective_splitter") else 0
     score += 6 if features.get("batch_phase_skills") else 0
+    score += 4 if features.get("subagent_stop_guard") else 0
+    score += 4 if features.get("packet_header_discipline") else 0
+    score += 4 if features.get("sequential_artifact_planning") else 0
     score += 4 if features.get("background_support_skills") else 0
     score += 4 if features.get("explicit_subagent_tools") else 0
     score += 4 if features.get("foreground_specialists") else 0
@@ -553,6 +559,9 @@ def _compatibility_score(features: dict[str, bool]) -> int:
     score += 5 if features.get("completion_barrier_contracts") else 0
     score += 5 if features.get("resume_ready_specialists") else 0
     score += 5 if features.get("atomic_task_packets") else 0
+    score += 4 if features.get("subagent_stop_guard") else 0
+    score += 3 if features.get("packet_header_discipline") else 0
+    score += 3 if features.get("sequential_artifact_planning") else 0
     score += 3 if features.get("no_repo_relative_plugin_refs") else 0
     score += 2 if features.get("plugin_name_frontmatter_avoided") else 0
     return min(100, score)
@@ -608,6 +617,12 @@ def _top_recommendations(
         recs.append("Make each review lens write its own artifact so the conductor can trust and synthesize specialist review instead of ignoring it.")
     if not features.get("completion_barrier_contracts"):
         recs.append("Harden every specialist with an explicit completion barrier so progress notes are never mistaken for finished work.")
+    if not features.get("subagent_stop_guard"):
+        recs.append("Add a deterministic SubagentStop guard so xlfg specialists cannot stop on progress chatter alone.")
+    if not features.get("packet_header_discipline"):
+        recs.append("Prefix every delegated packet with PRIMARY_ARTIFACT, FILE_SCOPE, DONE_CHECK, and RETURN_CONTRACT headers.")
+    if not features.get("sequential_artifact_planning"):
+        recs.append("Default artifact-producing planning/context lanes to sequential dispatch; parallelize only truly independent read-mostly packets.")
     if not features.get("resume_ready_specialists"):
         recs.append("Resume the same specialist once on incomplete returns instead of replacing it or accepting setup chatter as completion.")
     if not features.get("atomic_task_packets"):

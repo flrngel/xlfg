@@ -38,7 +38,7 @@ Turn the resolved intent and gathered truth into a lean run card, a practical te
    - run `xlfg-env-doctor` when the proof depends on a running app
    - run `xlfg-researcher` only if context phase proved that repo truth is insufficient
    - run `xlfg-brainstorm` only when the intent phase left multiple viable solution directions
-5. Keep specialists foregrounded and require their artifacts before synthesis. If a specialist returns only setup notes or a missing artifact, use `SendMessage` with the returned agent ID to resume the same specialist once. If no agent ID is available, re-dispatch the same packet once.
+5. Keep specialists foregrounded and require their artifacts before synthesis. Default to sequential plan specialists unless two packets are truly independent. If a specialist returns only setup notes or a missing artifact, use `SendMessage` with the returned agent ID to resume the same specialist once. If no agent ID is available, re-dispatch the same packet once.
 6. The main conductor should synthesize `spec.md` and the final plan from specialist artifacts instead of replacing those lanes with its own first-pass reasoning.
 7. Update `spec.md` as the single source of truth:
    - keep the intent contract and objective groups accurate
@@ -58,6 +58,22 @@ Turn the resolved intent and gathered truth into a lean run card, a practical te
 ## Readiness rule
 
 If `test-readiness.md` is `REVISE`, repair the plan yourself until it becomes `READY` or a true human-only blocker is explicit. Do not ask the user to sequence replanning.
+
+## Delegation packet rules
+
+- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
+- Every specialist packet must begin with machine-readable headers:
+
+```text
+PRIMARY_ARTIFACT: <exact path>
+FILE_SCOPE: <bounded files or paths>
+DONE_CHECK: <single honest check or NONE>
+RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+```
+
+- Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
+- When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
 
 ## Guardrails
 

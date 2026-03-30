@@ -25,7 +25,7 @@ Gather the repo and product truth needed for an honest plan without exploding co
    - `docs/xlfg/knowledge/current-state.md`
 3. Start from the intent contract already written in `spec.md`. Keep repo exploration scoped to those direct asks, implied asks, objective groups, and blockers.
 4. Explore repo truth first with targeted reads and grep, not broad file hoarding.
-5. Use specialists as true lane owners, not optional advisors. Give each one objective context plus one bounded output artifact:
+5. Use specialists as true lane owners, not optional advisors. Give each one objective context plus one bounded output artifact. Repo-map, harness-profile, and external research should normally run sequentially because each artifact shapes the next packet:
    - always run `xlfg-repo-mapper`
    - run `xlfg-harness-profiler` for any build / bugfix / delivery run
    - run `xlfg-context-adjacent-investigator`, `xlfg-context-constraints-investigator`, and `xlfg-context-unknowns-investigator` whenever the request is bundled, risky, or still assumption-heavy
@@ -42,6 +42,22 @@ Gather the repo and product truth needed for an honest plan without exploding co
 10. If a required specialist failed to produce its artifact, classify that in `workboard.md` and either retry once or continue only with an explicit gap note.
 11. Create `research.md` only when external research materially changes the decision surface.
 12. Keep `workboard.md` current while planning is in progress.
+
+## Delegation packet rules
+
+- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
+- Every specialist packet must begin with machine-readable headers:
+
+```text
+PRIMARY_ARTIFACT: <exact path>
+FILE_SCOPE: <bounded files or paths>
+DONE_CHECK: <single honest check or NONE>
+RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+```
+
+- Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
+- When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
 
 ## Guardrails
 

@@ -61,6 +61,21 @@ Use the `Skill` tool to load each phase just-in-time instead of carrying all pha
 - Keep xlfg specialists in the foreground; do not rely on background execution for phase-critical work. Recent platform issues have included sync problems, silent write failures, and broken background subagent transport.
 - Prefer the specialist artifact over the main agent's first-pass reasoning for that lane, because the specialist exists to apply a stricter expert lens, not because the main agent is incapable.
 
+## Atomic packet format
+
+Before dispatching any xlfg specialist, preseed the required artifact yourself and use a packet that starts with these machine-readable lines:
+
+```text
+PRIMARY_ARTIFACT: <exact path>
+FILE_SCOPE: <bounded files or paths>
+DONE_CHECK: <single honest check or NONE>
+RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+```
+
+- Preseed the artifact at `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the mission, and a short remaining checklist **before** the specialist starts broad reading.
+- Pass objective context, not just the literal query. Include the exact ask, why it matters, and any nearby constraints that change correctness.
+- Default to sequential specialist dispatch for artifact-producing planning/context lanes. Parallelize only when packets are truly independent, small, and read-mostly.
+
 ## Specialist completion barrier
 
 - Every specialist dispatch must be an **atomic packet** with one mission, one primary output artifact, one file scope, and one honest done check.
