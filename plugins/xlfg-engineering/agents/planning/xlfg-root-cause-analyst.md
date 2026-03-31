@@ -3,7 +3,7 @@ name: xlfg-root-cause-analyst
 description: Causal debugger. Use proactively during planning to find the true failure mechanism before solutioning. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 12
+maxTurns: 100
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

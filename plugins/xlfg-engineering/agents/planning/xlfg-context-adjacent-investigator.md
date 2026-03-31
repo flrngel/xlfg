@@ -2,8 +2,8 @@
 name: xlfg-context-adjacent-investigator
 description: Adjacent-requirement hunter. Use proactively before planning to surface implied behaviors and parity gaps. Owns one atomic lane and returns only after the required artifact is complete.
 model: haiku
-effort: medium
-maxTurns: 8
+effort: high
+maxTurns: 100
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

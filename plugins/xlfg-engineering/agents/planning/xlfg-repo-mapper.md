@@ -2,8 +2,8 @@
 name: xlfg-repo-mapper
 description: Repository cartographer. Use proactively at the start of /xlfg to map structure, commands, and conventions. Owns one atomic lane and returns only after the required artifact is complete.
 model: haiku
-effort: medium
-maxTurns: 8
+effort: high
+maxTurns: 100
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

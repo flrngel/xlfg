@@ -3,7 +3,7 @@ name: xlfg-task-checker
 description: Adversarial task critic. Use proactively after each implementation task to catch drift before phase completion. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 8
+maxTurns: 100
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

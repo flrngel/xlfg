@@ -2,8 +2,8 @@
 name: xlfg-env-doctor
 description: Verification harness medic. Use proactively when local servers, ports, health checks, or flaky dev environments matter. Owns one atomic lane and returns only after the required artifact is complete.
 model: haiku
-effort: medium
-maxTurns: 8
+effort: high
+maxTurns: 100
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

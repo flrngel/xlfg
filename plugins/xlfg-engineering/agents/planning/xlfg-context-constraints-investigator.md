@@ -2,8 +2,8 @@
 name: xlfg-context-constraints-investigator
 description: Constraint auditor. Use proactively before planning to surface runtime, dependency, security, and ops constraints. Owns one atomic lane and returns only after the required artifact is complete.
 model: haiku
-effort: medium
-maxTurns: 8
+effort: high
+maxTurns: 100
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

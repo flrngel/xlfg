@@ -3,7 +3,7 @@ name: xlfg-spec-author
 description: Behavior-contract author. Use proactively when flows need concrete scenario-level behavior before coding. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 12
+maxTurns: 100
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---
