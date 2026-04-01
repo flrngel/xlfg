@@ -29,7 +29,7 @@ Implement the planned change with one conductor, specialist task owners, aligned
    - for each non-trivial task, run `xlfg-task-implementer` explicitly with `TASK_ID`, bounded `scope`, one required artifact, and one done check
    - when tests or proof artifacts must change, run `xlfg-test-implementer` with the same task packet discipline
    - before marking a task done, run `xlfg-task-checker` against that exact task packet
-5. Keep these specialists foregrounded. Treat a missing report or a prep-only response as incomplete work, not success. Use `SendMessage` with the returned agent ID to resume the same specialist once before falling back to repair or re-splitting the task. If no agent ID is available, re-dispatch the exact same packet once.
+5. Keep these specialists foregrounded, short-lived, and leaf-only. Treat a missing report or a prep-only response as incomplete work, not success. Use `SendMessage` with the returned agent ID to resume the same specialist once before falling back to repair or re-splitting the task. If no agent ID is available, re-dispatch the exact same packet once.
 6. The main conductor should coordinate task order, integrate specialist artifacts, and resolve conflicts; it should not bypass the specialist lanes unless the task is truly trivial or the specialist failed twice.
 7. Implement the smallest coherent set of code and test changes that satisfy the run card.
 8. Run targeted task-level checks as you go. Do not close a task until its packet artifact exists and the done check is honestly addressed.
@@ -49,6 +49,7 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 ```
 
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Only the phase conductor may delegate. Never ask an implementation specialist to spawn nested subagents or create its own fan-out.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
 

@@ -3,7 +3,7 @@ name: xlfg-test-readiness-checker
 description: Proof-gate reviewer. Use proactively before implementation to decide whether the test contract is READY or REVISE. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 100
+maxTurns: 12
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 import threading
 import unittest
@@ -17,6 +18,11 @@ from xlfg.contracts import parse_test_readiness_verdict
 from xlfg.intent_eval import grade_intent_artifacts, evaluate_intent_suite, parse_spec_artifact
 from xlfg.scaffold import ensure_scaffold, scaffold_status
 from xlfg.verify import verify
+
+
+def _frontmatter_value(text: str, key: str) -> str | None:
+    match = re.search(rf"^{re.escape(key)}:\s*(.+)$", text, re.MULTILINE)
+    return match.group(1).strip() if match else None
 
 
 class _OkHandler(BaseHTTPRequestHandler):
@@ -148,6 +154,8 @@ class TestXLFG(unittest.TestCase):
         self.assertTrue(report["metrics"]["features"]["subagent_stop_guard"])
         self.assertTrue(report["metrics"]["features"]["packet_header_discipline"])
         self.assertTrue(report["metrics"]["features"]["sequential_artifact_planning"])
+        self.assertTrue(report["metrics"]["features"]["short_lived_specialists"])
+        self.assertTrue(report["metrics"]["features"]["leaf_specialists"])
 
     def test_prepare_scaffold_creates_recall_files(self) -> None:
         with tempfile.TemporaryDirectory() as td:
@@ -641,6 +649,21 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("## Specialist identity", text)
             self.assertIn("## Execution contract", text)
 
+    def test_all_specialist_agents_are_leaf_workers_with_short_turn_budgets(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        for root in [
+            repo_root / "plugins" / "xlfg-engineering" / "agents",
+            repo_root / "standalone" / ".claude" / "agents",
+        ]:
+            for agent_path in sorted(root.rglob("*.md")):
+                text = agent_path.read_text(encoding="utf-8")
+                tools = _frontmatter_value(text, "tools") or ""
+                max_turns = _frontmatter_value(text, "maxTurns")
+                self.assertIsNotNone(max_turns, f"Missing maxTurns in {agent_path}")
+                self.assertLessEqual(int(max_turns), 12, f"Turn budget too large in {agent_path}")
+                self.assertNotIn("Agent", tools, f"Nested delegation tool leaked into {agent_path}")
+                self.assertNotIn("SendMessage", tools, f"Resume tool leaked into {agent_path}")
+
     def test_review_agents_write_artifacts_under_reviews_dir(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         expected = {
@@ -664,6 +687,8 @@ class TestXLFG(unittest.TestCase):
         self.assertTrue(hardening["standalone_agent_pack"])
         self.assertEqual(hardening["agents_with_tools_allowlist"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["agents_with_background_false"], hardening["plugin_agent_count"])
+        self.assertEqual(hardening["agents_with_short_turn_budgets"], hardening["plugin_agent_count"])
+        self.assertEqual(hardening["agents_with_leaf_worker_tools"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["agents_with_proactive_description"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["agents_with_completion_barrier"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["agents_with_resume_rule"], hardening["plugin_agent_count"])
@@ -672,6 +697,8 @@ class TestXLFG(unittest.TestCase):
         self.assertEqual(hardening["review_agents_with_report_artifacts"], hardening["review_agent_count"])
         self.assertTrue(features["explicit_subagent_tools"])
         self.assertTrue(features["foreground_specialists"])
+        self.assertTrue(features["short_lived_specialists"])
+        self.assertTrue(features["leaf_specialists"])
         self.assertTrue(features["proactive_delegation_descriptions"])
         self.assertTrue(features["review_artifact_lane"])
         self.assertTrue(features["completion_barrier_contracts"])
@@ -712,6 +739,52 @@ class TestXLFG(unittest.TestCase):
             text = agent_path.read_text(encoding="utf-8")
             self.assertIn("## Turn budget rule", text, f"Missing turn budget rule in {agent_path.name}")
             self.assertIn("Write your artifact skeleton", text, f"Missing write-first instruction in {agent_path.name}")
+
+    def test_all_delegating_entrypoints_repeat_atomic_packet_contract(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        targets = [
+            repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md",
+            repo_root / "standalone" / ".claude" / "skills" / "xlfg" / "SKILL.md",
+        ]
+        targets.extend(sorted((repo_root / "plugins" / "xlfg-engineering" / "skills").glob("xlfg-*-phase/SKILL.md")))
+        targets.extend(sorted((repo_root / "standalone" / ".claude" / "skills").glob("xlfg-*-phase/SKILL.md")))
+        for path in targets:
+            text = path.read_text(encoding="utf-8")
+            is_main_entry = path.name == "xlfg.md" or path.parent.name == "xlfg"
+            if not is_main_entry and "Agent" not in text and "SendMessage" not in text:
+                continue
+            self.assertIn("PRIMARY_ARTIFACT:", text, f"Missing PRIMARY_ARTIFACT in {path}")
+            self.assertIn("DONE_CHECK:", text, f"Missing DONE_CHECK in {path}")
+            self.assertIn("RETURN_CONTRACT:", text, f"Missing RETURN_CONTRACT in {path}")
+            self.assertIn("Status: IN_PROGRESS", text, f"Missing artifact preseed rule in {path}")
+
+    def test_delegating_phase_skills_forbid_nested_subagents(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        phase_names = [
+            "xlfg-intent-phase",
+            "xlfg-context-phase",
+            "xlfg-plan-phase",
+            "xlfg-implement-phase",
+            "xlfg-verify-phase",
+            "xlfg-review-phase",
+        ]
+        for base in [
+            repo_root / "plugins" / "xlfg-engineering" / "skills",
+            repo_root / "standalone" / ".claude" / "skills",
+        ]:
+            for phase_name in phase_names:
+                text = (base / phase_name / "SKILL.md").read_text(encoding="utf-8")
+                self.assertIn("Only the phase conductor may delegate.", text)
+
+    def test_review_phase_keeps_small_fanout(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        for base in [
+            repo_root / "plugins" / "xlfg-engineering" / "skills",
+            repo_root / "standalone" / ".claude" / "skills",
+        ]:
+            text = (base / "xlfg-review-phase" / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("standard: 1 lens", text)
+            self.assertIn("up to 2 lenses", text)
 
     def test_review_agents_have_lean_context_sources(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

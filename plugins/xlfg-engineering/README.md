@@ -2,7 +2,7 @@
 
 `xlfg-engineering` is an autonomous SDLC harness for modern Claude Code.
 
-The 2.7.1 design target is simple:
+The 2.7.5 design target is simple:
 
 > **One public entrypoint, one run card, one intent contract, hidden phase skills loaded just in time, and specialist subagents that actually own their lanes.**
 
@@ -10,6 +10,7 @@ The 2.7.1 design target is simple:
 
 - `/xlfg-engineering:xlfg` stays the single public plugin entrypoint, and this baseline keeps the short `/xlfg` alias through `name: xlfg` on the plugin command.
 - The batch still includes the mandatory **intent phase**, but now the next weak layer is hardened too: specialist agents have stronger personas, explicit tool allowlists, and foreground-only bias.
+- Specialists now stay leaf-only and bounded by short turn budgets, so a bad lane gets re-split instead of drifting for dozens of turns.
 - Review specialists now write their own artifacts under `reviews/`, so the conductor synthesizes from real expert output instead of vague subagent summaries.
 - The standalone pack now mirrors plugin agents under `.claude/agents/` for parity with the skill pack.
 - Audit, lint, docs, and tests now check proactive specialist descriptions, explicit tool scopes, artifact-writing review lanes, and standalone agent parity.
@@ -64,6 +65,13 @@ Optional only when they add decision value:
 
 
 Reference intent fixtures ship in `evals/intent/`, and `xlfg eval-intent --suite-dir evals/intent` scores the bundled example artifacts out of the box.
+
+
+## 2.7.5 note
+
+- The conductor and phase skills now explicitly forbid nested specialist delegation; only the conductor may fan out work.
+- Plugin and standalone agent packs are back in sync on `maxTurns`, restoring the intended short-lived specialist behavior.
+- Review fan-out is leaner by default, and packet waiting is documented as artifact-first rather than chat-first.
 
 
 ## 2.7.1 note

@@ -35,7 +35,7 @@ This phase exists because users often provide:
    - the request depends on current external facts
    - freshness changes the meaning of the request
 4. Invoke `xlfg-query-refiner` explicitly and treat it as the lane owner for messy-intent resolution. Give it one atomic mission: resolve the intent contract in `spec.md` and nothing else. Use no other specialists unless they materially reduce a blocking ambiguity.
-5. Do not run xlfg specialists in background for this workflow. Keep them foregrounded so artifact writes, stop events, and workboard state stay synchronized.
+5. Do not run xlfg specialists in background for this workflow. Keep them foregrounded, short-lived, and leaf-only so artifact writes, stop events, and workboard state stay synchronized.
 6. Require the specialist to materially update `spec.md`. If it returns without updating the intent contract, or returns only with setup notes, use `SendMessage` with the returned agent ID to resume the same specialist once with the same mission packet; if no agent ID is available, re-dispatch the same packet once. Only after the second incomplete return may you record the specialist failure and repair the contract yourself before continuing.
 7. Update `spec.md` so the top `Intent contract` and `Objective groups` sections are concrete:
    - `resolution`: `proceed` | `proceed-with-assumptions` | `needs-user-answer`
@@ -72,6 +72,7 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 ```
 
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Only the phase conductor may delegate. Never ask a specialist to spawn nested subagents or fan out further from inside the lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
 

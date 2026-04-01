@@ -38,9 +38,10 @@ Turn the resolved intent and gathered truth into a lean run card, a practical te
    - run `xlfg-env-doctor` when the proof depends on a running app
    - run `xlfg-researcher` only if context phase proved that repo truth is insufficient
    - run `xlfg-brainstorm` only when the intent phase left multiple viable solution directions
-5. Keep specialists foregrounded and require their artifacts before synthesis. Default to sequential plan specialists unless two packets are truly independent. If a specialist returns only setup notes or a missing artifact, use `SendMessage` with the returned agent ID to resume the same specialist once. If no agent ID is available, re-dispatch the same packet once.
-6. The main conductor should synthesize `spec.md` and the final plan from specialist artifacts instead of replacing those lanes with its own first-pass reasoning.
-7. Update `spec.md` as the single source of truth:
+5. Keep the default specialist budget lean. Run the required plan specialists one lane at a time, then add at most one optional specialist when the current artifacts leave a concrete unresolved gap. Do not ask planning specialists to spawn more specialists.
+6. Keep specialists foregrounded and require their artifacts before synthesis. Default to sequential plan specialists unless two packets are truly independent. If a specialist returns only setup notes or a missing artifact, use `SendMessage` with the returned agent ID to resume the same specialist once. If no agent ID is available, re-dispatch the same packet once.
+7. The main conductor should synthesize `spec.md` and the final plan from specialist artifacts instead of replacing those lanes with its own first-pass reasoning.
+8. Update `spec.md` as the single source of truth:
    - keep the intent contract and objective groups accurate
    - fill outcome / why and false-success trap
    - record repo and external findings
@@ -49,11 +50,11 @@ Turn the resolved intent and gathered truth into a lean run card, a practical te
    - map tasks to objective IDs and scenario IDs
    - ensure each active task records `scope`, `primary_artifact`, and `done_check` in the `Task map`
    - keep proof summary and PM / UX / Engineering / QA / Release notes current
-8. Update `test-contract.md` with 1–5 practical scenario contracts total, ensuring each active objective has explicit proof.
-9. Update `test-readiness.md` with a real `READY` or `REVISE` verdict.
-10. Update `workboard.md` so objectives, tasks, blockers, and the next action stay visible. Create or refresh `tasks/<task-id>/task-brief.md` for each active task.
-11. Create optional docs only when they change a decision or proof obligation: `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `risk.md`.
-12. If a required planning specialist returns only setup notes or no artifact, retry once via resume or exact re-dispatch before repairing the gap yourself. Do not collapse a broad packet into main-thread guesswork; re-split it first when needed.
+9. Update `test-contract.md` with 1–5 practical scenario contracts total, ensuring each active objective has explicit proof.
+10. Update `test-readiness.md` with a real `READY` or `REVISE` verdict.
+11. Update `workboard.md` so objectives, tasks, blockers, and the next action stay visible. Create or refresh `tasks/<task-id>/task-brief.md` for each active task.
+12. Create optional docs only when they change a decision or proof obligation: `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `risk.md`.
+13. If a required planning specialist returns only setup notes or no artifact, retry once via resume or exact re-dispatch before repairing the gap yourself. Do not collapse a broad packet into main-thread guesswork; re-split it first when needed.
 
 ## Readiness rule
 
@@ -72,6 +73,7 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 ```
 
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Only the phase conductor may delegate. Never ask a planning specialist to spawn nested subagents or split work by launching its own workers.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
 

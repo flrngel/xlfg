@@ -333,6 +333,16 @@ def _subagent_hardening_report(root: Path) -> dict[str, Any]:
     def _background_false(path: Path, _text: str, fm: dict[str, str]) -> bool:
         return fm.get("background") == "false"
 
+    def _short_turn_budget(path: Path, _text: str, fm: dict[str, str]) -> bool:
+        try:
+            return 0 < int(fm.get("maxTurns", "0")) <= 12
+        except ValueError:
+            return False
+
+    def _leaf_worker_tools(path: Path, _text: str, fm: dict[str, str]) -> bool:
+        tools = {item.strip().lower() for item in fm.get("tools", "").split(",") if item.strip()}
+        return "agent" not in tools and "sendmessage" not in tools
+
     def _proactive_desc(path: Path, _text: str, fm: dict[str, str]) -> bool:
         return "use proactively" in fm.get("description", "").lower()
 
@@ -378,6 +388,8 @@ def _subagent_hardening_report(root: Path) -> dict[str, Any]:
         "standalone_agent_pack": standalone_parity,
         "agents_with_tools_allowlist": _count(_has_tools),
         "agents_with_background_false": _count(_background_false),
+        "agents_with_short_turn_budgets": _count(_short_turn_budget),
+        "agents_with_leaf_worker_tools": _count(_leaf_worker_tools),
         "agents_with_proactive_description": _count(_proactive_desc),
         "agents_with_specialist_identity_contract": _count(_specialist_identity),
         "agents_with_status_contract": _count(_status_contract),
@@ -439,6 +451,8 @@ def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
         "background_support_skills": entrypoints["background_support_skills"],
         "explicit_subagent_tools": hardening["plugin_agent_count"] > 0 and hardening["agents_with_tools_allowlist"] == hardening["plugin_agent_count"],
         "foreground_specialists": hardening["plugin_agent_count"] > 0 and hardening["agents_with_background_false"] == hardening["plugin_agent_count"],
+        "short_lived_specialists": hardening["plugin_agent_count"] > 0 and hardening["agents_with_short_turn_budgets"] == hardening["plugin_agent_count"],
+        "leaf_specialists": hardening["plugin_agent_count"] > 0 and hardening["agents_with_leaf_worker_tools"] == hardening["plugin_agent_count"],
         "proactive_delegation_descriptions": hardening["plugin_agent_count"] > 0 and hardening["agents_with_proactive_description"] == hardening["plugin_agent_count"],
         "specialist_identity_contracts": hardening["plugin_agent_count"] > 0 and hardening["agents_with_specialist_identity_contract"] == hardening["plugin_agent_count"],
         "status_contracts": hardening["plugin_agent_count"] > 0 and hardening["agents_with_status_contract"] == hardening["plugin_agent_count"],
@@ -525,6 +539,8 @@ def _coverage_score(features: dict[str, bool], version_sync_ok: bool) -> int:
     score += 4 if features.get("background_support_skills") else 0
     score += 4 if features.get("explicit_subagent_tools") else 0
     score += 4 if features.get("foreground_specialists") else 0
+    score += 4 if features.get("short_lived_specialists") else 0
+    score += 4 if features.get("leaf_specialists") else 0
     score += 4 if features.get("proactive_delegation_descriptions") else 0
     score += 4 if features.get("specialist_identity_contracts") else 0
     score += 4 if features.get("review_artifact_lane") else 0
@@ -554,6 +570,8 @@ def _compatibility_score(features: dict[str, bool]) -> int:
     score += 5 if features.get("no_legacy_task_tool") else 0
     score += 5 if features.get("explicit_subagent_tools") else 0
     score += 5 if features.get("foreground_specialists") else 0
+    score += 5 if features.get("short_lived_specialists") else 0
+    score += 5 if features.get("leaf_specialists") else 0
     score += 5 if features.get("proactive_delegation_descriptions") else 0
     score += 5 if features.get("review_artifact_lane") else 0
     score += 5 if features.get("completion_barrier_contracts") else 0
@@ -611,6 +629,10 @@ def _top_recommendations(
         recs.append("Give every specialist an explicit tool allowlist instead of relying on inherited permissions or prose-only restrictions.")
     if not features.get("foreground_specialists"):
         recs.append("Keep phase-critical specialists in the foreground so early stop and silent write failures are easier to detect.")
+    if not features.get("short_lived_specialists"):
+        recs.append("Cap specialist turn budgets aggressively so stuck lanes fail fast instead of looking hung for dozens of turns.")
+    if not features.get("leaf_specialists"):
+        recs.append("Keep specialists as leaf workers without Agent/SendMessage tools so nested delegation cannot deadlock or explode context.")
     if not features.get("proactive_delegation_descriptions"):
         recs.append("Make specialist descriptions explicitly proactive so Claude delegates to them more often.")
     if not features.get("review_artifact_lane"):

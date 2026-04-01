@@ -3,7 +3,7 @@ name: xlfg-brainstorm
 description: Solution-space explorer for ambiguous requests. Use proactively when /xlfg needs concrete options before committing to a plan. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 100
+maxTurns: 8
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

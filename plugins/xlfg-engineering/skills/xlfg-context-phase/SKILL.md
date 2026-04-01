@@ -25,13 +25,13 @@ Gather the repo and product truth needed for an honest plan without exploding co
    - `docs/xlfg/knowledge/current-state.md`
 3. Start from the intent contract already written in `spec.md`. Keep repo exploration scoped to those direct asks, implied asks, objective groups, and blockers.
 4. Explore repo truth first with targeted reads and grep, not broad file hoarding.
-5. Use specialists as true lane owners, not optional advisors. Give each one objective context plus one bounded output artifact. Repo-map, harness-profile, and external research should normally run sequentially because each artifact shapes the next packet:
+5. Use specialists as true lane owners, not optional advisors. Give each one objective context plus one bounded output artifact. Keep default fan-out small: run one active artifact-producing specialist at a time, then load the next specialist only if the previous artifact leaves a concrete unresolved gap. Repo-map, harness-profile, and external research should normally run sequentially because each artifact shapes the next packet:
    - always run `xlfg-repo-mapper`
    - run `xlfg-harness-profiler` for any build / bugfix / delivery run
-   - run `xlfg-context-adjacent-investigator`, `xlfg-context-constraints-investigator`, and `xlfg-context-unknowns-investigator` whenever the request is bundled, risky, or still assumption-heavy
+   - run `xlfg-context-adjacent-investigator`, `xlfg-context-constraints-investigator`, or `xlfg-context-unknowns-investigator` one at a time when the request is bundled, risky, or still assumption-heavy
    - run `xlfg-env-doctor` when local server behavior is relevant
    - run `xlfg-researcher` only when freshness or missing domain knowledge makes repo truth insufficient
-6. Keep these specialists foregrounded. After each specialist returns, verify its expected artifact exists, begins with `Status:`, and contains real findings instead of preparation notes. If it does not, use `SendMessage` with the returned agent ID to resume the same specialist once before treating the lane as failed. If no agent ID is available, re-dispatch the exact same packet once.
+6. Keep these specialists foregrounded, short-lived, and leaf-only. After each specialist returns, verify its expected artifact exists, begins with `Status:`, and contains real findings instead of preparation notes. If it does not, use `SendMessage` with the returned agent ID to resume the same specialist once before treating the lane as failed. If no agent ID is available, re-dispatch the exact same packet once.
 7. Use the specialist artifacts as the primary lane evidence. The main conductor should synthesize from them rather than silently redoing their work in chat.
 8. Write or update `context.md` with:
    - relevant repo and product context
@@ -56,6 +56,7 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 ```
 
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Only the phase conductor may delegate. Never ask a context specialist to spawn nested subagents or to fan out its own lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
 

@@ -2,7 +2,7 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-Version 2.7.1 hardens the next weak layer after intent handling: **specialist subagents now own their lanes more explicitly, produce verifiable artifacts, and are harder for the main flow to ignore or short-circuit**.
+Version 2.7.5 keeps hardening the next weak layer after intent handling: **specialist subagents stay foregrounded, leaf-only, bounded by short turn budgets, and small in fan-out so artifact-backed lanes fail faster and drift less**.
 
 - `/xlfg` is still the **single public entrypoint**, and it still **batches hidden phase skills**
 - the plugin command keeps the current short `/xlfg` alias via `name: xlfg`, while the namespaced form remains `/xlfg-engineering:xlfg`
@@ -11,7 +11,7 @@ Version 2.7.1 hardens the next weak layer after intent handling: **specialist su
 - bundled / messy requests are split into stable objective groups (`O1`, `O2`, ...)
 - the workflow ships an artifact-graded **`xlfg eval-intent`** harness for scoring ask recall, objective splitting, blocker handling, and false assumptions
 - hidden phase skills still load **just in time**, matching Claude Code’s skills model while keeping context small
-- every plugin specialist now has an explicit tool allowlist, proactive delegation description, foreground-only bias, and stronger execution contract
+- every plugin specialist now has an explicit tool allowlist, proactive delegation description, foreground-only bias, stronger execution contract, and bounded turn budget
 - review specialists now write lane artifacts under `reviews/`, and the standalone pack now includes `.claude/agents/` parity
 
 ## What is in this repo
@@ -62,6 +62,13 @@ xlfg verify --mode full
 ## License
 
 MIT
+
+
+## 2.7.5 note
+
+- xlfg specialists are now documented and audited as **leaf workers**: no nested subagent delegation inside specialist lanes.
+- Plugin and standalone agent packs now share the same bounded `maxTurns` budgets again, so stalled lanes fail faster instead of looking hung.
+- Review fan-out is leaner by default, and conductor guidance now says waiting is valid only when a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT` exist.
 
 
 ## 2.7.1 note

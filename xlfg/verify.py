@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Tuple
@@ -19,15 +20,25 @@ def _should_set_ci_env(command: str) -> bool:
     return c.startswith(("npm ", "pnpm ", "yarn ", "bun ", "npx ", "node "))
 
 
+def _resolve_command(command: str) -> str:
+    c = command.strip()
+    if (c == "python" or c.startswith("python ")) and shutil.which("python") is None and shutil.which("python3"):
+        return "python3" + c[6:]
+    return command
+
+
 def _run_cmd(command: str, log_path: Path, *, timeout_sec: Optional[int] = None) -> int:
     ensure_dir(log_path.parent)
+    resolved_command = _resolve_command(command)
     env = os.environ.copy()
 
-    if _should_set_ci_env(command) and "CI" not in env:
+    if _should_set_ci_env(resolved_command) and "CI" not in env:
         env["CI"] = "1"
 
     with log_path.open("w", encoding="utf-8") as f:
         f.write(f"$ {command}\n")
+        if resolved_command != command:
+            f.write(f"# resolved: {resolved_command}\n")
         if timeout_sec:
             f.write(f"# timeout: {timeout_sec}s\n")
         if env.get("CI") == "1":
@@ -37,7 +48,7 @@ def _run_cmd(command: str, log_path: Path, *, timeout_sec: Optional[int] = None)
 
         try:
             completed = subprocess.run(
-                command,
+                resolved_command,
                 shell=True,
                 stdout=f,
                 stderr=subprocess.STDOUT,

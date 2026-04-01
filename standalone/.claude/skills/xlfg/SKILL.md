@@ -58,6 +58,9 @@ Use the `Skill` tool to load each phase just-in-time instead of carrying all pha
 ## Specialist execution rule
 
 - Keep xlfg specialists in the foreground; do not rely on background execution for phase-critical work. Recent platform issues have included sync problems, silent write failures, and broken background subagent transport.
+- Keep phase-critical specialists short-lived. If a lane needs materially more time, broader scope, or multiple outputs, re-split it into smaller packets instead of letting one specialist drift.
+- xlfg specialists are leaf workers. Do not ask a specialist to spawn more specialists or nested subagents; only the conductor may delegate.
+- Keep fan-out small. Prefer one active specialist lane at a time for artifact-producing work; widen only for truly independent, read-mostly packets.
 - Prefer the specialist artifact over the main agent's first-pass reasoning for that lane, because the specialist exists to apply a stricter expert lens, not because the main agent is incapable.
 
 ## Atomic packet format
@@ -72,6 +75,7 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 ```
 
 - Preseed the artifact at `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the mission, and a short remaining checklist **before** the specialist starts broad reading.
+- Never wait on a specialist without a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT`; file-backed artifact progress is the only accepted basis for waiting.
 - Pass objective context, not just the literal query. Include the exact ask, why it matters, and any nearby constraints that change correctness.
 - Default to sequential specialist dispatch for artifact-producing planning/context lanes. Parallelize only when packets are truly independent, small, and read-mostly.
 

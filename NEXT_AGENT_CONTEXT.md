@@ -1,28 +1,27 @@
 # Next agent context
 
-## Current state (2.7.1)
+## Current state (2.7.5)
 
-The main 2.7.1 change is **subagent hardening after the 2.5.x intent-contract work**.
+The main 2.7.5 change is **making the 2.7.x subagent hardening internally consistent again**.
 
 What changed:
-- specialist agents now have explicit tool allowlists instead of mostly inheriting tools
-- descriptions now include **use proactively** so Claude is more likely to delegate to them
-- phase-critical agents now set `background: false`
-- each agent now has a stronger specialist identity plus execution contract
-- review specialists now write lane artifacts under `docs/xlfg/runs/<run>/reviews/`
-- the standalone pack now mirrors plugin agents under `.claude/agents/`
-- `/xlfg` and the phase skills now tell the conductor to treat specialists as lane owners and to retry / classify prep-only early exits as incomplete work
+- plugin agent `maxTurns` budgets are back in sync with the standalone pack instead of drifting to `100`
+- `/xlfg` and all delegating phase skills now say specialists are **leaf workers**; only the conductor may delegate
+- conductor guidance now explicitly ties waiting to preseeded artifacts plus `RETURN_CONTRACT`
+- review fan-out is leaner by default, and context / planning guidance now prefers one active artifact-producing lane at a time
+- audit + tests now enforce short-lived budgets, leaf-worker tools, atomic packet headers on delegating entrypoints, and lean review fan-out
 
 Why this matters:
-- production testing found subagents were often stopping after preparation without doing the actual lane work
-- the main conductor also was not relying on them strongly enough, especially in review
-- recent Claude Code docs and issues suggest that proactive descriptions, explicit tool scoping, and foreground execution are all important when you want reliable specialist delegation
+- production drift left plugin specialists with effectively unbounded turn budgets, which made a stuck lane look like a hang
+- nested delegation remains a bad fit for current Claude Code specialist orchestration, so xlfg now says that explicitly instead of relying only on tool scoping
+- smaller default fan-out keeps context pressure and coordination failures lower on real runs
 
 If you continue from here:
 - preserve the **one public conductor + hidden phase skills + separated specialists** architecture
 - do not flatten back into one monolithic prompt
 - do not reintroduce duplicated intent docs
 - if you add more hardening, prefer evals and artifact checks over more prose
+- keep plugin and standalone agent packs synchronized on `maxTurns` and delegation shape
 
 
 ## 2.7.1 note
@@ -35,3 +34,8 @@ If you continue from here:
 - Production run found agents exhausting maxTurns: 8 on speculative reads, never writing artifacts. Root cause: bloated "Read first" lists (14 files), no turn budget guidance, and stopHookActive escape hatch letting agents bypass the guard.
 - Fix: maxTurns raised to 12 for review + heavy-analysis agents. "Turn budget rule" added to all 26 specialists. Review agents get lean "Context sources" (3+3 files). stopHookActive escape removed. CONTEXT_DIGEST added to review-phase dispatch.
 - If you continue from here: preserve the turn budget rule in all new agents, keep maxTurns proportional to workload, and always embed context digests in dispatch packets for read-heavy specialists.
+
+## 2.7.5 note
+
+- A later drift had plugin specialists back at `maxTurns: 100` while the standalone pack still had bounded budgets. This patch restores parity and adds tests so that mismatch is easier to catch.
+- Conductors and phase skills now say the quiet rule out loud: specialists are leaf workers, nested delegation is not allowed, and lean fan-out wins by default.

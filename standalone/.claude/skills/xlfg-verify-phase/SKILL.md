@@ -31,11 +31,12 @@ Run honest layered proof for the changed behavior and reduce the results into a 
    - always run `xlfg-verify-runner`
    - then always run `xlfg-verify-reducer`
    - run `xlfg-env-doctor` when the harness is unhealthy or the proof depends on a running app
-5. Keep these specialists foregrounded. Missing verify artifacts mean verification did not actually happen.
-6. Require the verify artifacts to exist before accepting phase completion: `results.json`, `summary.md`, `verification.md`, and any required fix plan. If a specialist returns early without them or only narrates next steps, use `SendMessage` with the returned agent ID to resume the same specialist once. If no agent ID is available, re-dispatch the exact same packet once. Only then may you classify the phase as FAILED / RED.
-7. Write or update `verification.md` with real evidence.
-8. If verification is RED, write or update `verify-fix-plan.md` with the first actionable failure only.
-9. Update `workboard.md` with the verification status and next action.
+5. Keep verify fan-out small. Run one active verify specialist at a time in the required order above; do not ask verify specialists to spawn more specialists.
+6. Keep these specialists foregrounded, short-lived, and leaf-only. Missing verify artifacts mean verification did not actually happen.
+7. Require the verify artifacts to exist before accepting phase completion: `results.json`, `summary.md`, `verification.md`, and any required fix plan. If a specialist returns early without them or only narrates next steps, use `SendMessage` with the returned agent ID to resume the same specialist once. If no agent ID is available, re-dispatch the exact same packet once. Only then may you classify the phase as FAILED / RED.
+8. Write or update `verification.md` with real evidence.
+9. If verification is RED, write or update `verify-fix-plan.md` with the first actionable failure only.
+10. Update `workboard.md` with the verification status and next action.
 
 ## Green rule
 
@@ -54,6 +55,7 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 ```
 
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Only the phase conductor may delegate. Never ask a verify specialist to spawn nested subagents or hand off its lane to another worker.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
 

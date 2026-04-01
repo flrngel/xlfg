@@ -25,15 +25,15 @@ Run proportional review after verification, not cleanup theater before it.
    - `docs/xlfg/knowledge/current-state.md`
 3. Choose review fan-out by risk:
    - quick / low risk: 0–1 lens
-   - standard: 1–2 lenses
-   - deep / high risk: up to 4 lenses
+   - standard: 1 lens
+   - deep / high risk: up to 2 lenses
 4. Use the specialized review agents as lane owners for the chosen lenses:
    - `xlfg-architecture-reviewer`
    - `xlfg-security-reviewer`
    - `xlfg-performance-reviewer`
    - `xlfg-ux-reviewer`
 5. Before dispatch, shrink each review assignment to one change cluster plus one review lens. If a single lens would otherwise cover multiple unrelated fixes, split it into review packets (for example `architecture-R1.md`, `architecture-R2.md`) so each reviewer still gets one clear input and one clear output.
-6. Keep them foregrounded. Preseed each review artifact before dispatch. Each chosen reviewer must write its own artifact under `DOCS_RUN_DIR/reviews/` before the conductor synthesizes `review-summary.md`. If a reviewer returns only a chat summary or setup note, use `SendMessage` with the returned agent ID to resume the same reviewer once instead of accepting the lane. If no agent ID is available, re-dispatch the exact same packet once.
+6. Keep them foregrounded, short-lived, and leaf-only. Preseed each review artifact before dispatch. Each chosen reviewer must write its own artifact under `DOCS_RUN_DIR/reviews/` before the conductor synthesizes `review-summary.md`. If a reviewer returns only a chat summary or setup note, use `SendMessage` with the returned agent ID to resume the same reviewer once instead of accepting the lane. If no agent ID is available, re-dispatch the exact same packet once.
 7. Synthesize `review-summary.md` from the reviewer artifacts. Do not treat an empty or missing reviewer artifact as a clean review.
 8. Write `review-summary.md` only when there are real findings or non-trivial residual risks.
 9. Update `spec.md` and `workboard.md` with must-fix findings or accepted residual risk.
@@ -56,6 +56,7 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
   - The verdict and key findings from `verification.md`
   - The changed file list from implementation
   This saves the reviewer 3-5 turns of re-reading files the conductor already loaded.
+- Only the phase conductor may delegate. Never ask a reviewer to spawn nested subagents or split its own review lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
 

@@ -3,7 +3,7 @@ name: xlfg-task-implementer
 description: Scoped patch engineer. Use proactively for each non-trivial task so implementation follows the planned root fix. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 100
+maxTurns: 10
 tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write
 background: false
 ---

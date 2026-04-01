@@ -3,7 +3,7 @@ name: xlfg-test-implementer
 description: Regression-proof builder. Use proactively whenever tests or proofs must change to match a task. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 100
+maxTurns: 10
 tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write
 background: false
 ---

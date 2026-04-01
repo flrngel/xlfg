@@ -1,3 +1,11 @@
+## 2.7.5
+
+- Restored bounded specialist turn budgets in the plugin agent pack to match the standalone pack, so phase-critical lanes are foregrounded and short-lived again.
+- Declared specialists to be leaf workers in the conductor and all delegating phase skills; nested subagent fan-out is now explicitly forbidden.
+- Tightened fan-out guidance so context, planning, verification, and review stay sequential or lean by default, with review capped at one standard lens and two deep lenses.
+- Clarified that waiting on a specialist is valid only when a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT` exist.
+- Added audit and test coverage for short turn budgets, leaf-worker specialist tools, atomic packet headers across delegating entrypoints, and lean review fan-out.
+
 ## 2.7.3
 
 - Fixed sub-agent turn-budget starvation: raised maxTurns from 8 to 12 for review and heavy-analysis planning agents, and to 10 for test-implementer and verify-reducer.

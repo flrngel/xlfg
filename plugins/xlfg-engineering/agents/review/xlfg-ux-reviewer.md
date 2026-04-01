@@ -3,7 +3,7 @@ name: xlfg-ux-reviewer
 description: UX and accessibility critic. Use proactively for scenario fidelity, usability, and a11y review. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 100
+maxTurns: 12
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

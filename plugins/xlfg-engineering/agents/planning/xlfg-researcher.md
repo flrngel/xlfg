@@ -3,7 +3,7 @@ name: xlfg-researcher
 description: External fact-check researcher. Use proactively when current docs, APIs, or domain facts could change the plan. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 100
+maxTurns: 8
 tools: Read, Grep, Glob, LS, Bash, Write, WebSearch, WebFetch
 background: false
 ---
