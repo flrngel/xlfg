@@ -152,6 +152,7 @@ class TestXLFG(unittest.TestCase):
     def test_repo_audit_reports_stop_guard_and_packet_headers(self) -> None:
         report = audit_repo(Path(__file__).resolve().parents[1])
         self.assertTrue(report["metrics"]["features"]["subagent_stop_guard"])
+        self.assertTrue(report["metrics"]["features"]["conductor_stop_gate"])
         self.assertTrue(report["metrics"]["features"]["packet_header_discipline"])
         self.assertTrue(report["metrics"]["features"]["sequential_artifact_planning"])
         self.assertTrue(report["metrics"]["features"]["short_lived_specialists"])
@@ -472,6 +473,18 @@ class TestXLFG(unittest.TestCase):
         self.assertNotIn(" Task", command_md)
         self.assertNotIn(" Task", standalone_md)
 
+        # Phase-state tracking and loopback cap (v2.8.0)
+        self.assertIn("phase-state.json", command_md)
+        self.assertIn("phase-state.json", standalone_md)
+        self.assertIn("phase-state tracking", command_md.lower())
+        self.assertIn("phase-state tracking", standalone_md.lower())
+        # Stop hook: standalone has it in SKILL.md frontmatter; plugin has it in hooks.json only
+        self.assertIn("Stop:", standalone_md)
+        self.assertIn("phase-gate.mjs", standalone_md)
+        self.assertIn("max 2 loopbacks", command_md.lower())
+        self.assertIn("max 2 loopbacks", standalone_md.lower())
+        self.assertIn("loopback_count", command_md)
+        self.assertIn("loopback_count", standalone_md)
 
 
     def test_runtime_prompts_do_not_depend_on_query_contract_file(self) -> None:

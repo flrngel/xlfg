@@ -438,6 +438,7 @@ def _features(root: Path, entrypoints: dict[str, Any]) -> dict[str, bool]:
         "plugin_hooks": (plugin_root / "hooks" / "hooks.json").exists(),
         "hook_auto_exit_plan": "ExitPlanMode" in hooks_json or "ExitPlanMode" in primary_text,
         "subagent_stop_guard": "SubagentStop" in hooks_json and "subagent-stop-guard.mjs" in hooks_json and (plugin_root / "scripts" / "subagent-stop-guard.mjs").exists(),
+        "conductor_stop_gate": "Stop" in hooks_json and "phase-gate.mjs" in hooks_json and (plugin_root / "scripts" / "phase-gate.mjs").exists(),
         "packet_header_discipline": "PRIMARY_ARTIFACT:" in brief_blob and "DONE_CHECK:" in brief_blob and "RETURN_CONTRACT:" in brief_blob,
         "sequential_artifact_planning": "sequential" in _read_text(plugin_root / "skills" / "xlfg-context-phase" / "SKILL.md").lower() and "sequential" in _read_text(plugin_root / "skills" / "xlfg-plan-phase" / "SKILL.md").lower(),
         "effort_frontmatter": bool(fm["effort"]),
@@ -534,6 +535,7 @@ def _coverage_score(features: dict[str, bool], version_sync_ok: bool) -> int:
     score += 6 if features.get("multi_objective_splitter") else 0
     score += 6 if features.get("batch_phase_skills") else 0
     score += 4 if features.get("subagent_stop_guard") else 0
+    score += 4 if features.get("conductor_stop_gate") else 0
     score += 4 if features.get("packet_header_discipline") else 0
     score += 4 if features.get("sequential_artifact_planning") else 0
     score += 4 if features.get("background_support_skills") else 0
@@ -578,6 +580,7 @@ def _compatibility_score(features: dict[str, bool]) -> int:
     score += 5 if features.get("resume_ready_specialists") else 0
     score += 5 if features.get("atomic_task_packets") else 0
     score += 4 if features.get("subagent_stop_guard") else 0
+    score += 4 if features.get("conductor_stop_gate") else 0
     score += 3 if features.get("packet_header_discipline") else 0
     score += 3 if features.get("sequential_artifact_planning") else 0
     score += 3 if features.get("no_repo_relative_plugin_refs") else 0
@@ -641,6 +644,8 @@ def _top_recommendations(
         recs.append("Harden every specialist with an explicit completion barrier so progress notes are never mistaken for finished work.")
     if not features.get("subagent_stop_guard"):
         recs.append("Add a deterministic SubagentStop guard so xlfg specialists cannot stop on progress chatter alone.")
+    if not features.get("conductor_stop_gate"):
+        recs.append("Add a Stop hook on the main conductor so the pipeline cannot end before all phases complete.")
     if not features.get("packet_header_discipline"):
         recs.append("Prefix every delegated packet with PRIMARY_ARTIFACT, FILE_SCOPE, DONE_CHECK, and RETURN_CONTRACT headers.")
     if not features.get("sequential_artifact_planning"):

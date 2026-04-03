@@ -1,0 +1,1 @@
+{"date":"2026-04-03","run":"20260403-phase-reliability","event":"conductor_stop_gate_shipped","version":"2.8.0","summary":"Added Stop hook + phase-state file + loopback cap to prevent pipeline from dropping later phases"}

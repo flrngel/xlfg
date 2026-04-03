@@ -41,6 +41,23 @@ Treat this invocation as **one autonomous run**.
 2. Create `RUN_ID` with `xlfg start "$ARGUMENTS"` when the helper exists; otherwise create the lean core run manually.
 3. Resolve `DOCS_RUN_DIR=docs/xlfg/runs/<RUN_ID>` and `DX_RUN_DIR=.xlfg/runs/<RUN_ID>`.
 
+## Phase-state tracking
+
+After startup, write `.xlfg/phase-state.json` with this initial state:
+
+```json
+{
+  "run_id": "<RUN_ID>",
+  "phases": ["recall","intent","context","plan","implement","verify","review","compound"],
+  "completed": [],
+  "loopback_count": 0,
+  "max_loopbacks": 2,
+  "block_count": 0
+}
+```
+
+After each phase skill returns successfully, add that phase name to `completed` and reset `block_count` to `0`. Write the file back immediately. A Stop hook reads this file to prevent the conductor from ending before all phases are done.
+
 ## Batch skill pipeline
 
 Invoke these hidden skills in this exact order, always passing `RUN_ID`:
@@ -94,9 +111,9 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 - Do **not** broad-scan the repo or spawn wide research until `xlfg-engineering:xlfg-intent-phase` has written the intent contract and objective groups in `spec.md`.
 - If the intent phase marks `resolution: needs-user-answer`, stop and ask at most three concise numbered blocking questions. Do not continue to context, planning, or coding until the answer arrives.
 - If `test-readiness.md` is not `READY` after planning, return to `xlfg-engineering:xlfg-context-phase` and `xlfg-engineering:xlfg-plan-phase` yourself until the plan is repaired or a true human-only blocker is explicit.
-- If verification is RED with an actionable fix, go back to `xlfg-engineering:xlfg-implement-phase`, then rerun `xlfg-engineering:xlfg-verify-phase`.
-- If review finds a must-fix issue, go back to `xlfg-engineering:xlfg-implement-phase`, then rerun verify and review.
-- Do not hand this loop back to the user.
+- If verification is RED with an actionable fix, go back to `xlfg-engineering:xlfg-implement-phase`, then rerun `xlfg-engineering:xlfg-verify-phase`. Increment `loopback_count` in `.xlfg/phase-state.json` each time. **Max 2 loopbacks** — after 2 verify-fix cycles, stop and escalate to the user with a summary of what failed and why.
+- If review finds a must-fix issue, go back to `xlfg-engineering:xlfg-implement-phase`, then rerun verify and review. This also counts toward the loopback limit.
+- Do not hand this loop back to the user unless the loopback cap is reached.
 
 ## Completion
 

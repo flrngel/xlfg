@@ -1,5 +1,5 @@
 {
-  "description": "Lean automation for xlfg: skip the extra approval when Claude exits plan mode, and block xlfg subagents from stopping before their required artifact exists.",
+  "description": "Lean automation for xlfg: skip the extra approval when Claude exits plan mode, block the conductor from ending before all phases complete, and block xlfg subagents from stopping before their required artifact exists.",
   "hooks": {
     "PermissionRequest": [
       {
@@ -8,6 +8,16 @@
           {
             "type": "command",
             "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PermissionRequest\", \"decision\": {\"behavior\": \"allow\"}}}'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/phase-gate.mjs\""
           }
         ]
       }

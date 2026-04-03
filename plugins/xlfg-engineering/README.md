@@ -2,7 +2,7 @@
 
 `xlfg-engineering` is an autonomous SDLC harness for modern Claude Code.
 
-The 2.7.5 design target is simple:
+The 2.8.0 design target is simple:
 
 > **One public entrypoint, one run card, one intent contract, hidden phase skills loaded just in time, and specialist subagents that actually own their lanes.**
 

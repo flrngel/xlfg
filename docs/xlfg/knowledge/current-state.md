@@ -3,27 +3,32 @@
 Read this file first when entering a repo that uses xlfg. It is the shortest tracked handoff for the next agent.
 
 ## Service / product context
-- What is this repo / service trying to do right now?
+- xlfg is an autonomous SDLC harness for Claude Code (v2.8.0)
+- `/xlfg` batches 8 hidden phase skills: recall → intent → context → plan → implement → verify → review → compound
 
 ## Current high-signal truths
-- The most important facts that should shape new work immediately
-- Any request-shaping rule that repeatedly prevents dropped implied asks or monkey fixes
+- The conductor has a Stop hook (`phase-gate.mjs`) that blocks premature pipeline termination by reading `.xlfg/phase-state.json`
+- Verify-fix and review-fix loopback cycles are capped at 2 iterations
+- Specialists are leaf workers with short turn budgets (maxTurns ≤ 12), foregrounded, and bounded by artifact completion barriers
+- Plugin and standalone packs must stay synchronized on hooks, scripts, conductor text, and agent budgets
 
 ## Active UX / behavior contracts
-- Flows or invariants that repeatedly matter
+- The phase-state file uses the fixed path `.xlfg/phase-state.json` — the Stop hook reads it from `cwd`
+- Safety valve: 3 consecutive blocks → allow stopping (prevents infinite loop)
+- `max_tokens` stop reason → always allow (model physically can't continue)
 
 ## Current harness / verification rules
-- Ports, healthchecks, non-interactive rules, dev-server reuse rules
+- Tests: `python3 -m unittest discover tests/` — no dev server needed
+- 51 tests cover hooks, audit features, entrypoint structure, version sync, and specialist hardening
 
 ## Repeated failures to avoid
-- The recurring failure signatures and the proven first response
+- Do not register the same hook in both command frontmatter AND hooks.json — it double-fires (found in review, run 20260403)
+- Plugin hooks go in `hooks.json` only; standalone hooks go in SKILL.md frontmatter only
 
 ## Open risks / debts
-- Things the next agent should keep in mind before touching risky areas
+- Skill-level Stop hooks are relatively new in Claude Code — if they don't fire for SKILL.md frontmatter registrations, the standalone hook would be inert (harmless but not protective)
+- The loopback cap is prompt-instructed, not code-enforced — the Stop hook safety valve is the hard backstop
 
 ## Best starting recall queries
-- One or two exact lexical or typed queries that load the right memory fast
-
-Keep this document short, current, and biased toward actionable truths. Historical detail belongs in the ledger, shared knowledge files, or local runs.
-
-Merge rule: prefer updating this file only on the default branch (`main`, `master`, or `trunk`) or when the user explicitly asks to promote a repo-wide handoff. Feature branches should usually write a local `current-state-candidate.md` inside the run folder instead.
+- `xlfg recall 'phase-gate'` — conductor stop hook pattern
+- `xlfg recall 'hook registration'` — plugin vs standalone hook wiring

@@ -1,3 +1,11 @@
+## 2.8.0
+
+- Added a Stop hook (`phase-gate.mjs`) on the main conductor that blocks the pipeline from ending before all 8 phases complete.
+- Added phase-state tracking (`.xlfg/phase-state.json`) so the Stop hook and conductor know which phases have completed; survives context compaction.
+- Capped verify-fix and review-fix loopback cycles at 2 iterations to prevent unbounded context growth; exceeding the cap escalates to the user.
+- Registered the Stop hook in both plugin `hooks.json` and standalone/plugin conductor frontmatter.
+- Added `conductor_stop_gate` feature detection to the audit module.
+
 ## 2.7.5
 
 - Restored bounded specialist turn budgets in the plugin agent pack to match the standalone pack, so phase-critical lanes are foregrounded and short-lived again.

@@ -2,7 +2,7 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-Version 2.7.5 keeps hardening the next weak layer after intent handling: **specialist subagents stay foregrounded, leaf-only, bounded by short turn budgets, and small in fan-out so artifact-backed lanes fail faster and drift less**.
+Version 2.8.0 hardens the **conductor itself**: a Stop hook and phase-state file prevent the pipeline from ending before all 8 phases complete, and loopback iterations are now capped to prevent unbounded context growth.
 
 - `/xlfg` is still the **single public entrypoint**, and it still **batches hidden phase skills**
 - the plugin command keeps the current short `/xlfg` alias via `name: xlfg`, while the namespaced form remains `/xlfg-engineering:xlfg`
