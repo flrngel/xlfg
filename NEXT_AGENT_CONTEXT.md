@@ -1,8 +1,10 @@
 # Next agent context
 
-## Current state (2.8.0)
+## Current state (2.8.1)
 
-The main 2.8.0 change is **hardening the conductor itself** — the 2.7.x arc hardened specialists, but the conductor could still silently drop later phases.
+The 2.8.1 change is tiny and additive: the `/xlfg-debug` plugin command now registers `name: xlfg-debug` in its frontmatter so users can invoke it as `/xlfg-debug` instead of only `/xlfg-engineering:xlfg-debug`, mirroring the existing `/xlfg` alias pattern.
+
+The main 2.8.0 change (still in effect) is **hardening the conductor itself** — the 2.7.x arc hardened specialists, but the conductor could still silently drop later phases.
 
 What changed:
 - a Stop hook (`phase-gate.mjs`) now blocks the conductor from ending before all 8 phases complete

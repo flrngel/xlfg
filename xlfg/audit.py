@@ -218,9 +218,11 @@ def _entrypoint_report(root: Path) -> dict[str, Any]:
         repo_relative_refs += text.count("plugins/xlfg-engineering/")
 
     plugin_name_frontmatter_count = 0
+    plugin_debug_command = plugin_root / "commands" / "xlfg-debug.md"
     for path in sorted((plugin_root / "commands").glob("*.md")):
         # keep the intentional main-command alias from the 2.4.1 baseline
-        if path == plugin_command:
+        # and the /xlfg-debug short alias added in 2.8.1
+        if path == plugin_command or path == plugin_debug_command:
             continue
         if _parse_frontmatter(_read_text(path)).get("name"):
             plugin_name_frontmatter_count += 1

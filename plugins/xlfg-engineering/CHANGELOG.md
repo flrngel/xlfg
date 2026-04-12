@@ -1,3 +1,7 @@
+## 2.8.1
+
+- Registered `/xlfg-debug` as a short alias for the plugin command via `name: xlfg-debug` frontmatter, matching the `/xlfg` alias pattern so users can run `/xlfg-debug` without the `xlfg-engineering:` prefix.
+
 ## 2.8.0
 
 - Added a Stop hook (`phase-gate.mjs`) on the main conductor that blocks the pipeline from ending before all 8 phases complete.

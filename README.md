@@ -2,10 +2,10 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-Version 2.8.0 hardens the **conductor itself**: a Stop hook and phase-state file prevent the pipeline from ending before all 8 phases complete, and loopback iterations are now capped to prevent unbounded context growth.
+Version 2.8.1 registers `/xlfg-debug` as a short alias for the plugin debug command, mirroring how `/xlfg` is aliased. Version 2.8.0 hardens the **conductor itself**: a Stop hook and phase-state file prevent the pipeline from ending before all 8 phases complete, and loopback iterations are now capped to prevent unbounded context growth.
 
-- `/xlfg` is still the **single public entrypoint**, and it still **batches hidden phase skills**
-- the plugin command keeps the current short `/xlfg` alias via `name: xlfg`, while the namespaced form remains `/xlfg-engineering:xlfg`
+- `/xlfg` and `/xlfg-debug` are the public entrypoints, each **batching hidden phase skills**
+- the plugin commands keep short aliases (`/xlfg`, `/xlfg-debug`) via `name:` frontmatter, while the namespaced forms remain `/xlfg-engineering:xlfg` and `/xlfg-engineering:xlfg-debug`
 - the batch now includes a mandatory **intent phase** before context gathering and planning
 - `spec.md` is now the only active home for the **intent contract** and objective groups
 - bundled / messy requests are split into stable objective groups (`O1`, `O2`, ...)
