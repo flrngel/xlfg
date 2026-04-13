@@ -1,0 +1,27 @@
+{
+  "name": "xlfg",
+  "owner": {
+    "name": "flrngel",
+    "url": "https://github.com/flrngel"
+  },
+  "plugins": [
+    {
+      "name": "xlfg-engineering",
+      "source": "./plugins/xlfg-engineering",
+      "description": "Autonomous, proof-first SDLC harness for Claude Code: public /xlfg and /xlfg-debug entrypoints that batch hidden phase skills, a lean run card in spec.md, specialist subagents with bounded turn budgets, and a Stop-hook phase gate.",
+      "author": {
+        "name": "flrngel",
+        "url": "https://github.com/flrngel"
+      },
+      "license": "MIT",
+      "keywords": [
+        "xlfg",
+        "agentic",
+        "sdlc",
+        "software-engineering",
+        "verification",
+        "claude-code"
+      ]
+    }
+  ]
+}

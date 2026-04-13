@@ -26,25 +26,38 @@ Version 2.8.1 registers `/xlfg-debug` as a short alias for the plugin debug comm
 
 ## Quick start
 
-### Plugin install (recommended)
+### Install via the plugin marketplace (recommended)
 
-Clone this repo anywhere, then launch Claude Code with `--plugin-dir` pointing at the plugin package:
+Inside Claude Code, add this repo as a marketplace and install the plugin:
 
-```bash
-git clone https://github.com/flrngel/xlfg.git ~/project/personal/xlfg
-claude --plugin-dir ~/project/personal/xlfg/plugins/xlfg-engineering
+```text
+/plugin marketplace add flrngel/xlfg
+/plugin install xlfg-engineering@xlfg
 ```
 
-`--plugin-dir` loads plugins for the current session only and is repeatable, so you can mix xlfg with other local plugins without editing global config. Inside the session:
+Claude Code fetches the marketplace manifest from `.claude-plugin/marketplace.json`, resolves the plugin at `./plugins/xlfg-engineering`, and caches it under `~/.claude/plugins/`. Commands, skills, hooks, specialist agents, and the `context7` MCP server all activate together. After install:
 
 - `/xlfg "what you want built"` — full SDLC run
 - `/xlfg-debug "what is broken"` — diagnosis-only run (no source edits)
 
 Both short forms are aliases of `/xlfg-engineering:xlfg` and `/xlfg-engineering:xlfg-debug`, registered via `name:` frontmatter on the plugin commands.
 
+Update with `/plugin marketplace update xlfg`.
+
+### Session-only install via `--plugin-dir`
+
+For quick local testing without adding to the marketplace:
+
+```bash
+git clone https://github.com/flrngel/xlfg.git ~/project/personal/xlfg
+claude --plugin-dir ~/project/personal/xlfg/plugins/xlfg-engineering
+```
+
+`--plugin-dir` loads the plugin for the current Claude session only and is repeatable, so you can mix xlfg with other local plugins without editing global config.
+
 ### Manual standalone install
 
-For environments where launching Claude with `--plugin-dir` is inconvenient, copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run `/xlfg` or `/xlfg-debug`.
+For environments where the plugin loader is unavailable, copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run `/xlfg` or `/xlfg-debug`.
 
 ## Entry model
 
