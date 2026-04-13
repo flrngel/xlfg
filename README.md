@@ -44,17 +44,6 @@ Both short forms are aliases of `/xlfg-engineering:xlfg` and `/xlfg-engineering:
 
 Update with `/plugin marketplace update xlfg`.
 
-### Session-only install via `--plugin-dir`
-
-For quick local testing without adding to the marketplace:
-
-```bash
-git clone https://github.com/flrngel/xlfg.git ~/project/personal/xlfg
-claude --plugin-dir ~/project/personal/xlfg/plugins/xlfg-engineering
-```
-
-`--plugin-dir` loads the plugin for the current Claude session only and is repeatable, so you can mix xlfg with other local plugins without editing global config.
-
 ### Manual standalone install
 
 For environments where the plugin loader is unavailable, copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run `/xlfg` or `/xlfg-debug`.
