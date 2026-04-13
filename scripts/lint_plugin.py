@@ -95,8 +95,8 @@ def lint_frontmatter(path: Path, fm: Optional[Dict[str, str]], kind: str) -> Lis
             )
         )
 
-    # Keep the main plugin command alias `name: xlfg` from the 2.4.1 baseline; avoid all other plugin name frontmatter.
-    if fm.get("name") and not (kind == "command" and path.name == "xlfg.md"):
+    # Keep the main plugin command aliases `name: xlfg` (2.4.1 baseline) and `name: xlfg-debug` (2.8.1); avoid all other plugin name frontmatter.
+    if fm.get("name") and not (kind == "command" and path.name in {"xlfg.md", "xlfg-debug.md"}):
         issues.append(
             LintIssue(
                 path,
