@@ -17,7 +17,7 @@ from xlfg.recall import recall
 from xlfg.contracts import parse_test_readiness_verdict
 from xlfg.intent_eval import grade_intent_artifacts, evaluate_intent_suite, parse_spec_artifact
 from xlfg.scaffold import ensure_scaffold, scaffold_status
-from xlfg.verify import verify
+from xlfg.verify import verify, _unittest_dash_k_negation_hint
 
 
 def _frontmatter_value(text: str, key: str) -> str | None:
@@ -869,6 +869,91 @@ class TestXLFG(unittest.TestCase):
             self.assertEqual(parsed["task_map"][0]["scope"], "app/login.ts tests/login.spec.ts")
             self.assertEqual(parsed["task_map"][0]["primary_artifact"], "tasks/T1/implementer-report.md")
             self.assertEqual(parsed["task_map"][0]["done_check"], "pytest tests/login -q")
+
+    def test_unittest_dash_k_negation_hint_fires_only_on_matching_signature(self) -> None:
+        # Positive: unittest discover + pytest-style negation + exit 5 → hint
+        hint = _unittest_dash_k_negation_hint(
+            'python3 -m unittest discover tests/ -k "not test_allows_on_empty_stdin"',
+            5,
+        )
+        self.assertIsNotNone(hint)
+        assert hint is not None  # narrow for mypy-like readers
+        self.assertIn("substring match", hint.lower())
+        self.assertIn("exit 5", hint.lower())
+
+        # Positive variant: single quotes around negation
+        hint2 = _unittest_dash_k_negation_hint(
+            "python3 -m unittest discover tests/ -k 'not X'",
+            5,
+        )
+        self.assertIsNotNone(hint2)
+
+        # Negative: exit 0 — not a failure at all
+        self.assertIsNone(
+            _unittest_dash_k_negation_hint(
+                'python3 -m unittest discover tests/ -k "not X"', 0
+            )
+        )
+
+        # Negative: exit 5 but pytest (has real negation support) — must not annotate
+        self.assertIsNone(
+            _unittest_dash_k_negation_hint('pytest tests/ -k "not slow"', 5)
+        )
+
+        # Negative: unittest exit 5 but no `-k "not ..."` — unrelated cause
+        self.assertIsNone(
+            _unittest_dash_k_negation_hint(
+                "python3 -m unittest discover tests/ -k some_substring", 5
+            )
+        )
+
+        # Negative: exit 1 with the bad signature — real test failure, not a filter miss
+        self.assertIsNone(
+            _unittest_dash_k_negation_hint(
+                'python3 -m unittest discover tests/ -k "not X"', 1
+            )
+        )
+
+    def test_unittest_dash_k_negation_hint_lands_in_verify_contract_issues(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "docs" / "xlfg" / "knowledge").mkdir(parents=True, exist_ok=True)
+            ensure_scaffold(root, __version__)
+            create_run(root, request="flaky filter", run_id="20260413-999999-flaky")
+            docs_run = root / "docs" / "xlfg" / "runs" / "20260413-999999-flaky"
+            # Use a guaranteed-empty tests directory so unittest exits 5 (NO TESTS RAN)
+            empty_dir = root / "empty_tests"
+            empty_dir.mkdir()
+            fast_check_cmd = f'python3 -m unittest discover {empty_dir} -k "not X"'
+            (docs_run / "test-contract.md").write_text(
+                f"""# Test contract
+
+## Required scenario contracts
+
+### P0-1 — bad filter
+- objective: `O1`
+- requirement_kind: `F2P`
+- priority: `P0`
+- query_ids: `Q1`
+- practical_steps:
+  1. run
+- fast_check: `{fast_check_cmd}`
+- ship_phase: `fast`
+- ship_check: NONE
+- regression_check: NONE
+- manual_smoke: NONE
+- anti_monkey_probe: NONE
+""",
+                encoding="utf-8",
+            )
+            (docs_run / "test-readiness.md").write_text(
+                "# Test readiness\n\n## Verdict\n- `READY`\n",
+                encoding="utf-8",
+            )
+            result = verify(root, "20260413-999999-flaky", mode="fast")
+            self.assertFalse(result["ok"])
+            joined = "\n".join(result["contract_issues"])
+            self.assertIn("substring match", joined.lower(), msg=joined)
 
     def test_ui_designer_agent_exists_in_both_packs_with_dual_mode(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

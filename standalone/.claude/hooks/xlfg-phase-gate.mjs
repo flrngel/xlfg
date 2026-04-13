@@ -31,9 +31,15 @@ const ALL_PHASES = [
 const MAX_BLOCKS = 3;
 
 const raw = await readStdin();
+// Empty stdin means this invocation carries no Claude Code stop event.
+// Allow stopping instead of reading the cwd-relative phase-state file,
+// which would otherwise block legitimate non-xlfg invocations.
+if (!raw.trim()) {
+  process.exit(0);
+}
 let payload = {};
 try {
-  payload = raw.trim() ? JSON.parse(raw) : {};
+  payload = JSON.parse(raw);
 } catch {
   process.exit(0);
 }

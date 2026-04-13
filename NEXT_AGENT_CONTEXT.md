@@ -1,8 +1,13 @@
 # Next agent context
 
-## Current state (2.8.1)
+## Current state (2.8.2)
 
-The 2.8.1 change is tiny and additive: the `/xlfg-debug` plugin command now registers `name: xlfg-debug` in its frontmatter so users can invoke it as `/xlfg-debug` instead of only `/xlfg-engineering:xlfg-debug`, mirroring the existing `/xlfg` alias pattern.
+2.8.2 closes two residual risks from the 2.8.1 follow-up work:
+
+- `phase-gate.mjs` (both plugin and standalone copies) now exits 0 immediately on empty stdin. Before this change, the hook would read the cwd-relative `.xlfg/phase-state.json` even when no stop-event payload was present, which caused `test_allows_on_empty_stdin` to flake inside an active /xlfg run and, more importantly, let the hook block legitimate non-xlfg invocations that happened to share the cwd.
+- `xlfg verify` now annotates unittest exit 5 with a one-line hint when the planned command combines `python -m unittest` / `unittest discover` with pytest-style `-k "not ..."` negation. unittest's `-k` is substring-match only, so those commands collect zero tests and exit 5 (NO TESTS RAN); the hint makes that diagnosable instead of opaque. Pytest commands with the same filter are never annotated (pytest supports real negation).
+
+2.8.1 added the `/xlfg-debug` short alias. 2.8.1 also introduced `xlfg-ui-designer` (conditional plan-phase + verify-phase specialist for UI-related work).
 
 The main 2.8.0 change (still in effect) is **hardening the conductor itself** — the 2.7.x arc hardened specialists, but the conductor could still silently drop later phases.
 

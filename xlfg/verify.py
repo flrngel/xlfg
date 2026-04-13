@@ -20,6 +20,31 @@ def _should_set_ci_env(command: str) -> bool:
     return c.startswith(("npm ", "pnpm ", "yarn ", "bun ", "npx ", "node "))
 
 
+def _unittest_dash_k_negation_hint(command: str, exit_code: int) -> Optional[str]:
+    """Return a one-line hint when a unittest command exits 5 because it was
+    handed a pytest-style `-k "not X"` filter that unittest resolves as a
+    substring match against nothing, collecting zero tests.
+
+    Returns None when the signature does not match — keeps the detector tight
+    so pytest's own `-k "not X"` usage (which is legitimately supported and
+    rarely returns exit 5) is never annotated.
+    """
+    if exit_code != 5:
+        return None
+    c = command.lower()
+    if "unittest" not in c:
+        return None
+    if 'python -m unittest' not in c and 'python3 -m unittest' not in c and 'unittest discover' not in c:
+        return None
+    if '-k "not ' not in command and "-k 'not " not in command:
+        return None
+    return (
+        "unittest `-k` uses substring match, not pytest-style negation. "
+        "`-k \"not X\"` matched nothing (exit 5 = NO TESTS RAN). "
+        "Use a different filter or fix the underlying test."
+    )
+
+
 def _resolve_command(command: str) -> str:
     c = command.strip()
     if (c == "python" or c.startswith("python ")) and shutil.which("python") is None and shutil.which("python3"):
@@ -337,6 +362,9 @@ def verify(
                 }
                 steps.append(step)
                 (log_dir / f"{name}.exitcode").write_text(str(code), encoding="utf-8")
+                hint = _unittest_dash_k_negation_hint(cmd, code)
+                if hint:
+                    contract_issues.append(hint)
                 if code != 0:
                     ok = False
                     break

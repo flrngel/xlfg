@@ -2,7 +2,7 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-Version 2.8.1 registers `/xlfg-debug` as a short alias for the plugin debug command, mirroring how `/xlfg` is aliased. Version 2.8.0 hardens the **conductor itself**: a Stop hook and phase-state file prevent the pipeline from ending before all 8 phases complete, and loopback iterations are now capped to prevent unbounded context growth.
+Version 2.8.2 fixes the phase-gate Stop hook so it exits cleanly on empty stdin (stops flaking inside an active /xlfg run, stops blocking unrelated invocations that share the cwd) and adds a pointed diagnostic when an `xlfg verify` contract accidentally uses pytest-style `-k "not ..."` with a unittest runner. Version 2.8.1 registered `/xlfg-debug` as a short alias and added the `xlfg-ui-designer` specialist (conditional plan/verify lanes for UI-related work). Version 2.8.0 hardens the **conductor itself**: a Stop hook and phase-state file prevent the pipeline from ending before all 8 phases complete, and loopback iterations are now capped to prevent unbounded context growth.
 
 - `/xlfg` and `/xlfg-debug` are the public entrypoints, each **batching hidden phase skills**
 - the plugin commands keep short aliases (`/xlfg`, `/xlfg-debug`) via `name:` frontmatter, while the namespaced forms remain `/xlfg-engineering:xlfg` and `/xlfg-engineering:xlfg-debug`

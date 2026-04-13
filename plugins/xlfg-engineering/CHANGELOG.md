@@ -1,3 +1,9 @@
+## 2.8.2
+
+- Fixed `phase-gate.mjs` (plugin + standalone) to exit 0 immediately on empty stdin instead of reading the cwd-relative `.xlfg/phase-state.json`. Prevents `test_allows_on_empty_stdin` from flaking inside an active /xlfg run and, more importantly, stops the hook from blocking legitimate non-xlfg invocations that happen to share the cwd.
+- Added a scoped diagnostic in `xlfg verify`: when a planned `python -m unittest` / `unittest discover` command uses pytest-style `-k "not ..."` negation and exits 5 (NO TESTS RAN), the helper now appends a one-line hint to `contract_issues` explaining that unittest's `-k` is substring-match only. No change to pass/fail semantics; pytest commands with the same filter are never annotated.
+- Added `xlfg-ui-designer` specialist agent (conditional plan-phase + verify-phase dispatch for UI-related work) — carried from 2.8.1 follow-up work.
+
 ## 2.8.1
 
 - Registered `/xlfg-debug` as a short alias for the plugin command via `name: xlfg-debug` frontmatter, matching the `/xlfg` alias pattern so users can run `/xlfg-debug` without the `xlfg-engineering:` prefix.
