@@ -26,23 +26,43 @@ Version 2.8.1 registers `/xlfg-debug` as a short alias for the plugin debug comm
 
 ## Quick start
 
+### Install via `npx skills` (recommended)
+
+xlfg ships SKILL.md files in `standalone/.claude/skills/`, so it works with the [`skills`](https://github.com/vercel-labs/skills) CLI out of the box. From inside your target repo:
+
+```bash
+# project scope — adds to ./.claude/skills/
+npx skills add flrngel/xlfg
+
+# user scope — adds to ~/.claude/skills/
+npx skills add flrngel/xlfg -g -a claude-code
+```
+
+After install, the public entrypoints are live:
+
+- `/xlfg "what you want built"` — full SDLC run
+- `/xlfg-debug "what is broken"` — diagnosis-only run (no source edits)
+
+Keep skill files updated with `npx skills update`.
+
 ### Plugin / team install
 
-Run the plugin command:
+Run the plugin command directly:
 
 - `/xlfg-engineering:xlfg "what you want built"`
+- `/xlfg-engineering:xlfg-debug "what is broken"`
 
-### Standalone / short-command install
+Both commands ship short aliases (`/xlfg`, `/xlfg-debug`) via `name:` frontmatter.
 
-Copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run:
+### Manual standalone install
 
-- `/xlfg "what you want built"`
+Copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run `/xlfg` or `/xlfg-debug`.
 
 ## Entry model
 
-- `/xlfg` owns the whole SDLC run.
-- It should not ask the user to run phase subcommands or internal skills.
-- It loads hidden phase skills just in time: recall, intent, context, plan, implement, verify, review, compound.
+- `/xlfg` owns the whole SDLC run and loads hidden phase skills just in time: recall, intent, context, plan, implement, verify, review, compound.
+- `/xlfg-debug` is the diagnosis-only sibling: recall → intent → context → debug. It finds the deep root cause and names the likely repair surface without touching source, tests, fixtures, migrations, or configs.
+- Neither command asks the user to run phase subcommands or internal skills.
 - `spec.md` is the run card and single source of truth.
 - Optional docs exist only when they change a decision or proof.
 - The helper CLI is optional, but when installed it makes scaffold, recall, verification, audit, and intent grading more deterministic.
