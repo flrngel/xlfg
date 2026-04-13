@@ -26,37 +26,25 @@ Version 2.8.1 registers `/xlfg-debug` as a short alias for the plugin debug comm
 
 ## Quick start
 
-### Install via `npx skills` (recommended)
+### Plugin install (recommended)
 
-xlfg ships SKILL.md files in `standalone/.claude/skills/`, so it works with the [`skills`](https://github.com/vercel-labs/skills) CLI out of the box. From inside your target repo:
+Clone this repo anywhere, then launch Claude Code with `--plugin-dir` pointing at the plugin package:
 
 ```bash
-# project scope — adds to ./.claude/skills/
-npx skills add flrngel/xlfg
-
-# user scope — adds to ~/.claude/skills/
-npx skills add flrngel/xlfg -g -a claude-code
+git clone https://github.com/flrngel/xlfg.git ~/project/personal/xlfg
+claude --plugin-dir ~/project/personal/xlfg/plugins/xlfg-engineering
 ```
 
-After install, the public entrypoints are live:
+`--plugin-dir` loads plugins for the current session only and is repeatable, so you can mix xlfg with other local plugins without editing global config. Inside the session:
 
 - `/xlfg "what you want built"` — full SDLC run
 - `/xlfg-debug "what is broken"` — diagnosis-only run (no source edits)
 
-Keep skill files updated with `npx skills update`.
-
-### Plugin / team install
-
-Run the plugin command directly:
-
-- `/xlfg-engineering:xlfg "what you want built"`
-- `/xlfg-engineering:xlfg-debug "what is broken"`
-
-Both commands ship short aliases (`/xlfg`, `/xlfg-debug`) via `name:` frontmatter.
+Both short forms are aliases of `/xlfg-engineering:xlfg` and `/xlfg-engineering:xlfg-debug`, registered via `name:` frontmatter on the plugin commands.
 
 ### Manual standalone install
 
-Copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run `/xlfg` or `/xlfg-debug`.
+For environments where launching Claude with `--plugin-dir` is inconvenient, copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run `/xlfg` or `/xlfg-debug`.
 
 ## Entry model
 
