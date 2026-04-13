@@ -696,7 +696,7 @@ class TestXLFG(unittest.TestCase):
         report = audit_repo(repo_root)
         hardening = report["metrics"]["subagent_hardening"]
         features = report["metrics"]["features"]
-        self.assertEqual(hardening["plugin_agent_count"], 26)
+        self.assertEqual(hardening["plugin_agent_count"], 27)
         self.assertTrue(hardening["standalone_agent_pack"])
         self.assertEqual(hardening["agents_with_tools_allowlist"], hardening["plugin_agent_count"])
         self.assertEqual(hardening["agents_with_background_false"], hardening["plugin_agent_count"])
@@ -869,6 +869,45 @@ class TestXLFG(unittest.TestCase):
             self.assertEqual(parsed["task_map"][0]["scope"], "app/login.ts tests/login.spec.ts")
             self.assertEqual(parsed["task_map"][0]["primary_artifact"], "tasks/T1/implementer-report.md")
             self.assertEqual(parsed["task_map"][0]["done_check"], "pytest tests/login -q")
+
+    def test_ui_designer_agent_exists_in_both_packs_with_dual_mode(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        standalone = repo_root / "standalone" / ".claude" / "agents" / "planning" / "xlfg-ui-designer.md"
+        plugin = repo_root / "plugins" / "xlfg-engineering" / "agents" / "planning" / "xlfg-ui-designer.md"
+        self.assertTrue(standalone.exists(), f"missing {standalone}")
+        self.assertTrue(plugin.exists(), f"missing {plugin}")
+        self.assertEqual(
+            standalone.read_text(encoding="utf-8"),
+            plugin.read_text(encoding="utf-8"),
+            "xlfg-ui-designer must stay byte-identical across packs",
+        )
+        text = standalone.read_text(encoding="utf-8")
+        self.assertIn("DOCS_RUN_DIR/ui-design.md", text)
+        self.assertIn("DOCS_RUN_DIR/ui-verification.md", text)
+        self.assertIn("## Specialist identity", text)
+        self.assertIn("## Execution contract", text)
+
+    def test_ui_designer_is_wired_into_plan_phase_with_conditional_trigger(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        for path in [
+            repo_root / "standalone" / ".claude" / "skills" / "xlfg-plan-phase" / "SKILL.md",
+            repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-plan-phase" / "SKILL.md",
+        ]:
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("xlfg-ui-designer", text, f"plan-phase must reference xlfg-ui-designer: {path}")
+            self.assertIn("UI-related", text, f"plan-phase must describe conditional trigger: {path}")
+            self.assertIn("DOCS_RUN_DIR/ui-design.md", text, f"plan-phase must pass artifact path: {path}")
+
+    def test_ui_designer_is_wired_into_verify_phase_with_conditional_trigger(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        for path in [
+            repo_root / "standalone" / ".claude" / "skills" / "xlfg-verify-phase" / "SKILL.md",
+            repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-verify-phase" / "SKILL.md",
+        ]:
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("xlfg-ui-designer", text, f"verify-phase must reference xlfg-ui-designer: {path}")
+            self.assertIn("UI-related", text, f"verify-phase must describe conditional trigger: {path}")
+            self.assertIn("DOCS_RUN_DIR/ui-verification.md", text, f"verify-phase must pass artifact path: {path}")
 
 
 if __name__ == "__main__":  # pragma: no cover
