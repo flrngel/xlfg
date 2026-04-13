@@ -41,6 +41,7 @@ htmlcov/
 # Logs
 *.log
 .xlfg/
+docs/xlfg/
 docs/xlfg/runs/*
 !docs/xlfg/runs/.gitkeep
 !docs/xlfg/runs/README.md
