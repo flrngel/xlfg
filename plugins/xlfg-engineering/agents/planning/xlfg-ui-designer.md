@@ -3,7 +3,7 @@ name: xlfg-ui-designer
 description: UI design and a11y contract specialist. Use proactively in planning and verify lanes when the task touches frontend or visual/interaction design. Owns one atomic lane; returns only after the artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 12
+maxTurns: 150
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

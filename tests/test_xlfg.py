@@ -673,7 +673,7 @@ class TestXLFG(unittest.TestCase):
                 tools = _frontmatter_value(text, "tools") or ""
                 max_turns = _frontmatter_value(text, "maxTurns")
                 self.assertIsNotNone(max_turns, f"Missing maxTurns in {agent_path}")
-                self.assertLessEqual(int(max_turns), 12, f"Turn budget too large in {agent_path}")
+                self.assertLessEqual(int(max_turns), 150, f"Turn budget too large in {agent_path}")
                 self.assertNotIn("Agent", tools, f"Nested delegation tool leaked into {agent_path}")
                 self.assertNotIn("SendMessage", tools, f"Resume tool leaked into {agent_path}")
 

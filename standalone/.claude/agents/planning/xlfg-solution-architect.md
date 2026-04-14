@@ -3,7 +3,7 @@ name: xlfg-solution-architect
 description: Root-fix architect. Use proactively after diagnosis to compare options and pick the smallest honest fix. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 12
+maxTurns: 150
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

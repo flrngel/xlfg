@@ -1,6 +1,28 @@
 # Next agent context
 
-## Current state (2.8.2)
+## Current state (2.9.0)
+
+The main 2.9.0 change is a deliberate reversal of the v2.7.5 bounded-budget design: every specialist's `maxTurns` is now `150` (up from 8/10/12) across both packs.
+
+What changed:
+- all 27 plugin + 27 standalone specialist agent files set `maxTurns: 150` in frontmatter
+- audit predicate (`xlfg/audit.py:_short_turn_budget`) and test assertion (`tests/test_xlfg.py`) now assert the new bound (`<= 150`); coverage stays — only the numeric bound rose
+- `docs/xlfg/knowledge/current-state.md` reframes the cap as a generous safety ceiling, not a target; the prompt-side write-first / leaf-worker / atomic-packet rules now carry the full forcing-function load
+- `docs/xlfg/knowledge/decision-log.md` has its first real entry, capturing the full 2.7.3 → 2.7.4 → 2.7.5 → 2.9.0 history and rejected shortcuts
+- README lead text + version files synced
+
+Why this matters:
+- 150 is a **ceiling, not a target** — most specialist lanes still finish in far fewer turns. Needing many turns is a signal the lane was scoped wrong, not a signal to raise the cap further.
+- At 150, a stuck specialist looping on speculative reads will appear hung longer before failing. Mitigation lives in the prompt-side rules + SubagentStop guard + missing-artifact detection, not in the cap.
+- Sonnet keeps worst-case cost acceptable; the user explicitly accepted the cost+risk tradeoff in this run.
+
+If you continue from here:
+- do **not** silently re-bound the cap back to 12. The decision-log entry and `current-state.md` are the durable record. If a real production incident motivates a smaller cap, write a new decision-log entry citing evidence.
+- preserve all prompt-side specialist rules — they are now load-bearing for the forcing function.
+- keep plugin and standalone packs in sync on `maxTurns` (no recurrence of the v2.7.4 plugin-only drift).
+- if you change the bound, update both audit + test assertion in lockstep so CI stays honest.
+
+## Previous state (2.8.2) — for reference
 
 2.8.2 closes two residual risks from the 2.8.1 follow-up work:
 

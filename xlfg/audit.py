@@ -337,7 +337,7 @@ def _subagent_hardening_report(root: Path) -> dict[str, Any]:
 
     def _short_turn_budget(path: Path, _text: str, fm: dict[str, str]) -> bool:
         try:
-            return 0 < int(fm.get("maxTurns", "0")) <= 12
+            return 0 < int(fm.get("maxTurns", "0")) <= 150
         except ValueError:
             return False
 
@@ -635,7 +635,7 @@ def _top_recommendations(
     if not features.get("foreground_specialists"):
         recs.append("Keep phase-critical specialists in the foreground so early stop and silent write failures are easier to detect.")
     if not features.get("short_lived_specialists"):
-        recs.append("Cap specialist turn budgets aggressively so stuck lanes fail fast instead of looking hung for dozens of turns.")
+        recs.append("Set every specialist's `maxTurns` to a bounded ceiling (current design: 150) so stuck lanes are still detectable; combine with prompt-side write-first / leaf-worker rules that carry the forcing-function load.")
     if not features.get("leaf_specialists"):
         recs.append("Keep specialists as leaf workers without Agent/SendMessage tools so nested delegation cannot deadlock or explode context.")
     if not features.get("proactive_delegation_descriptions"):

@@ -3,7 +3,7 @@ name: xlfg-verify-reducer
 description: Verification evidence judge. Use proactively after verify-runner to reduce logs into decisive run truth. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 10
+maxTurns: 150
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

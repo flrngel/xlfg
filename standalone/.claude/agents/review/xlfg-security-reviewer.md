@@ -3,7 +3,7 @@ name: xlfg-security-reviewer
 description: Security critic. Use proactively for auth, validation, secret-handling, and injection review. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 12
+maxTurns: 150
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

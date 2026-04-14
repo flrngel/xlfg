@@ -9,7 +9,7 @@ Read this file first when entering a repo that uses xlfg. It is the shortest tra
 ## Current high-signal truths
 - The conductor has a Stop hook (`phase-gate.mjs`) that blocks premature pipeline termination by reading `.xlfg/phase-state.json`
 - Verify-fix and review-fix loopback cycles are capped at 2 iterations
-- Specialists are leaf workers with short turn budgets (maxTurns ≤ 12), foregrounded, and bounded by artifact completion barriers
+- Specialists are leaf workers with a generous safety ceiling (maxTurns ≤ 150), foregrounded, and bounded by artifact completion barriers plus the prompt-side write-first / leaf-worker rules. The ceiling is a budget cap, not a target — most lanes finish in far fewer turns; needing many turns is a signal the lane was scoped wrong, not a signal to raise the cap further
 - Plugin and standalone packs must stay synchronized on hooks, scripts, conductor text, and agent budgets
 
 ## Active UX / behavior contracts

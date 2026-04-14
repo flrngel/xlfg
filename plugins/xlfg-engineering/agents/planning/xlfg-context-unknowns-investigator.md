@@ -3,7 +3,7 @@ name: xlfg-context-unknowns-investigator
 description: Ambiguity triager. Use proactively before planning to isolate assumptions, deferrable decisions, and the few true blockers. Owns one atomic lane and returns only after the required artifact is complete.
 model: haiku
 effort: high
-maxTurns: 8
+maxTurns: 150
 tools: Read, Grep, Glob, LS, Bash, Write
 background: false
 ---

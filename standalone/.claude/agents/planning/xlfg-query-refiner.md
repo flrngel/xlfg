@@ -3,7 +3,7 @@ name: xlfg-query-refiner
 description: Intent surgeon for messy requests. Use proactively at the start of /xlfg to turn vague asks into a concrete intent contract. Owns one atomic lane and returns only after the required artifact is complete.
 model: sonnet
 effort: high
-maxTurns: 8
+maxTurns: 150
 tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch
 background: false
 ---

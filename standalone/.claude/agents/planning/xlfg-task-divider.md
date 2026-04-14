@@ -3,7 +3,7 @@ name: xlfg-task-divider
 description: Atomic task packet planner. Use proactively after solution choice so each specialist gets one bounded mission, one artifact, and one honest done check. Returns only after the artifact is complete.
 model: sonnet
 effort: medium
-maxTurns: 8
+maxTurns: 150
 tools: Read, Grep, Glob, LS, Edit, MultiEdit, Write
 background: false
 ---

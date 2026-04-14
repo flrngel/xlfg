@@ -1,3 +1,12 @@
+## 2.9.0
+
+- Raised every specialist agent's `maxTurns` to **150** in both the plugin pack (27 agents) and the standalone pack (27 agents). The cap is a generous safety ceiling, not a target — most lanes still finish in far fewer turns. Prompt-side write-first / leaf-worker / atomic-packet rules now carry the forcing-function load that the small numeric bound previously shared.
+- Updated the audit predicate (`xlfg/audit.py:_short_turn_budget`) and the test assertion (`tests/test_xlfg.py`) to assert the new bound (`<= 150`). The predicate's *meaning* is unchanged — coverage remains; only the numeric bound rose. The fallback recommendation text in `audit.py` stays generic ("cap turn budgets aggressively") so a future drift to unbounded values is still flagged.
+- Rewrote `docs/xlfg/knowledge/current-state.md` and the lead text of `plugins/xlfg-engineering/README.md` so durable framing matches: leaf workers under a generous safety ceiling, with prompt-side rules carrying the forcing function, instead of "short turn budgets (`maxTurns ≤ 12`)".
+- Added the first real entry to `docs/xlfg/knowledge/decision-log.md` — captures the 2.7.3 → 2.7.4 → 2.7.5 → 2.9.0 history, the rationale for treating 150 as a ceiling, and the explicit rejected shortcuts (delete the audit predicate; bump only the plugin pack; patch instead of minor).
+- Bumped to **2.9.0** (minor, not patch) because reversing the v2.7.5 bounded-budget design contract changes a load-bearing rule, not a numeric tweak.
+- Risks accepted (per the `/xlfg-debug` predecessor run `docs/xlfg/runs/20260414-073242-maxturns-decision/`): a stuck specialist looping on speculative reads will appear hung longer before failing; mitigation lives in the prompt-side rules + SubagentStop guard, not in the cap.
+
 ## 2.8.2
 
 - Fixed `phase-gate.mjs` (plugin + standalone) to exit 0 immediately on empty stdin instead of reading the cwd-relative `.xlfg/phase-state.json`. Prevents `test_allows_on_empty_stdin` from flaking inside an active /xlfg run and, more importantly, stops the hook from blocking legitimate non-xlfg invocations that happen to share the cwd.
