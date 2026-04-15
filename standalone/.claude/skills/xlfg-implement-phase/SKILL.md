@@ -38,7 +38,7 @@ Implement the planned change with one conductor, specialist task owners, aligned
 
 ## Delegation packet rules
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
+- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
 - Every specialist packet must begin with machine-readable headers:
 
 ```text

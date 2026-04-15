@@ -26,7 +26,7 @@ Gather the repo and product truth needed for an honest plan without exploding co
 3. Start from the intent contract already written in `spec.md`. Keep repo exploration scoped to those direct asks, implied asks, objective groups, and blockers.
 4. Explore repo truth first with targeted reads and grep, not broad file hoarding.
 5. Use specialists as true lane owners, not optional advisors. Give each one objective context plus one bounded output artifact. Keep default fan-out small: run one active artifact-producing specialist at a time, then load the next specialist only if the previous artifact leaves a concrete unresolved gap. Repo-map, harness-profile, and external research should normally run sequentially because each artifact shapes the next packet:
-   - always run `xlfg-repo-mapper`
+   - run `xlfg-repo-mapper` unless `memory-recall.md` already contains grep-cited `file:line` entries covering every objective in `spec.md`. When skipping, append a one-line skip note to `context.md` that names the recall coverage (`xlfg-repo-mapper skipped — memory-recall.md lines N–M cover O1, O2`). Do not skip when the surface is unfamiliar, when recall returned an explicit no-hit, or when any objective's files are not cited.
    - run `xlfg-harness-profiler` for any build / bugfix / delivery run
    - run `xlfg-context-adjacent-investigator`, `xlfg-context-constraints-investigator`, or `xlfg-context-unknowns-investigator` one at a time when the request is bundled, risky, or still assumption-heavy
    - run `xlfg-env-doctor` when local server behavior is relevant
@@ -41,11 +41,11 @@ Gather the repo and product truth needed for an honest plan without exploding co
 9. Update the research and context sections of `spec.md`.
 10. If a required specialist failed to produce its artifact, classify that in `workboard.md` and either retry once or continue only with an explicit gap note.
 11. Create `research.md` only when external research materially changes the decision surface.
-12. Keep `workboard.md` current while planning is in progress.
+12. Keep the task/objective/blocker sections of `workboard.md` current. The `## Phase status` block is rendered by the conductor from `.xlfg/phase-state.json`.
 
 ## Delegation packet rules
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
+- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
 - Every specialist packet must begin with machine-readable headers:
 
 ```text

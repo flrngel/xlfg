@@ -1,8 +1,42 @@
 # Next agent context
 
-## Current state (3.0.0)
+## Current state (3.1.0)
 
-The main 3.0.0 change is removal of the `xlfg` Python CLI package. The repo is now plugin-only — no `pip install`, no console-script entrypoints. Install exclusively via the Claude Code marketplace manifest.
+3.1.0 targets inter-agent communication waste. The run artifacts now carry a single canonical `status:` field (inside YAML frontmatter), phase-status in `workboard.md` is rendered from `.xlfg/phase-state.json` instead of hand-written per phase, the Claude Code task pane is kept in sync with xlfg's phase list via a startup `TaskCreate` bridge, `ledger.jsonl` has a real schema and a single validating writer, and two specialist lanes (`xlfg-repo-mapper` in context-phase; verify-phase `xlfg-ui-designer` re-fire) are gated instead of unconditional.
+
+What changed:
+- `plugins/xlfg-engineering/scripts/subagent-stop-guard.mjs` parses YAML frontmatter `status:` first, falls back to the legacy bare `Status:` first line for backward compatibility. New templates prescribe YAML only.
+- 54 agent files (27 × 2 packs) converted from bare `Status: DONE | BLOCKED | FAILED` to YAML frontmatter. Completion-barrier prose, turn-budget rule, and preseed convention all point at the YAML shape.
+- `plugins/xlfg-engineering/agents/_shared/output-template.md` (mirrored to standalone) is the single reference for frontmatter / preseed / final-chat shape.
+- `plugins/xlfg-engineering/skills/xlfg-context-phase/SKILL.md:29` replaces `always run xlfg-repo-mapper` with a conditional skip when `memory-recall.md` already grep-cites coverage.
+- `plugins/xlfg-engineering/skills/xlfg-verify-phase/SKILL.md:34` adds a task-checker-DA-coverage gate to the UI-designer re-fire.
+- `plugins/xlfg-engineering/scripts/render-workboard.mjs` (mirrored to standalone) renders the `## Phase status` block from `.xlfg/phase-state.json` between HTML-comment markers. Phase skills no longer write phase-completion rows.
+- `plugins/xlfg-engineering/commands/xlfg.md` (and standalone `xlfg/SKILL.md`) add `TaskCreate`/`TaskUpdate`/`TaskList` to `allowed-tools`, and a "Harness task bridge" startup step that creates `xlfg: <phase>` tasks.
+- `docs/xlfg/knowledge/ledger-schema.md` is the canonical shape. `plugins/xlfg-engineering/scripts/ledger-append.mjs` is the only allowed writer.
+
+Why this matters:
+- Artifact bytes-per-run drop: one status line per artifact instead of two, phase-status rendered once per boundary instead of hand-re-described each phase.
+- Harness-task-pane nag is silenced without making `workboard.md` a second source of truth.
+- Ledger events stop drifting across runs — schema rejects unknown shapes at write time.
+- Specialist theater removed on two common axes (recall vs repo-mapper; UI-designer plan + task-checker + UI-designer verify).
+
+If you continue from here:
+- Keep YAML frontmatter as the canonical artifact header shape. The stop-guard's bare-Status fallback is a transition branch, not a long-term contract — future breaking release can remove it.
+- When creating a new agent, copy the scaffold from `agents/_shared/output-template.md`; don't reinvent it.
+- When appending to `ledger.jsonl`, always go through `scripts/ledger-append.mjs`. Direct `echo >>` is forbidden and will drift again.
+- Phase skills still own the task / objective / blocker sections of `workboard.md`. They MUST NOT hand-write phase-status rows — the renderer owns that region.
+- The `TaskCreate` bridge is startup-only and completion-only. Do NOT create harness tasks for specialists or sub-packets.
+- Bump version in **both** `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json` for every behavior change.
+- Keep plugin and standalone packs in sync. `test_standalone_agent_pack_matches_plugin_agents` + new `test_standalone_stop_guard_matches_plugin` + `test_standalone_renderer_matches_plugin` enforce this at CI time.
+
+Intentionally not done in 3.1.0 (known-open):
+- Phase B from the plan (CONTEXT_DIGEST per phase + shared delegation-rules doc) — user deferred.
+- O1 scale-tier redesign (XS/S/M/L, SKIPPED terminal state, specialist "lite" variants) — belongs in its own RFC.
+- Cost observability (tokens / wall-time / specialist count) and auto run-summary.
+
+## Previous state (3.0.0) — for reference
+
+The main 3.0.0 change was removal of the `xlfg` Python CLI package. The repo is plugin-only — no `pip install`, no console-script entrypoints. Install exclusively via the Claude Code marketplace manifest.
 
 What changed:
 - `xlfg/` directory (13 Python source files, ~4700 LoC) deleted entirely

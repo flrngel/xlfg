@@ -53,7 +53,7 @@ Turn the resolved intent and gathered truth into a lean run card, a practical te
    - keep proof summary and PM / UX / Engineering / QA / Release notes current
 9. Update `test-contract.md` with 1–5 practical scenario contracts total, ensuring each active objective has explicit proof.
 10. Update `test-readiness.md` with a real `READY` or `REVISE` verdict.
-11. Update `workboard.md` so objectives, tasks, blockers, and the next action stay visible. Create or refresh `tasks/<task-id>/task-brief.md` for each active task.
+11. Update the objectives, tasks, blockers, and next-action sections of `workboard.md`. The `## Phase status` block is rendered by the conductor from `.xlfg/phase-state.json` — do not hand-write phase completion rows there. Create or refresh `tasks/<task-id>/task-brief.md` for each active task.
 12. Create optional docs only when they change a decision or proof obligation: `diagnosis.md`, `solution-decision.md`, `flow-spec.md`, `env-plan.md`, `proof-map.md`, `risk.md`.
 13. If a required planning specialist returns only setup notes or no artifact, retry once via resume or exact re-dispatch before repairing the gap yourself. Do not collapse a broad packet into main-thread guesswork; re-split it first when needed.
 
@@ -63,7 +63,7 @@ If `test-readiness.md` is `REVISE`, repair the plan yourself until it becomes `R
 
 ## Delegation packet rules
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
+- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
 - Every specialist packet must begin with machine-readable headers:
 
 ```text

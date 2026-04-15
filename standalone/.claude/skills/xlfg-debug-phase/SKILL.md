@@ -62,12 +62,12 @@ Produce an evidence-backed root-cause report and likely repair surface without m
    - `Proof summary` with reproduction, disproof, confidence, and remaining unknowns
 10. Write `diagnosis.md` with the causal chain and rejected shortcuts.
 11. Write `debug-report.md` as the final diagnosis artifact.
-12. Update `workboard.md` so stage status, blockers, and the next safest repair or proof step are visible. Add a `debug` stage line if the ledger does not already have one, and mark implementation-oriented stages as `SKIPPED (/xlfg-debug)` when that improves clarity.
+12. Update the blockers and next-safest-repair sections of `workboard.md`. Mark implementation-oriented stages as `SKIPPED (/xlfg-debug)` when that improves clarity. The `## Phase status` block is rendered by the conductor from `.xlfg/phase-state.json`.
 13. Create optional docs only when they change the evidence surface: `repro-notes.md`, `probe-log.md`, `history-findings.md`, `env-plan.md`, `research.md`. Do not create implementation tasks.
 
 ## Required output shape
 
-`debug-report.md` must begin with `Status: DONE` or `Status: BLOCKED` or `Status: FAILED` and contain:
+`debug-report.md` must open with YAML frontmatter declaring `status: DONE`, `status: BLOCKED`, or `status: FAILED` and contain:
 
 ```markdown
 # Debug report
@@ -107,7 +107,7 @@ Produce an evidence-backed root-cause report and likely repair surface without m
 
 ## Delegation packet rules
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
+- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
 - Every specialist packet must begin with machine-readable headers:
 
 ```text

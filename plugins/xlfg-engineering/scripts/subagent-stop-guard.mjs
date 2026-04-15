@@ -32,6 +32,18 @@ function firstNonEmptyLine(text) {
   return "";
 }
 
+// Canonical shape (v3.1.0+): YAML frontmatter at the top of the file with
+// `status: DONE|BLOCKED|FAILED`. Legacy shape: bare `Status: DONE|BLOCKED|FAILED`
+// as the first non-empty line. Accept both for backward compatibility.
+function hasTerminalStatus(text) {
+  const body = String(text || "");
+  const yaml = body.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)/);
+  if (yaml && /^status:\s*(DONE|BLOCKED|FAILED)\s*$/m.test(yaml[1])) {
+    return true;
+  }
+  return /^Status:\s*(DONE|BLOCKED|FAILED)\b/.test(firstNonEmptyLine(body));
+}
+
 function artifactHasFinalStatus(filePath, cwd) {
   if (!filePath) return false;
   try {
@@ -39,7 +51,7 @@ function artifactHasFinalStatus(filePath, cwd) {
     const stat = fs.statSync(resolved);
     if (!stat.isFile() || stat.size === 0) return false;
     const text = fs.readFileSync(resolved, "utf8");
-    return /^Status:\s*(DONE|BLOCKED|FAILED)\b/.test(firstNonEmptyLine(text));
+    return hasTerminalStatus(text);
   } catch {
     return false;
   }
@@ -131,4 +143,4 @@ if (finalMatch) {
 }
 
 const artifactHint = expectedArtifact ? ` Finalize ${expectedArtifact} first.` : " Finalize the promised artifact first.";
-block(`xlfg specialists may not stop on setup or progress chatter.${artifactHint} Reply exactly DONE <artifact-path>, BLOCKED <artifact-path>, or FAILED <artifact-path> after the artifact exists with Status: DONE|BLOCKED|FAILED. If a tool failed, record the failure in the artifact instead of returning early.`);
+block(`xlfg specialists may not stop on setup or progress chatter.${artifactHint} Reply exactly DONE <artifact-path>, BLOCKED <artifact-path>, or FAILED <artifact-path> after the artifact carries YAML frontmatter with status: DONE|BLOCKED|FAILED (or the legacy bare-Status first line). If a tool failed, record the failure in the artifact instead of returning early.`);

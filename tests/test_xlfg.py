@@ -101,8 +101,12 @@ class TestXLFG(unittest.TestCase):
 
         self.assertIn("Skill(xlfg-engineering:xlfg-intent-phase *)", command_md)
         self.assertIn("Skill(xlfg-intent-phase *)", standalone_md)
-        self.assertNotIn(" Task", command_md)
-        self.assertNotIn(" Task", standalone_md)
+        # Reject the stale standalone `Task` tool name (replaced by `Agent` or
+        # `Skill`). `TaskCreate` / `TaskUpdate` / `TaskList` (v3.1.0 task bridge)
+        # are legitimate and MUST NOT be rejected here.
+        for stale in (", Task,", ", Task\n", ", Task ", " Task(", " Task "):
+            self.assertNotIn(stale, command_md, f"stale `Task` tool name in command: {stale!r}")
+            self.assertNotIn(stale, standalone_md, f"stale `Task` tool name in standalone: {stale!r}")
 
         # Phase-state tracking and loopback cap (v2.8.0)
         self.assertIn("phase-state.json", command_md)
@@ -149,6 +153,8 @@ class TestXLFG(unittest.TestCase):
     def test_all_agents_have_proactive_descriptions_tools_and_foreground(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         for agent_path in sorted((repo_root / "plugins" / "xlfg-engineering" / "agents").rglob("*.md")):
+            if "_shared" in agent_path.parts:
+                continue
             text = agent_path.read_text(encoding="utf-8")
             self.assertIn("use proactively", text.lower())
             self.assertIn("tools:", text)
@@ -163,6 +169,8 @@ class TestXLFG(unittest.TestCase):
             repo_root / "standalone" / ".claude" / "agents",
         ]:
             for agent_path in sorted(root.rglob("*.md")):
+                if "_shared" in agent_path.parts:
+                    continue
                 text = agent_path.read_text(encoding="utf-8")
                 tools = _frontmatter_value(text, "tools") or ""
                 max_turns = _frontmatter_value(text, "maxTurns")
@@ -183,7 +191,8 @@ class TestXLFG(unittest.TestCase):
         for filename, artifact in expected.items():
             text = (review_root / filename).read_text(encoding="utf-8")
             self.assertIn(artifact, text)
-            self.assertIn("Status: DONE | BLOCKED | FAILED", text)
+            # v3.1.0+ canonical: status lives inside YAML frontmatter.
+            self.assertIn("status: DONE | BLOCKED | FAILED", text)
 
     def test_plan_phase_and_spec_support_atomic_task_packets(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
@@ -197,21 +206,32 @@ class TestXLFG(unittest.TestCase):
 
     def test_all_agents_have_completion_barrier_and_resume_rule(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        for agent_path in sorted((repo_root / "plugins" / "xlfg-engineering" / "agents").rglob("*.md")):
+        agent_root = repo_root / "plugins" / "xlfg-engineering" / "agents"
+        for agent_path in sorted(agent_root.rglob("*.md")):
+            # _shared is a reference doc, not an agent.
+            if "_shared" in agent_path.parts:
+                continue
             text = agent_path.read_text(encoding="utf-8")
             self.assertIn("## Completion barrier", text)
             self.assertIn("Do not return a progress update", text)
             self.assertIn("If the parent resumes you", text)
-            self.assertIn("Status: IN_PROGRESS", text)
+            self.assertIn("status: IN_PROGRESS", text)
             self.assertIn("## Final response contract", text)
             self.assertIn("DONE <artifact-path>", text)
 
     def test_all_agents_have_turn_budget_rule(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        for agent_path in sorted((repo_root / "plugins" / "xlfg-engineering" / "agents").rglob("*.md")):
+        agent_root = repo_root / "plugins" / "xlfg-engineering" / "agents"
+        for agent_path in sorted(agent_root.rglob("*.md")):
+            if "_shared" in agent_path.parts:
+                continue
             text = agent_path.read_text(encoding="utf-8")
             self.assertIn("## Turn budget rule", text, f"Missing turn budget rule in {agent_path.name}")
-            self.assertIn("Write your artifact skeleton", text, f"Missing write-first instruction in {agent_path.name}")
+            self.assertIn(
+                "Write the YAML frontmatter skeleton",
+                text,
+                f"Missing write-first instruction in {agent_path.name}",
+            )
 
     def test_all_delegating_entrypoints_repeat_atomic_packet_contract(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
@@ -229,7 +249,7 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("PRIMARY_ARTIFACT:", text, f"Missing PRIMARY_ARTIFACT in {path}")
             self.assertIn("DONE_CHECK:", text, f"Missing DONE_CHECK in {path}")
             self.assertIn("RETURN_CONTRACT:", text, f"Missing RETURN_CONTRACT in {path}")
-            self.assertIn("Status: IN_PROGRESS", text, f"Missing artifact preseed rule in {path}")
+            self.assertIn("status: IN_PROGRESS", text, f"Missing artifact preseed rule in {path}")
 
     def test_delegating_phase_skills_forbid_nested_subagents(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

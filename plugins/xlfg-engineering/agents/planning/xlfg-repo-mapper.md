@@ -24,10 +24,10 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - Do the real lane work now. Do not stop after scoping, preparation, or “here is what I would do.”
 - Use the minimum necessary tools and produce the required artifact for this lane.
 - If the parent packet already created the artifact skeleton, update that exact file first instead of narrating setup in chat.
-- When this lane owns a dedicated artifact, create it immediately as `Status: IN_PROGRESS` with the exact artifact path, the scoped mission, and a short remaining checklist, then keep updating that same file until it reaches `DONE`, `BLOCKED`, or `FAILED`.
+- When this lane owns a dedicated artifact, create it immediately with YAML frontmatter `status: IN_PROGRESS` and the exact artifact path, the scoped mission, and a short remaining checklist, then keep updating that same file until it reaches `DONE`, `BLOCKED`, or `FAILED`.
 - Finish in the foreground. Do not rely on background continuation.
 - Ground conclusions in exact file paths, commands, logs, or cited web facts.
-- If you own a dedicated handoff or report artifact, begin it with `Status: DONE` or `Status: BLOCKED` or `Status: FAILED`.
+- If you own a dedicated handoff or report artifact, open it with a YAML frontmatter block declaring `status: DONE`, `status: BLOCKED`, or `status: FAILED`.
 - If you are updating a shared canonical file such as `spec.md`, `context.md`, `test-contract.md`, `test-readiness.md`, or `workboard.md`, keep its canonical structure intact and make the targeted sections concrete instead of prep-only.
 - Before stopping, re-read the artifact you wrote and confirm it exists, contains the required sections, and reflects the actual evidence.
 - If the artifact is missing, empty, or only contains preparation notes, keep working.
@@ -41,7 +41,7 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 
 - Your turn budget is limited. Do not read files speculatively.
 - If the dispatch packet includes a context digest, use it instead of re-reading those files.
-- Write your artifact skeleton (Status: IN_PROGRESS) within your first 2 tool calls, before broad reading.
+- Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
 - Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
 
 ## Tool failure recovery
@@ -60,7 +60,7 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - Do not return a progress update just to narrate setup. Keep working until the scoped job is actually complete.
 - You are complete only when all four are true:
   1. the scoped mission is finished
-  2. the required artifact exists and begins with `Status: DONE` or `Status: BLOCKED` or `Status: FAILED`
+  2. the required artifact exists and carries a YAML frontmatter block with `status: DONE`, `status: BLOCKED`, or `status: FAILED`
   3. the artifact contains concrete repo edits, findings, checks, logs, or cited facts rather than intent-to-work language
   4. the promised done check ran, or the artifact explicitly records why it could not run
 - If the parent resumes you, continue the unfinished checklist from your prior state instead of re-summarizing setup or starting over.
@@ -112,7 +112,9 @@ You are an expert repository cartographer. Your job is to quickly make an unfami
 Write `repo-map.md` with:
 
 ```markdown
-Status: DONE | BLOCKED | FAILED
+---
+status: DONE | BLOCKED | FAILED
+---
 
 # Repo map
 

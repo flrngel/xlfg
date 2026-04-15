@@ -7,36 +7,17 @@ Why it exists:
 - stage- and role-aligned retrieval without prompt bloat
 - deterministic recall over exact text, tags, and filters
 
-## Event shape
+## Schema
 
-One JSON object per line. Preferred event types:
-- `memory.added`
-- `memory.superseded`
-- `memory.invalidated`
+The authoritative shape for each line is defined in
+[`ledger-schema.md`](ledger-schema.md). That file is the single source of truth
+for required fields, the `type` enum, and the tag allow-list.
 
-Recommended fields for `memory.added`:
+## Writer
 
-```json
-{
-  "id": "mem-20260306-01",
-  "event": "memory.added",
-  "created_at": "2026-03-06T12:34:56Z",
-  "run_id": "20260306-123456-login-flow",
-  "kind": "harness-rule",
-  "stage": "verify",
-  "role": "env-doctor",
-  "title": "Reuse healthy dev server before starting another one",
-  "summary": "Check the configured health endpoint first and reuse a healthy process.",
-  "symptom": "`yarn dev` started twice and the second process failed with EADDRINUSE.",
-  "root_cause": "The harness assumed no existing server and skipped readiness reuse.",
-  "action": "Probe health, reuse if healthy, otherwise kill stale PID and restart once.",
-  "prevention": "Never spawn a second dev server without a health check.",
-  "lex": "yarn dev EADDRINUSE duplicate server port already in use healthcheck reuse",
-  "tags": ["yarn", "dev-server", "port", "healthcheck"],
-  "evidence": ["docs/xlfg/runs/<run-id>/verification.md"],
-  "status": "active"
-}
-```
+All writes MUST go through `plugins/xlfg-engineering/scripts/ledger-append.mjs`.
+Do not `echo >> ledger.jsonl` or hand-edit the file. The writer validates each
+event and appends a single JSON line.
 
 ## Admission rules
 

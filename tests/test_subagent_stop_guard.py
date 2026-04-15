@@ -88,3 +88,67 @@ class TestSubagentStopGuard(unittest.TestCase):
             data = json.loads(out)
             self.assertEqual(data["decision"], "block")
             self.assertIn(str(artifact), data["reason"])
+
+    def test_allows_done_when_artifact_has_yaml_frontmatter_status(self) -> None:
+        """v3.1.0+ canonical shape: status lives inside YAML frontmatter."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            transcript = root / "agent.jsonl"
+            artifact = root / "repo-map.md"
+            artifact.write_text(
+                "---\nstatus: DONE\n---\n\n# Repo map\n",
+                encoding="utf-8",
+            )
+            transcript.write_text(
+                f'{{"role":"user","content":"PRIMARY_ARTIFACT: {artifact}"}}\n',
+                encoding="utf-8",
+            )
+            code, out = self._run_guard(
+                {
+                    "agent_type": "xlfg-repo-mapper",
+                    "cwd": str(root),
+                    "agent_transcript_path": str(transcript),
+                    "last_assistant_message": f"DONE {artifact}",
+                    "stop_hook_active": False,
+                }
+            )
+            self.assertEqual(code, 0)
+            self.assertEqual(out, "")
+
+    def test_blocks_when_yaml_status_still_in_progress(self) -> None:
+        """IN_PROGRESS status in YAML frontmatter is not terminal; guard must block."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            transcript = root / "agent.jsonl"
+            artifact = root / "repo-map.md"
+            artifact.write_text(
+                "---\nstatus: IN_PROGRESS\n---\n\n# Repo map\n",
+                encoding="utf-8",
+            )
+            transcript.write_text(
+                f'{{"role":"user","content":"PRIMARY_ARTIFACT: {artifact}"}}\n',
+                encoding="utf-8",
+            )
+            code, out = self._run_guard(
+                {
+                    "agent_type": "xlfg-repo-mapper",
+                    "cwd": str(root),
+                    "agent_transcript_path": str(transcript),
+                    "last_assistant_message": "Still working.",
+                    "stop_hook_active": False,
+                }
+            )
+            self.assertEqual(code, 0)
+            data = json.loads(out)
+            self.assertEqual(data["decision"], "block")
+
+    def test_standalone_stop_guard_matches_plugin(self) -> None:
+        """Both packs share the stop-guard script; divergence risks behavior drift."""
+        repo_root = Path(__file__).resolve().parents[1]
+        plugin = repo_root / "plugins" / "xlfg-engineering" / "scripts" / "subagent-stop-guard.mjs"
+        standalone = repo_root / "standalone" / ".claude" / "hooks" / "xlfg-subagent-stop-guard.mjs"
+        self.assertTrue(standalone.exists())
+        self.assertEqual(
+            plugin.read_text(encoding="utf-8"),
+            standalone.read_text(encoding="utf-8"),
+        )

@@ -89,7 +89,7 @@ DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 ```
 
-- Preseed the artifact at `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the mission, and a short remaining checklist **before** the specialist starts broad reading.
+- Preseed the artifact at `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the mission, and a short remaining checklist **before** the specialist starts broad reading.
 - Never wait on a specialist without a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT`; file-backed artifact progress is the only accepted basis for waiting.
 - Pass objective context, not just the literal query. Include the exact ask, why it matters, and any nearby constraints that change correctness.
 - Default to sequential specialist dispatch for artifact-producing diagnosis lanes. Parallelize only when packets are truly independent, small, and read-mostly.
@@ -98,7 +98,7 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 
 - Every specialist dispatch must be an **atomic packet** with one mission, one primary output artifact, one file scope, and one honest done check.
 - Do not accept chat-only progress updates as completion. “I'm going to …”, “here is my plan …”, or “I prepared the context …” all count as **INCOMPLETE** until the promised artifact exists and the scoped work is actually done.
-- A specialist lane is complete only when the required artifact exists, starts with `Status: DONE` or `Status: BLOCKED` or `Status: FAILED`, and contains concrete edits, findings, checks, logs, or cited facts.
+- A specialist lane is complete only when the required artifact exists, carries YAML frontmatter `status: DONE`, `status: BLOCKED`, or `status: FAILED`, and contains concrete edits, findings, checks, logs, or cited facts.
 - If a specialist returns early without the artifact or only with setup notes, resume the **same specialist** with `SendMessage` using its returned agent ID so it continues from prior state instead of starting over. If no agent ID is available or resume is unavailable, re-dispatch the exact same packet once.
 - Only after a second incomplete return should you mark the specialist lane failed, re-split the task, or repair the gap yourself. Do not bypass the specialist after the first incomplete return.
 - If a task packet spans multiple unrelated outputs, split it before delegation rather than hoping one specialist will self-scope perfectly.

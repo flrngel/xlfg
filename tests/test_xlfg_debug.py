@@ -72,7 +72,7 @@ class TestXLFGDebug(unittest.TestCase):
             self.assertIn("PRIMARY_ARTIFACT:", text)
             self.assertIn("DONE_CHECK:", text)
             self.assertIn("RETURN_CONTRACT:", text)
-            self.assertIn("Status: IN_PROGRESS", text)
+            self.assertIn("status: IN_PROGRESS", text)
             self.assertIn("Only the phase conductor may delegate.", text)
             self.assertIn("SendMessage", text)
             self.assertIn("smallest honest reproducer", text.lower())

@@ -32,6 +32,18 @@ function firstNonEmptyLine(text) {
   return "";
 }
 
+// Canonical shape (v3.1.0+): YAML frontmatter at the top of the file with
+// `status: DONE|BLOCKED|FAILED`. Legacy shape: bare `Status: DONE|BLOCKED|FAILED`
+// as the first non-empty line. Accept both for backward compatibility.
+function hasTerminalStatus(text) {
+  const body = String(text || "");
+  const yaml = body.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)/);
+  if (yaml && /^status:\s*(DONE|BLOCKED|FAILED)\s*$/m.test(yaml[1])) {
+    return true;
+  }
+  return /^Status:\s*(DONE|BLOCKED|FAILED)\b/.test(firstNonEmptyLine(body));
+}
+
 function artifactHasFinalStatus(filePath, cwd) {
   if (!filePath) return false;
   try {
@@ -39,7 +51,7 @@ function artifactHasFinalStatus(filePath, cwd) {
     const stat = fs.statSync(resolved);
     if (!stat.isFile() || stat.size === 0) return false;
     const text = fs.readFileSync(resolved, "utf8");
-    return /^Status:\s*(DONE|BLOCKED|FAILED)\b/.test(firstNonEmptyLine(text));
+    return hasTerminalStatus(text);
   } catch {
     return false;
   }
@@ -47,9 +59,24 @@ function artifactHasFinalStatus(filePath, cwd) {
 
 function extractExpectedArtifact(transcriptText) {
   const hay = String(transcriptText || "");
+
+  // Pass 1: scan FULL transcript for PRIMARY_ARTIFACT lines that look like absolute paths.
+  // This survives long transcripts where the tail window misses the dispatch packet.
+  const primaryPat = /PRIMARY_ARTIFACT:\s*([^\n\r"}`\\]+)/gi;
+  let primaryLast = null;
+  let m;
+  while ((m = primaryPat.exec(hay)) !== null) {
+    const candidate = (m[1] || "").trim().replace(/^['"`{]+|['"`}]+$/g, "").trim();
+    // Must look like an absolute path (starts with / or ~) and have no backslashes
+    if (candidate && /^[/~]/.test(candidate) && !candidate.includes("\\") && candidate.length <= 300) {
+      primaryLast = candidate;
+    }
+  }
+  if (primaryLast) return primaryLast;
+
+  // Pass 2: fall back to tail-based heuristics for other patterns
   const tail = hay.slice(-40000);
   const patterns = [
-    /PRIMARY_ARTIFACT:\s*([^\n\r"}]+)/gi,
     /primary_artifact:\s*`?([^\n\r`;]+)`?/gi,
     /(?:Write(?:[^\n\r]{0,120})? to|write(?:[^\n\r]{0,120})? to)\s+([~/.A-Za-z0-9_:\-]+\.(?:md|json|txt|log))/g,
     /handoff path:\s*`?([^\n\r`;]+)`?/gi,
@@ -59,8 +86,9 @@ function extractExpectedArtifact(transcriptText) {
     pattern.lastIndex = 0;
     let match;
     while ((match = pattern.exec(tail)) !== null) {
-      const candidate = (match[1] || "").trim().replace(/^['"`{]+|['"`}]+$/g, "");
-      if (candidate) last = candidate;
+      const raw = (match[1] || "").replace(/\\[nrt].*/s, "").trim();
+      const candidate = raw.replace(/^['"`{]+|['"`}]+$/g, "").trim();
+      if (candidate && candidate.length <= 300 && !candidate.includes("\\") && /[/.]/.test(candidate)) last = candidate;
     }
     if (last) return last;
   }
@@ -115,4 +143,4 @@ if (finalMatch) {
 }
 
 const artifactHint = expectedArtifact ? ` Finalize ${expectedArtifact} first.` : " Finalize the promised artifact first.";
-block(`xlfg specialists may not stop on setup or progress chatter.${artifactHint} Reply exactly DONE <artifact-path>, BLOCKED <artifact-path>, or FAILED <artifact-path> after the artifact exists with Status: DONE|BLOCKED|FAILED. If a tool failed, record the failure in the artifact instead of returning early.`);
+block(`xlfg specialists may not stop on setup or progress chatter.${artifactHint} Reply exactly DONE <artifact-path>, BLOCKED <artifact-path>, or FAILED <artifact-path> after the artifact carries YAML frontmatter with status: DONE|BLOCKED|FAILED (or the legacy bare-Status first line). If a tool failed, record the failure in the artifact instead of returning early.`);

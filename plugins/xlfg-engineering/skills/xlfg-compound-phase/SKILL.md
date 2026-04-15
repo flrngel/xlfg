@@ -30,7 +30,7 @@ Promote only verified, reusable lessons into durable knowledge and leave the nex
 4. Use `current-state.md` for repo-wide durable handoff when appropriate; keep branch-local lessons in the run when they are not yet durable.
 5. Append durable events to `ledger.jsonl`.
 6. Write `compound-summary.md` and, when helpful, `run-summary.md`.
-7. Update `workboard.md` so `compound` is `DONE`.
+7. Update any residual task/blocker notes in `workboard.md`. The `## Phase status` block (including `compound: DONE`) is rendered by the conductor from `.xlfg/phase-state.json`.
 
 ## Guardrails
 

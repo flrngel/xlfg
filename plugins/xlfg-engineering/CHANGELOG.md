@@ -1,3 +1,112 @@
+## 3.1.0
+
+Inter-agent communication cleanup — removes dual-write status, surfaces a
+canonical ledger writer, gates two redundant specialist re-runs, and makes the
+Claude Code task pane track xlfg's file-based phase list.
+
+### A — Kill structural duplication inside each artifact
+
+- **A1. Single canonical `status:` location.** Every xlfg artifact now carries
+  exactly one status marker, inside a YAML frontmatter block. The bare
+  `Status: DONE | BLOCKED | FAILED` line that used to sit above the frontmatter
+  is removed from all 27 agent output templates in both packs. `subagent-stop-guard.mjs`
+  parses YAML frontmatter first and falls back to the legacy bare-Status line
+  only for artifacts produced before this release.
+- **A2. Shared output-template reference.** `plugins/xlfg-engineering/agents/_shared/output-template.md`
+  (mirrored to standalone) is the single authoritative description of artifact
+  frontmatter, preseed shape, and the specialist's final-chat contract. Per-agent
+  files describe only their agent-specific sections.
+
+### C — Remove cross-agent content overlap
+
+- **C1. Context-phase: gate `xlfg-repo-mapper`.** The `always run` directive is
+  replaced with "run unless `memory-recall.md` already grep-cites `file:line`
+  coverage of every objective in `spec.md`." When skipped, the conductor
+  appends a one-line rationale to `context.md`. Prevents recall + repo-mapper
+  from both enumerating the same surface.
+- **C2. Verify-phase: gate `xlfg-ui-designer` re-fire.** The UI-designer
+  verify-phase lane now requires task-checker to have left at least one DA id
+  unresolved, or to have marked a DA `fail`, or to have not run. When every DA
+  is already `pass` in the implement-phase checker reports, the verify lane is
+  skipped with a one-line rationale in `verification.md`.
+
+### D — Normalize phase-state writes
+
+- **D1. `workboard.md` phase-status is rendered, not hand-written.**
+  `plugins/xlfg-engineering/scripts/render-workboard.mjs` (mirrored to
+  `standalone/.claude/hooks/xlfg-render-workboard.mjs`) re-renders the
+  `## Phase status` block from `.xlfg/phase-state.json` after each phase
+  completes. Rendered region is bounded by HTML comment markers so the rest of
+  `workboard.md` (task tables, blockers, next-action) remains human-authored.
+  Every phase skill's "Update workboard.md" instruction now explicitly excludes
+  the phase-status table.
+- **D2. Harness TaskCreate bridge.** `/xlfg` startup now emits eight synthetic
+  `TaskCreate` calls (one per phase, subject `xlfg: <phase>`) and calls
+  `TaskUpdate` as each phase completes. Silences the Claude Code task-pane nag
+  without turning `workboard.md` into a second source of truth. `TaskCreate`,
+  `TaskUpdate`, and `TaskList` are added to the `/xlfg` command's `allowed-tools`
+  frontmatter in both packs.
+
+### E — Canonical ledger schema + single writer
+
+- **E1. `docs/xlfg/knowledge/ledger-schema.md`.** Declares required fields
+  (`ts`, `run`, `type`, `version`, `summary`), the `type` enum, the tag
+  allow-list, and the ISO 8601 `Z`-suffixed timestamp rule. Existing 4-event
+  `ledger.jsonl` uses legacy `date`/`event` keys — the writer keeps history
+  intact but rejects new writes in the legacy shape.
+- **E2. `plugins/xlfg-engineering/scripts/ledger-append.mjs`.** The single
+  writer. Validates against the schema and appends one JSON line. Rejects
+  unknown fields, out-of-enum types, bad semver, disallowed tags, and malformed
+  timestamps. `ledger.md` now references the schema and the writer instead of
+  documenting its own shape.
+
+### Tests
+
+- `tests/test_subagent_stop_guard.py` gains `test_allows_done_when_artifact_has_yaml_frontmatter_status`,
+  `test_blocks_when_yaml_status_still_in_progress`, and
+  `test_standalone_stop_guard_matches_plugin`.
+- `tests/test_ledger_append.py` covers schema presence, well-formed dry-run,
+  and every validator rejection path.
+- `tests/test_render_workboard.py` covers no-op on absent state, dry-run,
+  idempotent re-render preserving human-authored content, missing-`run_id`
+  failure, and plugin↔standalone byte-identity.
+- Updated `test_review_agents_write_artifacts_under_reviews_dir`,
+  `test_all_agents_have_completion_barrier_and_resume_rule`,
+  `test_all_agents_have_turn_budget_rule`,
+  `test_all_delegating_entrypoints_repeat_atomic_packet_contract`, and
+  `test_xlfg_debug_phase_requires_scientific_debugging_and_forbids_edits` to
+  assert the new YAML frontmatter strings.
+- Relaxed the `" Task"` substring guard in
+  `test_main_xlfg_entrypoints_are_self_contained_and_batch_phase_driven` to
+  reject only the stale standalone `Task` tool name, not the new
+  `TaskCreate` / `TaskUpdate` / `TaskList` harness tools.
+
+Total: 51 tests (was 35). All green.
+
+### Risks accepted
+
+- The stop-guard accepts both YAML-frontmatter status and the legacy bare
+  `Status:` first line. This is deliberate backward compatibility for artifacts
+  produced before 3.1.0; removing the legacy branch is a future breaking change
+  that will need a separate bump.
+- The workboard renderer only rewrites the region between its own markers.
+  Pre-3.1.0 `workboard.md` files without markers get the rendered block
+  prepended on first run. Legacy phase-status prose elsewhere in those files is
+  not cleaned up automatically.
+
+### Intentionally not in this release
+
+- Phase B from the plan (CONTEXT_DIGEST per phase + shared delegation-rules
+  doc) — deferred by the user.
+- O1 scale-tier redesign (XS/S/M/L, SKIPPED terminal state) — out of scope for
+  communication-surface dedup; belongs in its own RFC.
+- Specialist "lite" variants (N13) and cost observability (S9) — separate
+  tracks that do not block this release.
+
+Bumped to **3.1.0** (minor) because this changes the canonical artifact shape
+and the authoritative writer for `ledger.jsonl`, while remaining backward
+compatible on read for existing artifacts and events.
+
 ## 3.0.0
 
 - **Breaking**: Removed the `xlfg` Python CLI package (`xlfg/` directory, ~4700 LoC) and `pyproject.toml` entirely. The Python console-script entry point (`xlfg init`, `xlfg start`, `xlfg audit`, `xlfg recall`, `xlfg verify`, `xlfg eval-intent`, `xlfg doctor`, `xlfg detect`, `xlfg status`) no longer exists. The plugin is now installed exclusively via the Claude Code marketplace manifest — no `pip install` required or supported.

@@ -31,13 +31,13 @@ Run honest layered proof for the changed behavior and reduce the results into a 
    - always run `xlfg-verify-runner`
    - then always run `xlfg-verify-reducer`
    - run `xlfg-env-doctor` when the harness is unhealthy or the proof depends on a running app
-   - run `xlfg-ui-designer` as a design-vs-implementation verification lane when the task is UI-related — same trigger as plan-phase (intent mentions UI / frontend / visual / interaction / layout / component / screen / a11y, or the changed FILE_SCOPE includes `*.tsx|*.jsx|*.vue|*.svelte|*.html|*.css|*.scss|*.sass|*.less|*.styl` or files under common frontend dirs `src/components/`, `app/`, `pages/`, `ui/`, `frontend/`, `web/`). Dispatch with `PRIMARY_ARTIFACT: DOCS_RUN_DIR/ui-verification.md` and pass the plan-phase `ui-design.md` as the contract to verify against. Skip for pure-backend runs.
+   - run `xlfg-ui-designer` as a design-vs-implementation verification lane when the task is UI-related — same trigger as plan-phase (intent mentions UI / frontend / visual / interaction / layout / component / screen / a11y, or the changed FILE_SCOPE includes `*.tsx|*.jsx|*.vue|*.svelte|*.html|*.css|*.scss|*.sass|*.less|*.styl` or files under common frontend dirs `src/components/`, `app/`, `pages/`, `ui/`, `frontend/`, `web/`). **Gate on task-checker DA coverage**: before dispatching, scan the most recent `tasks/<task-id>/checker-report.md` artifacts produced during implement-phase. If every plan-phase DA id (`DA1`..`DAN` in `ui-design.md`) is marked `pass` in at least one checker report, skip this lane and append a one-line skip note to `verification.md` (`xlfg-ui-designer skipped — task-checker DAs covered`). Run only when checker reports are missing, leave any DA unresolved, or mark any DA `fail`. Dispatch with `PRIMARY_ARTIFACT: DOCS_RUN_DIR/ui-verification.md` and pass the plan-phase `ui-design.md` as the contract to verify against. Skip for pure-backend runs.
 5. Keep verify fan-out small. Run one active verify specialist at a time in the required order above; do not ask verify specialists to spawn more specialists.
 6. Keep these specialists foregrounded, short-lived, and leaf-only. Missing verify artifacts mean verification did not actually happen.
 7. Require the verify artifacts to exist before accepting phase completion: `results.json`, `summary.md`, `verification.md`, and any required fix plan. If a specialist returns early without them or only narrates next steps, use `SendMessage` with the returned agent ID to resume the same specialist once. If no agent ID is available, re-dispatch the exact same packet once. Only then may you classify the phase as FAILED / RED.
 8. Write or update `verification.md` with real evidence.
 9. If verification is RED, write or update `verify-fix-plan.md` with the first actionable failure only.
-10. Update `workboard.md` with the verification status and next action.
+10. Update the verification-status and next-action sections of `workboard.md`. The `## Phase status` block is rendered by the conductor from `.xlfg/phase-state.json`.
 
 ## Green rule
 
@@ -45,7 +45,7 @@ Do not call the run GREEN unless scenario-targeted proof actually ran for the ch
 
 ## Delegation packet rules
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with `Status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
+- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
 - Every specialist packet must begin with machine-readable headers:
 
 ```text
