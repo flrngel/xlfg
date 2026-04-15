@@ -3,7 +3,7 @@
 Read this file first when entering a repo that uses xlfg. It is the shortest tracked handoff for the next agent.
 
 ## Service / product context
-- xlfg is an autonomous SDLC harness for Claude Code (v2.8.0)
+- xlfg is an autonomous SDLC harness for Claude Code (v3.0.0)
 - `/xlfg` batches 8 hidden phase skills: recall → intent → context → plan → implement → verify → review → compound
 
 ## Current high-signal truths
@@ -19,7 +19,7 @@ Read this file first when entering a repo that uses xlfg. It is the shortest tra
 
 ## Current harness / verification rules
 - Tests: `python3 -m unittest discover tests/` — no dev server needed
-- 51 tests cover hooks, audit features, entrypoint structure, version sync, and specialist hardening
+- ~20 tests cover entrypoint structure, version sync, and specialist hardening (CLI-module tests removed in v3.0.0)
 
 ## Repeated failures to avoid
 - Do not register the same hook in both command frontmatter AND hooks.json — it double-fires (found in review, run 20260403)
@@ -30,5 +30,5 @@ Read this file first when entering a repo that uses xlfg. It is the shortest tra
 - The loopback cap is prompt-instructed, not code-enforced — the Stop hook safety valve is the hard backstop
 
 ## Best starting recall queries
-- `xlfg recall 'phase-gate'` — conductor stop hook pattern
-- `xlfg recall 'hook registration'` — plugin vs standalone hook wiring
+- `Grep "phase-gate" docs/xlfg/knowledge/` — conductor stop hook pattern
+- `Grep "hook registration" docs/xlfg/knowledge/` — plugin vs standalone hook wiring

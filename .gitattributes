@@ -1,5 +1,5 @@
 # xlfg bundle repository
-# Target repositories using xlfg will receive the same merge-friendly rules via `xlfg prepare`.
+# These merge-friendly union rules ship with the xlfg-engineering plugin.
 
 docs/xlfg/knowledge/decision-log.md merge=union
 docs/xlfg/knowledge/patterns.md merge=union

@@ -35,3 +35,22 @@ Record durable architectural and product decisions made during `/xlfg` runs.
   - CI stays green via the predicate/test bound update, not via removing coverage.
   - Plugin and standalone packs remain in sync (no recurrence of the v2.7.4 plugin-only drift).
 - **Links**: run `docs/xlfg/runs/20260414-074853-maxturns-150/`; predecessor diagnosis `docs/xlfg/runs/20260414-073242-maxturns-decision/debug-report.md`; commits `050f0e0`, `b386280`, `9ec40a2` (history) and the 2.9.0 commit for this change.
+
+---
+
+## 2026-04-14 — xlfg Python CLI package removed (v3.0.0, breaking)
+
+- **Date**: 2026-04-14
+- **Decision**: Delete the entire `xlfg/` Python package (13 source files, ~4700 LoC), `pyproject.toml`, the `/xlfg-audit` and `/xlfg-init` plugin commands, `docs/benchmarking.md`, and `evals/intent/`. Strip all CLI invocation wording from plugin commands and phase skills. Bump both plugin.json manifests to **3.0.0**. The repo becomes plugin-only; the only supported install path is the Claude Code marketplace manifest.
+- **Context**: A prior user message confirmed: "I think we can do both. nobody's running xlfg audit." CLI removal eliminates the dual-path (CLI-or-manual) ambiguity in the run hot path, removes ~4700 lines of dead Python, and simplifies the install story. No external users declared a dependency on the Python console-script entry points.
+- **Alternatives considered**:
+  - Keep `xlfg/` as deprecated stubs (gut bodies, leave `__init__.py` with a deprecation warning) — **rejected**: drift tax continues; 4700 lines of stubs confuse future agents; violates false-success warning (leaving code while silencing references).
+  - Keep `pyproject.toml` as an empty packaging stub — **rejected**: no Python surface to package; dead metadata with no purpose; signals the opposite of what removal accomplishes.
+  - Delete `xlfg/` but keep `pyproject.toml` as a minimal lib-less project file — **rejected**: same dead-metadata problem; the repo is plugin-only after removal.
+- **Rejected shortcut**: Removing CLI wording from `commands/xlfg.md` only while leaving `xlfg-recall/SKILL.md` and standalone mirrors untouched (partial patch leaves CLI hits in skills). All 6 skill files (3 plugin + 3 standalone) required edits.
+- **Consequences**:
+  - `xlfg/__init__.py` and `pyproject.toml` are deleted; version tracking moves to `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json` exclusively. `CLAUDE.md` versioning checklist updated.
+  - Phase skills (xlfg-recall-phase, xlfg-verify-phase, xlfg-recall) now do equivalent scaffold/recall/verify work directly with Read/Grep/Glob/Write — no CLI intermediary.
+  - Test suite pruned from 40 to ~20 tests; CLI-module tests deleted; `test_versions_are_synced` rewritten to read from plugin.json.
+  - `git revert` of the v3.0.0 commit is the rollback. No database migrations, no external API changes.
+- **Links**: run `docs/xlfg/runs/20260414-160756-drop-xlfg-cli-dependency/`

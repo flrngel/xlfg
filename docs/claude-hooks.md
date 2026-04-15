@@ -29,8 +29,8 @@ Create `.claude/hooks/task_complete.sh`:
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Fast checks. Prefer repo-specific overrides in docs/xlfg/knowledge/commands.json
-xlfg verify --mode fast
+# Run your project's test command directly. Example:
+python3 -m unittest discover tests/ -v
 ```
 
 Then make it executable:

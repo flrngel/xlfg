@@ -47,9 +47,24 @@ function artifactHasFinalStatus(filePath, cwd) {
 
 function extractExpectedArtifact(transcriptText) {
   const hay = String(transcriptText || "");
+
+  // Pass 1: scan FULL transcript for PRIMARY_ARTIFACT lines that look like absolute paths.
+  // This survives long transcripts where the tail window misses the dispatch packet.
+  const primaryPat = /PRIMARY_ARTIFACT:\s*([^\n\r"}`\\]+)/gi;
+  let primaryLast = null;
+  let m;
+  while ((m = primaryPat.exec(hay)) !== null) {
+    const candidate = (m[1] || "").trim().replace(/^['"`{]+|['"`}]+$/g, "").trim();
+    // Must look like an absolute path (starts with / or ~) and have no backslashes
+    if (candidate && /^[/~]/.test(candidate) && !candidate.includes("\\") && candidate.length <= 300) {
+      primaryLast = candidate;
+    }
+  }
+  if (primaryLast) return primaryLast;
+
+  // Pass 2: fall back to tail-based heuristics for other patterns
   const tail = hay.slice(-40000);
   const patterns = [
-    /PRIMARY_ARTIFACT:\s*([^\n\r"}]+)/gi,
     /primary_artifact:\s*`?([^\n\r`;]+)`?/gi,
     /(?:Write(?:[^\n\r]{0,120})? to|write(?:[^\n\r]{0,120})? to)\s+([~/.A-Za-z0-9_:\-]+\.(?:md|json|txt|log))/g,
     /handoff path:\s*`?([^\n\r`;]+)`?/gi,
@@ -59,8 +74,9 @@ function extractExpectedArtifact(transcriptText) {
     pattern.lastIndex = 0;
     let match;
     while ((match = pattern.exec(tail)) !== null) {
-      const candidate = (match[1] || "").trim().replace(/^['"`{]+|['"`}]+$/g, "");
-      if (candidate) last = candidate;
+      const raw = (match[1] || "").replace(/\\[nrt].*/s, "").trim();
+      const candidate = raw.replace(/^['"`{]+|['"`}]+$/g, "").trim();
+      if (candidate && candidate.length <= 300 && !candidate.includes("\\") && /[/.]/.test(candidate)) last = candidate;
     }
     if (last) return last;
   }

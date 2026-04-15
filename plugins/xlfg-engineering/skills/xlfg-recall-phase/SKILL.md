@@ -24,10 +24,10 @@ Perform deterministic recall before broad repo scanning and record only the smal
    - `docs/xlfg/knowledge/*.md`
    - `docs/xlfg/knowledge/agent-memory/*.md`
    - `docs/xlfg/knowledge/ledger.jsonl`
-3. Prefer the helper when available:
-   - `xlfg recall yesterday`
-   - `xlfg recall '<quoted lexical query>'`
-   - typed lexical recall when the failure or flow is known
+3. Perform deterministic recall using Read and Grep:
+   - Read `docs/xlfg/knowledge/current-state.md` and related run `spec.md` first
+   - Use `Grep` with exact lexical terms (role, stage, kind, scope filters) over `docs/xlfg/knowledge/`
+   - Use temporal filters by scanning ledger.jsonl or recent run dirs when the query is date-scoped
 4. Write `memory-recall.md` with:
    - sources checked
    - strong matches

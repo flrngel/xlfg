@@ -32,13 +32,12 @@ Treat this invocation as **one autonomous run**.
 - treat designated specialists as lane owners whose artifacts should drive synthesis, not optional advisors the main agent can casually ignore
 - ask the user only for true human-only blockers: missing secrets, destructive external approvals, or correctness-changing product ambiguity you cannot ground from the repo or current research
 - prefer repo truth first, then targeted web research when freshness matters or the repo is insufficient
-- prefer the local `xlfg` helper CLI when available
 - for bundled or messy requests, split the work into stable objective groups (`O1`, `O2`, ...) before broad repo fan-out
 
 ## Startup
 
-1. Quietly sync scaffold if missing or stale with `xlfg init` (or `xlfg prepare`) when the helper exists; otherwise perform the equivalent bootstrap manually.
-2. Create `RUN_ID` with `xlfg start "$ARGUMENTS"` when the helper exists; otherwise create the lean core run manually.
+1. Sync scaffold if missing or stale: ensure `docs/xlfg/runs/`, `.xlfg/runs/`, `docs/xlfg/knowledge/`, and `.xlfg/` directories exist; create any missing ones.
+2. Create `RUN_ID` as `<YYYYMMDD>-<HHMMSS>-<slug>` where `<slug>` is a short kebab-case summary of `$ARGUMENTS`; write the lean core run directories and `spec.md` skeleton manually.
 3. Resolve `DOCS_RUN_DIR=docs/xlfg/runs/<RUN_ID>` and `DX_RUN_DIR=.xlfg/runs/<RUN_ID>`.
 
 ## Phase-state tracking

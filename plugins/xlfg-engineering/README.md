@@ -14,8 +14,6 @@ The 2.9.0 design target is simple:
 - Review specialists now write their own artifacts under `reviews/`, so the conductor synthesizes from real expert output instead of vague subagent summaries.
 - The standalone pack now mirrors plugin agents under `.claude/agents/` for parity with the skill pack.
 - Audit, lint, docs, and tests now check proactive specialist descriptions, explicit tool scopes, artifact-writing review lanes, and standalone agent parity.
-- `xlfg eval-intent` remains in place, so intent quality and subagent hardening can both be measured instead of hand-waved.
-
 ## Quick start
 
 ### Plugin form (shared / team use)
@@ -62,9 +60,6 @@ Optional only when they add decision value:
 - `spec.md` carries the intent contract plus PM / UX / Engineering / QA truth in one place.
 - Verification must prove changed behavior, not just produce green-looking motion.
 - Extra docs and extra agents are optional, not the default.
-
-
-Reference intent fixtures ship in `evals/intent/`, and `xlfg eval-intent --suite-dir evals/intent` scores the bundled example artifacts out of the box.
 
 
 ## 2.7.5 note

@@ -16,44 +16,27 @@ Use this when an xlfg run needs past context without relying on vector search.
 5. `docs/xlfg/knowledge/ledger.jsonl`
 6. `docs/xlfg/runs/`
 
-## Backends
+## Recall method
 
-If the helper CLI exists, you may use it:
+Perform deterministic recall with Read and Grep over the read-order files above. No CLI tool is required or available.
 
-```bash
-xlfg recall yesterday
-xlfg recall 'login button enter submit'
-xlfg recall --file query.qmd
-```
-
-If the helper CLI does not exist, perform the same deterministic recall manually with exact lexical search over the files above.
+- Use `Read` for `current-state.md`, `ledger.jsonl`, and targeted knowledge files
+- Use `Grep` with exact lexical terms, filtered by path prefix, for broad sweeps
+- For temporal queries: scan `ledger.jsonl` by date field or list `docs/xlfg/runs/` dirs by name prefix (YYYYMMDD)
 
 ## Query modes
 
-### 1) Temporal
+### 1) Temporal recall
 
-```bash
-xlfg recall yesterday
-xlfg recall last week
-xlfg recall 2026-03-06
-```
+Scan `docs/xlfg/knowledge/ledger.jsonl` for entries with `date` matching the target period, or list `docs/xlfg/runs/` directories whose names begin with the target date prefix (e.g. `20260306`).
 
-### 2) Plain lexical
+### 2) Plain lexical recall
 
-```bash
-xlfg recall 'login button enter submit'
-```
+Use `Grep` with the literal phrase across `docs/xlfg/knowledge/` and recent run dirs. Quote multi-word phrases.
 
-### 3) Typed query document
+### 3) Typed query recall
 
-```bash
-xlfg recall $'lex: "port already in use" yarn dev healthcheck
-stage: verify
-kind: failure harness-rule
-role: env-doctor
-scope: memory runs
-when: last 30 days'
-```
+Construct a Grep query combining the relevant filters from the supported keys below. For example, to find env-doctor failures in the last 30 days from the verify stage: grep for the `lex:` phrase in `docs/xlfg/knowledge/agent-memory/env-doctor.md` and any recent run `verification.md` files.
 
 Supported keys:
 - `lex:` exact lexical search with phrases and negation

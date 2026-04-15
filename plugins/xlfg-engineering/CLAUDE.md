@@ -6,8 +6,8 @@ Every behavior change MUST update:
 
 1. `CHANGELOG.md`
 2. `README.md`
-3. `xlfg/__init__.py`
-4. `pyproject.toml`
+3. `plugins/xlfg-engineering/.claude-plugin/plugin.json`
+4. `plugins/xlfg-engineering/.cursor-plugin/plugin.json`
 5. `NEXT_AGENT_CONTEXT.md`
 
 Normal evolution should bump **patch** unless the public entry model changes materially.

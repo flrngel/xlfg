@@ -24,10 +24,10 @@ Run honest layered proof for the changed behavior and reduce the results into a 
    - `workboard.md`
    - optional `proof-map.md`, `env-plan.md`, `risk.md`
    - `docs/xlfg/knowledge/current-state.md`
-3. Prefer the helper when available:
-   - `xlfg verify --run <RUN_ID> --mode auto`
-   - or `fast` / `full` when the run card makes the choice obvious
-4. When the helper is unavailable or insufficient, use the verify specialists as lane owners with one required artifact each:
+3. Run the planned test commands directly:
+   - Execute the commands defined in `test-contract.md` `fast_check` and `ship_check` fields
+   - Default test runner: `python3 -m unittest discover tests/ -v` unless `test-contract.md` specifies otherwise
+4. Use the verify specialists as lane owners with one required artifact each:
    - always run `xlfg-verify-runner`
    - then always run `xlfg-verify-reducer`
    - run `xlfg-env-doctor` when the harness is unhealthy or the proof depends on a running app

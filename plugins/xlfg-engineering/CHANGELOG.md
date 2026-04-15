@@ -1,3 +1,14 @@
+## 3.0.0
+
+- **Breaking**: Removed the `xlfg` Python CLI package (`xlfg/` directory, ~4700 LoC) and `pyproject.toml` entirely. The Python console-script entry point (`xlfg init`, `xlfg start`, `xlfg audit`, `xlfg recall`, `xlfg verify`, `xlfg eval-intent`, `xlfg doctor`, `xlfg detect`, `xlfg status`) no longer exists. The plugin is now installed exclusively via the Claude Code marketplace manifest — no `pip install` required or supported.
+- Removed `/xlfg-audit` and `/xlfg-init` plugin commands (direct CLI wrappers with no standalone function after CLI removal).
+- Stripped "prefer the local xlfg helper CLI when available" wording from `commands/xlfg.md`, `commands/xlfg-debug.md`, `skills/xlfg-recall-phase/SKILL.md`, `skills/xlfg-verify-phase/SKILL.md`, and `skills/xlfg-recall/SKILL.md` (plugin + standalone mirrors). Phase skills now do equivalent work directly with Read/Grep/Glob/Write tools.
+- Deleted orphaned CLI artifacts: `docs/benchmarking.md` (entirely about `xlfg audit` / `xlfg eval-intent`), `evals/intent/` directory (fixtures only consumed by `xlfg eval-intent`).
+- Pruned `tests/test_xlfg.py` to remove the ~20 test functions that imported `xlfg.*` modules; ~20 plugin/standalone shape tests are preserved. Rewrote `test_versions_are_synced_across_package_and_plugin_manifests` to read versions from both `plugin.json` manifests instead of `xlfg.__version__`.
+- Updated version tracking: `xlfg/__init__.py` and `pyproject.toml` are deleted; canonical version now lives in `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json` only. Updated `CLAUDE.md` versioning checklist accordingly.
+- Updated `README.md` to remove the "Local helper CLI" section and the pip install example. Plugin-only install remains the single supported path.
+- Bumped to **3.0.0** (major, breaking) because removing a public console-script entry point is a breaking change for any user who installed the Python package.
+
 ## 2.9.0
 
 - Raised every specialist agent's `maxTurns` to **150** in both the plugin pack (27 agents) and the standalone pack (27 agents). The cap is a generous safety ceiling, not a target — most lanes still finish in far fewer turns. Prompt-side write-first / leaf-worker / atomic-packet rules now carry the forcing-function load that the small numeric bound previously shared.

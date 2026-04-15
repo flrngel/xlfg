@@ -16,7 +16,6 @@ Read `NEXT_AGENT_CONTEXT.md` first. It is the bundle-level handoff document and 
 - Verification evidence in `verification.md` is proof truth; `proof-map.md` is optional only when it changes a decision.
 - Review confirms quality; it does not create quality.
 - The repo is the system of record for long-running agent work.
-- The Python CLI is optional implementation support; the standalone `/xlfg` entrypoint is the clearest UX.
 - Intent quality should be measured with artifact-based evaluation, not vibes.
 
 ## Important paths
@@ -27,9 +26,7 @@ Read `NEXT_AGENT_CONTEXT.md` first. It is the bundle-level handoff document and 
 - `plugins/xlfg-engineering/agents/` — subagent prompts
 - `plugins/xlfg-engineering/skills/` — hidden support skills
 - `standalone/.claude/skills/xlfg/` — short `/xlfg` install pack
-- `evals/intent/` — messy-prompt fixtures for artifact grading
-- `xlfg/` — dependency-free helper CLI / scaffold backend
-- `tests/` — regression tests for scaffold, recall, verification, intent grading, and repo contracts
+- `tests/` — regression tests for plugin/standalone shape, version sync, and specialist contracts
 
 
 ## 2.7.1 note

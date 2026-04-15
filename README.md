@@ -2,14 +2,13 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
-Version 2.8.2 fixes the phase-gate Stop hook so it exits cleanly on empty stdin (stops flaking inside an active /xlfg run, stops blocking unrelated invocations that share the cwd) and adds a pointed diagnostic when an `xlfg verify` contract accidentally uses pytest-style `-k "not ..."` with a unittest runner. Version 2.8.1 registered `/xlfg-debug` as a short alias and added the `xlfg-ui-designer` specialist (conditional plan/verify lanes for UI-related work). Version 2.8.0 hardens the **conductor itself**: a Stop hook and phase-state file prevent the pipeline from ending before all 8 phases complete, and loopback iterations are now capped to prevent unbounded context growth.
+Version 3.0.0 removes the `xlfg` Python CLI package entirely. Install via the plugin marketplace only — no Python package installation needed or supported.
 
 - `/xlfg` and `/xlfg-debug` are the public entrypoints, each **batching hidden phase skills**
 - the plugin commands keep short aliases (`/xlfg`, `/xlfg-debug`) via `name:` frontmatter, while the namespaced forms remain `/xlfg-engineering:xlfg` and `/xlfg-engineering:xlfg-debug`
 - the batch now includes a mandatory **intent phase** before context gathering and planning
 - `spec.md` is now the only active home for the **intent contract** and objective groups
 - bundled / messy requests are split into stable objective groups (`O1`, `O2`, ...)
-- the workflow ships an artifact-graded **`xlfg eval-intent`** harness for scoring ask recall, objective splitting, blocker handling, and false assumptions
 - hidden phase skills still load **just in time**, matching Claude Code’s skills model while keeping context small
 - every plugin specialist now has an explicit tool allowlist, proactive delegation description, foreground-only bias, stronger execution contract, and bounded turn budget
 - review specialists now write lane artifacts under `reviews/`, and the standalone pack now includes `.claude/agents/` parity
@@ -18,10 +17,8 @@ Version 2.8.2 fixes the phase-gate Stop hook so it exits cleanly on empty stdin 
 
 1. A Claude Code plugin in `plugins/xlfg-engineering/`
 2. A standalone `.claude/skills/` pack in `standalone/`
-3. A dependency-free Python helper CLI (`xlfg`) that can scaffold, recall, verify, audit, and grade intent artifacts locally
-4. Research notes on recent subagent / harness hardening in `docs/subagent-hardening-2026.md`
-5. Benchmarking guidance in `docs/benchmarking.md`
-6. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
+3. Research notes on recent subagent / harness hardening in `docs/subagent-hardening-2026.md`
+4. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
 
 
 ## Quick start
@@ -55,20 +52,6 @@ For environments where the plugin loader is unavailable, copy the full `standalo
 - Neither command asks the user to run phase subcommands or internal skills.
 - `spec.md` is the run card and single source of truth.
 - Optional docs exist only when they change a decision or proof.
-- The helper CLI is optional, but when installed it makes scaffold, recall, verification, audit, and intent grading more deterministic.
-
-## Local helper CLI
-
-```bash
-python -m pip install -e .
-xlfg init
-xlfg start "fix login flow"
-xlfg audit
-xlfg eval-intent --fixture evals/intent/messy-bugfix-bundle.json --run <RUN_ID>
-xlfg eval-intent --suite-dir evals/intent
-xlfg verify --mode full
-```
-
 ## License
 
 MIT
