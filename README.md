@@ -2,6 +2,8 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
 
+Version 3.1.1 is a tooling-only patch: the plugin frontmatter linter now skips `agents/_shared/` (which holds cross-agent reference material like `output-template.md`, not agent definitions), so CI no longer fails on the shared template introduced in 3.1.0. Plugin manifests are also resynced to match the shipped version.
+
 Version 3.1.0 tightens inter-agent communication: artifacts carry exactly one canonical `status:` field inside YAML frontmatter (replacing the dual `Status:` + `status:` write), `workboard.md`'s phase-status block is rendered from `.xlfg/phase-state.json` instead of hand-written by each phase, the Claude Code task pane now mirrors xlfg's phase list via a startup `TaskCreate` bridge, and `ledger.jsonl` gets a canonical schema (`docs/xlfg/knowledge/ledger-schema.md`) with a single validating writer (`scripts/ledger-append.mjs`). Two redundant specialist lanes are gated: context-phase skips `xlfg-repo-mapper` when `memory-recall.md` already grep-cites the surface, and verify-phase skips `xlfg-ui-designer` when implement-phase task-checker already proved every DA.
 
 Version 3.0.0 removed the `xlfg` Python CLI package entirely. Install via the plugin marketplace only — no Python package installation needed or supported.

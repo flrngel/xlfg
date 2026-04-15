@@ -1,3 +1,15 @@
+## 3.1.1
+
+CI fix — `scripts/lint_plugin.py` treated every markdown file under
+`plugins/xlfg-engineering/agents/**` as an agent, so the new shared reference
+at `agents/_shared/output-template.md` (added in 3.1.0) failed the
+frontmatter check. The linter and the standalone-parity counter now skip the
+`_shared/` directory, since it holds cross-agent reference material rather
+than agent definitions. No runtime behavior changes; this is a tooling-only
+patch. Plugin manifests are also resynced — 3.1.0 shipped without updating
+`plugin.json` / `.cursor-plugin/plugin.json`, so 3.1.1 rolls them forward
+alongside the lint fix.
+
 ## 3.1.0
 
 Inter-agent communication cleanup — removes dual-write status, surfaces a

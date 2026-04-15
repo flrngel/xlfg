@@ -1,6 +1,12 @@
 # Next agent context
 
-## Current state (3.1.0)
+## Current state (3.1.1)
+
+3.1.1 is a CI/tooling patch on top of 3.1.0. `scripts/lint_plugin.py` walked every markdown file under `plugins/xlfg-engineering/agents/**` expecting agent frontmatter, so the new shared reference at `agents/_shared/output-template.md` (shipped in 3.1.0) failed the frontmatter check and broke CI. The linter and the standalone-parity counter now skip any path containing `_shared`, which is the home for cross-agent reference material rather than agent definitions. Also resyncs `plugin.json` / `.cursor-plugin/plugin.json` — 3.1.0 shipped without bumping them.
+
+If you continue from here: when adding new cross-agent reference docs, keep them under `agents/_shared/` so the linter knows to skip them. Real agents still live under `agents/{planning,implementation,verify,review}/` and must keep YAML frontmatter.
+
+## Previous state (3.1.0)
 
 3.1.0 targets inter-agent communication waste. The run artifacts now carry a single canonical `status:` field (inside YAML frontmatter), phase-status in `workboard.md` is rendered from `.xlfg/phase-state.json` instead of hand-written per phase, the Claude Code task pane is kept in sync with xlfg's phase list via a startup `TaskCreate` bridge, `ledger.jsonl` has a real schema and a single validating writer, and two specialist lanes (`xlfg-repo-mapper` in context-phase; verify-phase `xlfg-ui-designer` re-fire) are gated instead of unconditional.
 
@@ -34,7 +40,7 @@ Intentionally not done in 3.1.0 (known-open):
 - O1 scale-tier redesign (XS/S/M/L, SKIPPED terminal state, specialist "lite" variants) — belongs in its own RFC.
 - Cost observability (tokens / wall-time / specialist count) and auto run-summary.
 
-## Previous state (3.0.0) — for reference
+## Earlier state (3.0.0) — for reference
 
 The main 3.0.0 change was removal of the `xlfg` Python CLI package. The repo is plugin-only — no `pip install`, no console-script entrypoints. Install exclusively via the Claude Code marketplace manifest.
 

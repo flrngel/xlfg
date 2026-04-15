@@ -149,6 +149,9 @@ def main() -> int:
             issues.append(LintIssue(phase_skill, "Missing hidden phase skill."))
 
     for p in sorted((PLUGIN_ROOT / "agents").rglob("*.md")):
+        # _shared/ holds cross-agent reference docs (e.g. output-template.md), not agents themselves.
+        if "_shared" in p.parts:
+            continue
         text = _load_text(p)
         fm = parse_frontmatter(text)
         # agent descriptions still matter, but `name` is fine here and often useful
@@ -172,8 +175,8 @@ def main() -> int:
             issues.append(LintIssue(p, "Active runtime prompts should not depend on query-contract.md; keep the intent contract in spec.md instead."))
 
 
-    plugin_agents = sorted((PLUGIN_ROOT / "agents").rglob("*.md"))
-    standalone_agents = sorted((PLUGIN_ROOT.parents[1] / "standalone" / ".claude" / "agents").rglob("*.md"))
+    plugin_agents = [p for p in sorted((PLUGIN_ROOT / "agents").rglob("*.md")) if "_shared" not in p.parts]
+    standalone_agents = [p for p in sorted((PLUGIN_ROOT.parents[1] / "standalone" / ".claude" / "agents").rglob("*.md")) if "_shared" not in p.parts]
     if len(plugin_agents) != len(standalone_agents):
         issues.append(LintIssue(PLUGIN_ROOT, "Standalone .claude/agents pack should mirror plugin agent count for parity."))
 
