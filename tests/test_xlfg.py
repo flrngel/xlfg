@@ -26,7 +26,7 @@ class _OkHandler(BaseHTTPRequestHandler):
 
 
 class TestXLFG(unittest.TestCase):
-    def test_versions_are_synced_across_package_and_plugin_manifests(self) -> None:
+    def test_versions_are_synced_across_plugin_manifests(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         claude_plugin = json.loads(
             (repo_root / "plugins" / "xlfg-engineering" / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
@@ -34,10 +34,15 @@ class TestXLFG(unittest.TestCase):
         cursor_plugin = json.loads(
             (repo_root / "plugins" / "xlfg-engineering" / ".cursor-plugin" / "plugin.json").read_text(encoding="utf-8")
         )
+        codex_plugin = json.loads(
+            (repo_root / "plugins" / "xlfg-engineering" / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )
         claude_version = claude_plugin["version"]
         cursor_version = cursor_plugin["version"]
-        # Both manifests must agree on the same version string
+        codex_version = codex_plugin["version"]
+        # All manifests must agree on the same version string
         self.assertEqual(claude_version, cursor_version)
+        self.assertEqual(claude_version, codex_version)
         # Version must be a semver string (major.minor.patch)
         semver_pattern = re.compile(r'^\d+\.\d+\.\d+$')
         self.assertRegex(claude_version, semver_pattern, f"plugin.json version {claude_version!r} is not a semver string")

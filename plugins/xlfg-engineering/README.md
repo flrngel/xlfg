@@ -1,6 +1,12 @@
-# xlfg-engineering (Claude Code plugin)
+# xlfg-engineering
 
-`xlfg-engineering` is an autonomous SDLC harness for modern Claude Code.
+`xlfg-engineering` is an autonomous SDLC harness for modern Claude Code and Codex.
+
+The 3.2.0 Codex surface adds `.codex-plugin/plugin.json`,
+repo-scoped marketplace metadata, and two public Codex skills: `$xlfg` and
+`$xlfg-debug`. The Codex skills live under `codex/skills/` and use shared phase
+references under `codex/references/phases/` so the existing Claude command and
+hidden-skill model remains unchanged.
 
 The 2.9.0 design target is simple:
 
@@ -21,6 +27,14 @@ The 2.9.0 design target is simple:
 Install the plugin and run:
 
 - `/xlfg-engineering:xlfg "fix the login timeout flow"`
+
+### Codex form
+
+Install `xlfg-engineering` from the repo marketplace at
+`.agents/plugins/marketplace.json`, then run:
+
+- `$xlfg "fix the login timeout flow"`
+- `$xlfg-debug "diagnose the failing login timeout flow"`
 
 ### Standalone form (short `/xlfg` command)
 

@@ -1,0 +1,6 @@
+interface:
+  display_name: "xlfg-debug"
+  short_description: "Diagnosis-only xlfg run"
+  default_prompt: "$xlfg-debug \"diagnose this failure without editing source\""
+policy:
+  allow_implicit_invocation: false

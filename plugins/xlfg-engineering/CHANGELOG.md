@@ -1,3 +1,31 @@
+## 3.2.0
+
+Codex support release - adds a first-class Codex plugin surface beside the
+existing Claude Code and Cursor manifests without changing the Claude entry
+model.
+
+- Added `plugins/xlfg-engineering/.codex-plugin/plugin.json` with Codex
+  install metadata, `skills: "./codex/skills/"`, and `mcpServers: "./.mcp.json"`.
+- Added repo-scoped Codex marketplace metadata at
+  `.agents/plugins/marketplace.json`, pointing Codex at
+  `./plugins/xlfg-engineering`.
+- Added two public Codex skills under `plugins/xlfg-engineering/codex/skills/`:
+  `$xlfg` for the full SDLC run and `$xlfg-debug` for diagnosis-only runs.
+  These are separate from the Claude hidden phase skills because Codex requires
+  `name` and `description` frontmatter on every public skill.
+- Added shared Codex phase references under
+  `plugins/xlfg-engineering/codex/references/phases/`, preserving the
+  recall -> intent -> context -> plan -> implement -> verify -> review ->
+  compound run and the recall -> intent -> context -> debug diagnosis run.
+- Codex v1 uses prompt-level phase barriers and file-backed state rather than
+  trying to clone Claude plugin lifecycle hooks. Hard hook parity can be
+  considered later as a separate `.codex/` install pack.
+- Added `tests/test_codex_plugin.py` and updated version sync coverage so the
+  Claude, Cursor, and Codex manifests must agree on 3.2.0.
+
+Bumped to **3.2.0** (minor) because this adds a new public distribution
+surface while preserving the existing Claude Code and Cursor surfaces.
+
 ## 3.1.1
 
 CI fix — `scripts/lint_plugin.py` treated every markdown file under

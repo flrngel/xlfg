@@ -1,0 +1,37 @@
+{
+  "name": "xlfg-engineering",
+  "version": "3.2.0",
+  "description": "Autonomous, proof-first SDLC harness for Codex with file-backed run cards, scenario proof, review, and compounding.",
+  "author": {
+    "name": "xlfg",
+    "email": "",
+    "url": ""
+  },
+  "license": "MIT",
+  "keywords": [
+    "xlfg",
+    "agentic",
+    "software-engineering",
+    "workflow",
+    "verification",
+    "codex"
+  ],
+  "skills": "./codex/skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "xlfg Engineering",
+    "shortDescription": "Proof-first SDLC runs in Codex",
+    "longDescription": "Run xlfg's file-backed SDLC workflow in Codex: resolve intent, gather repo truth, plan, implement, verify with scenario proof, review, and compound durable lessons.",
+    "developerName": "xlfg",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "$xlfg \"implement the requested change with proof\"",
+      "$xlfg-debug \"diagnose this failure without editing source\""
+    ],
+    "brandColor": "#10A37F"
+  }
+}
