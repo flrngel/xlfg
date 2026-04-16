@@ -15,6 +15,10 @@ entry model. The new Codex surface is intentionally separate:
 - `plugins/xlfg-engineering/codex/references/phases/` holds the Codex internal
   phase guidance. Do not add extra public Codex phase skills unless the entry
   model deliberately changes.
+- `plugins/xlfg-engineering/codex/references/model-policy.md` states that
+  Codex must not load the Claude specialist definitions under
+  `plugins/xlfg-engineering/agents/**`; their `model` / `effort` frontmatter is
+  Claude Code-only.
 
 Why the split matters:
 - Codex skills require `name` and `description` frontmatter, while the existing
@@ -23,6 +27,9 @@ Why the split matters:
 - Codex plugins currently package skills, MCP config, apps, and metadata. This
   release does not attempt hard hook parity; the Codex skills use prompt-level
   barriers plus `.xlfg/phase-state.json` and file-backed artifacts.
+- Codex uses the active session model/effort by default and selects built-in
+  Codex roles (`explorer`, `worker`, `default`) by lane shape unless the user or
+  project config supplies a Codex custom agent.
 - The current Claude Code `/xlfg` and `/xlfg-debug` command surfaces are
   unchanged.
 

@@ -56,9 +56,13 @@ Load only the current phase reference from `../../references/phases/` as needed:
 7. `review.md`
 8. `compound.md`
 
+Before spawning or simulating specialist work, read `../../references/model-policy.md`. Do not reuse the Claude Code specialist files under `plugins/xlfg-engineering/agents/**` as Codex configuration.
+
 ## Specialist Work
 
 Invoking `$xlfg` is an explicit request to use bounded Codex subagents where the runtime supports them; if subagents are unavailable, the conductor performs the lane inline and records that fallback in `workboard.md`.
+
+Use the active Codex session model and reasoning effort by default. Do not translate Claude specialist `model` or `effort` frontmatter into Codex settings.
 
 Use a specialist only for a bounded lane with one required artifact. Before starting specialist work, preseed the artifact with YAML frontmatter:
 

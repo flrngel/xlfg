@@ -17,6 +17,10 @@ model.
   `plugins/xlfg-engineering/codex/references/phases/`, preserving the
   recall -> intent -> context -> plan -> implement -> verify -> review ->
   compound run and the recall -> intent -> context -> debug diagnosis run.
+- Added a Codex model/effort policy that forbids treating Claude specialist
+  `model` / `effort` frontmatter as Codex configuration. Codex defaults to the
+  active session model/effort and built-in roles by lane shape unless explicit
+  Codex custom agents are configured.
 - Codex v1 uses prompt-level phase barriers and file-backed state rather than
   trying to clone Claude plugin lifecycle hooks. Hard hook parity can be
   considered later as a separate `.codex/` install pack.

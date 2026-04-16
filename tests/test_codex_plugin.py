@@ -98,8 +98,20 @@ class TestCodexPlugin(unittest.TestCase):
             "verification evidence",
             "explicit request to use bounded Codex subagents",
             "if subagents are unavailable",
+            "active Codex session model and reasoning effort",
+            "Do not translate Claude specialist `model` or `effort` frontmatter",
         ]:
             self.assertIn(needle, combined)
+
+    def test_codex_surface_has_explicit_model_policy(self) -> None:
+        model_policy = self.codex_root / "references" / "model-policy.md"
+        self.assertTrue(model_policy.exists())
+        text = model_policy.read_text(encoding="utf-8")
+        self.assertIn("Do not load `plugins/xlfg-engineering/agents/**` as Codex agent configuration", text)
+        self.assertIn("Use the active Codex session model and reasoning effort", text)
+        self.assertIn("Do not translate Claude model labels into OpenAI model names", text)
+        for role in ("`explorer`", "`worker`", "`default`"):
+            self.assertIn(role, text)
 
     def test_codex_files_do_not_contain_claude_only_runtime_tokens(self) -> None:
         forbidden = [
@@ -112,6 +124,11 @@ class TestCodexPlugin(unittest.TestCase):
             "PermissionRequest",
             "CLAUDE_PLUGIN_ROOT",
             "user-invocable",
+            "model:",
+            "effort:",
+            "sonnet",
+            "haiku",
+            "opus",
         ]
         for path in sorted(self.codex_root.rglob("*")):
             if not path.is_file():
