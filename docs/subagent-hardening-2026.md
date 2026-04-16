@@ -8,7 +8,6 @@ This release responds to a real production failure mode: specialists were someti
 - **Structural capability boundaries**: agents should get explicit tool allowlists instead of broad inherited permissions.
 - **Foreground completion**: phase-critical specialists should finish in the foreground so early stop, sync, and write failures are visible.
 - **Artifact-backed authority**: specialists should write artifacts the conductor can verify and synthesize from.
-- **Standalone parity**: the standalone `.claude/skills` pack should not silently lose the agent layer.
 
 ## Practical xlfg changes
 

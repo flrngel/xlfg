@@ -28,9 +28,9 @@ If `--issue` is requested but `gh` is not installed or not authenticated (`gh au
 
 Read the `version` field from all three plugin manifests:
 
-- `plugins/xlfg-engineering/.claude-plugin/plugin.json`
-- `plugins/xlfg-engineering/.cursor-plugin/plugin.json`
-- `plugins/xlfg-engineering/.codex-plugin/plugin.json`
+- `.claude-plugin/plugin.json`
+- `.cursor-plugin/plugin.json`
+- `.codex-plugin/plugin.json`
 
 **Pass** if all three agree. Otherwise list which manifests disagree.
 
@@ -38,15 +38,15 @@ Read the `version` field from all three plugin manifests:
 
 For each expected phase skill, check that the directory exists and contains a `SKILL.md`:
 
-- `plugins/xlfg-engineering/skills/xlfg-recall-phase/`
-- `plugins/xlfg-engineering/skills/xlfg-intent-phase/`
-- `plugins/xlfg-engineering/skills/xlfg-context-phase/`
-- `plugins/xlfg-engineering/skills/xlfg-plan-phase/`
-- `plugins/xlfg-engineering/skills/xlfg-implement-phase/`
-- `plugins/xlfg-engineering/skills/xlfg-verify-phase/`
-- `plugins/xlfg-engineering/skills/xlfg-review-phase/`
-- `plugins/xlfg-engineering/skills/xlfg-compound-phase/`
-- `plugins/xlfg-engineering/skills/xlfg-debug-phase/`
+- `skills/xlfg-recall-phase/`
+- `skills/xlfg-intent-phase/`
+- `skills/xlfg-context-phase/`
+- `skills/xlfg-plan-phase/`
+- `skills/xlfg-implement-phase/`
+- `skills/xlfg-verify-phase/`
+- `skills/xlfg-review-phase/`
+- `skills/xlfg-compound-phase/`
+- `skills/xlfg-debug-phase/`
 
 `sdlc_coverage_score` = present / 9. Higher is better.
 
@@ -54,57 +54,48 @@ For each expected phase skill, check that the directory exists and contains a `S
 
 Compute word counts (via `wc -w`) for:
 
-- `plugins/xlfg-engineering/commands/xlfg.md`
-- `plugins/xlfg-engineering/commands/xlfg-debug.md`
-- each `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md`
+- `commands/xlfg.md`
+- `commands/xlfg-debug.md`
+- each `skills/xlfg-*-phase/SKILL.md`
 
 Report each file's word count. `workflow_load_score` = total words across the above files. **Lower is better.** Also list the top 3 files by size (the top load drivers) so future tuning can target them.
 
 ### 4. Claude Code compatibility
 
-For the two public commands (`commands/xlfg.md` and `commands/xlfg-debug.md`), confirm the frontmatter contains:
+For the two public commands (`commands/xlfg.md` and `commands/xlfg-debug.md` inside the plugin), confirm the frontmatter contains:
 
 - `allowed-tools:`
 - `effort:` (should be `high` for these)
 - `disable-model-invocation: true`
 - `hooks:` with a `PermissionRequest` → `ExitPlanMode` auto-allow
 
-For every phase skill under `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md`, confirm the frontmatter contains:
+For every phase skill under `skills/xlfg-*-phase/SKILL.md`, confirm the frontmatter contains:
 
 - `user-invocable: false`
 - no `name:` field (hidden skills must omit `name` per the Codex split)
 
-Forbidden-token sweep across `plugins/xlfg-engineering/commands/**`, `plugins/xlfg-engineering/skills/**`, and `plugins/xlfg-engineering/agents/**`:
+Forbidden-token sweep across `commands/**`, `skills/**`, and `agents/**` inside the plugin:
 
 - stale `Task` tool name (check with word-boundary patterns `, Task,`, `, Task\n`, `, Task `, ` Task(`, ` Task `) — `TaskCreate`/`TaskUpdate`/`TaskList` are legitimate and must not trigger
 - `query-contract.md` (forbidden reference to a deleted file)
 
-For every specialist agent under `plugins/xlfg-engineering/agents/**/*.md` (excluding `_shared`):
+For every specialist agent under `agents/**/*.md` (excluding `_shared`) inside the plugin:
 
 - `maxTurns:` present and ≤ 150
 - no `Agent` or `SendMessage` in its `tools:` list (leaf-worker rule)
 
 `claude_code_compatibility_score` = pass count / total checks. Higher is better.
 
-### 5. Standalone parity
-
-Count `*.md` files under:
-
-- `plugins/xlfg-engineering/agents/`
-- `standalone/.claude/agents/`
-
-`parity_ok` = counts are equal.
-
-### 6. Codex surface integrity
+### 5. Codex surface integrity
 
 Confirm exactly two public Codex skills:
 
-- `plugins/xlfg-engineering/codex/skills/xlfg/SKILL.md`
-- `plugins/xlfg-engineering/codex/skills/xlfg-debug/SKILL.md`
+- `codex/skills/xlfg/SKILL.md`
+- `codex/skills/xlfg-debug/SKILL.md`
 
 Confirm neither file contains any of these Claude-only tokens: `allowed-tools`, `Skill(`, `TaskCreate`, `TaskUpdate`, `TaskList`, `ExitPlanMode`, `PermissionRequest`, `CLAUDE_PLUGIN_ROOT`, `user-invocable`, `model:`, `effort:`, `sonnet`, `haiku`, `opus`.
 
-### 7. Scaffold self-consistency
+### 6. Scaffold self-consistency
 
 If the current repo has a `docs/xlfg/meta.json`, read `tool_version` and compare against the plugin.json version from check 1. Flag drift.
 
@@ -112,8 +103,8 @@ If the current repo has a `docs/xlfg/meta.json`, read `tool_version` and compare
 
 Produce, in this order:
 
-1. **Per-check summary table — FIRST.** Print this before any prose. One row per check (1–7) with columns `# | check | status | score | note`. Status is `pass` / `fail` / `warn`. Score is the numeric value where applicable (coverage ratio, compatibility ratio, word count) or `—`. Note is a terse one-liner such as `3 manifests agree` or `2 skills missing user-invocable`.
-2. **Headline scores.** One line each: `workflow_load_score`, `sdlc_coverage_score`, `claude_code_compatibility_score`, `efficiency_index`, and `parity_ok`.
+1. **Per-check summary table — FIRST.** Print this before any prose. One row per check (1–6) with columns `# | check | status | score | note`. Status is `pass` / `fail` / `warn`. Score is the numeric value where applicable (coverage ratio, compatibility ratio, word count) or `—`. Note is a terse one-liner such as `3 manifests agree` or `2 skills missing user-invocable`.
+2. **Headline scores.** One line each: `workflow_load_score`, `sdlc_coverage_score`, `claude_code_compatibility_score`, and `efficiency_index`.
 3. **Top load drivers** — the top 3 largest files by word count from check 3.
 4. **Top compatibility gaps** — any failed assertion from check 4, grouped by category (command frontmatter, phase skill frontmatter, forbidden tokens, specialist tools, `maxTurns`).
 5. **Best cost-to-confidence improvements** — if any check failed, the one-line fix per failure. If everything passed, say so explicitly.

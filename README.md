@@ -4,7 +4,7 @@
 
 Version 3.3.1 upgrades `/xlfg-audit`: the report now leads with a per-check summary table (one row per check with pass/fail and score), and a new optional flag `--issue` (or `--issue <owner>/<repo>`) files the report as a GitHub issue via `gh`. Personal info — home paths, emails, git identity, hostnames, signed-off / co-authored lines — is redacted before the body is handed to `gh`, and the command aborts the issue call if any token-shape string shows up (nothing inside the audit should ever be a secret). Pure-prompt change; no new runtime.
 
-Version 3.2.2 fixes a startup regression where every repeat `/xlfg` or `/xlfg-debug` run on a project errored with `File has not been read yet. Read it first before writing to it.` on the first `Write(.xlfg/phase-state.json)`. Conductors now clear any stale `phase-state.json` left by the previous run in the same shell step that syncs the scaffold directories, so the fresh initial Write always succeeds. All four conductor surfaces (Claude plugin, standalone, Codex `$xlfg`, Codex `$xlfg-debug`) got the guidance.
+Version 3.2.2 fixes a startup regression where every repeat `/xlfg` or `/xlfg-debug` run on a project errored with `File has not been read yet. Read it first before writing to it.` on the first `Write(.xlfg/phase-state.json)`. Conductors now clear any stale `phase-state.json` left by the previous run in the same shell step that syncs the scaffold directories, so the fresh initial Write always succeeds. All three conductor surfaces (Claude plugin, Codex `$xlfg`, Codex `$xlfg-debug`) got the guidance.
 
 Version 3.2.0 adds first-class Codex support. Codex installs through
 `.codex-plugin/plugin.json` and the repo marketplace at
@@ -25,15 +25,14 @@ Version 3.0.0 removed the `xlfg` Python CLI package entirely. Install via the pl
 - bundled / messy requests are split into stable objective groups (`O1`, `O2`, ...)
 - hidden phase skills still load **just in time**, matching Claude Code’s skills model while keeping context small
 - every plugin specialist now has an explicit tool allowlist, proactive delegation description, foreground-only bias, stronger execution contract, and bounded turn budget
-- review specialists now write lane artifacts under `reviews/`, and the standalone pack now includes `.claude/agents/` parity
+- review specialists now write lane artifacts under `reviews/`
 
 ## What is in this repo
 
 1. A Claude Code plugin in `plugins/xlfg-engineering/`
 2. A Codex plugin surface in `plugins/xlfg-engineering/.codex-plugin/` and `plugins/xlfg-engineering/codex/`
-3. A standalone `.claude/skills/` pack in `standalone/`
-4. Research notes on recent subagent / harness hardening in `docs/subagent-hardening-2026.md`
-5. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
+3. Research notes on recent subagent / harness hardening in `docs/subagent-hardening-2026.md`
+4. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
 
 
 ## Quick start
@@ -68,10 +67,6 @@ plugin directory, choose the local xlfg marketplace, and install
 
 Codex uses skill invocation rather than the Claude Code slash-command aliases.
 
-### Manual standalone install
-
-For environments where the plugin loader is unavailable, copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run `/xlfg` or `/xlfg-debug`.
-
 ## Entry model
 
 - `/xlfg` owns the whole SDLC run and loads hidden phase skills just in time: recall, intent, context, plan, implement, verify, review, compound.
@@ -88,7 +83,7 @@ MIT
 ## 2.7.5 note
 
 - xlfg specialists are now documented and audited as **leaf workers**: no nested subagent delegation inside specialist lanes.
-- Plugin and standalone agent packs now share the same bounded `maxTurns` budgets again, so stalled lanes fail faster instead of looking hung.
+- Specialists now use bounded `maxTurns` budgets, so stalled lanes fail faster instead of looking hung.
 - Review fan-out is leaner by default, and conductor guidance now says waiting is valid only when a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT` exist.
 
 

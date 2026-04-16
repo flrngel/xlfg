@@ -25,8 +25,7 @@ Read `NEXT_AGENT_CONTEXT.md` first. It is the bundle-level handoff document and 
 - `plugins/xlfg-engineering/commands/` — Claude Code plugin commands
 - `plugins/xlfg-engineering/agents/` — subagent prompts
 - `plugins/xlfg-engineering/skills/` — hidden support skills
-- `standalone/.claude/skills/xlfg/` — short `/xlfg` install pack
-- `tests/` — regression tests for plugin/standalone shape, version sync, and specialist contracts
+- `tests/` — regression tests for plugin shape, version sync, and specialist contracts
 
 
 ## 2.7.1 note

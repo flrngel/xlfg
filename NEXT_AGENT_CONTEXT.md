@@ -24,14 +24,14 @@ If you continue from here:
 
 What changed:
 - `plugins/xlfg-engineering/commands/xlfg-init.md` — idempotent scaffold repair. Creates missing tracked directories (`docs/xlfg/knowledge/`, `docs/xlfg/knowledge/agent-memory/`, `docs/xlfg/migrations/`), local-only directories (`docs/xlfg/runs/`, `.xlfg/runs/`), and missing durable knowledge files without overwriting any existing file. Ensures `.gitignore` has the canonical four-line xlfg ignore set. Flags blanket `docs/xlfg/` ignore lines as drift and asks before removing.
-- `plugins/xlfg-engineering/commands/xlfg-audit.md` — every check is a file read Claude can perform: version sync across the three manifests, SDLC coverage (9 phase-skill directories), workflow load (wc -w on the main command + phase skills, with top-3 load drivers called out), Claude Code compatibility (command + phase-skill frontmatter, forbidden-token sweep for stale `Task` tool name and `query-contract.md`, specialist `maxTurns` ≤ 150 + leaf-worker rule), standalone parity (agent count match), Codex surface integrity (exactly two public skills, no Claude-only tokens), and scaffold self-consistency (`meta.json.tool_version` vs `plugin.json.version`).
+- `plugins/xlfg-engineering/commands/xlfg-audit.md` — every check is a file read Claude can perform: version sync across the three manifests, SDLC coverage (9 phase-skill directories), workflow load (wc -w on the main command + phase skills, with top-3 load drivers called out), Claude Code compatibility (command + phase-skill frontmatter, forbidden-token sweep for stale `Task` tool name and `query-contract.md`, specialist `maxTurns` ≤ 150 + leaf-worker rule), Codex surface integrity (exactly two public skills, no Claude-only tokens), and scaffold self-consistency (`meta.json.tool_version` vs `plugin.json.version`).
 - `.gitignore` — removed the blanket `docs/xlfg/` line. That line was added 2026-04-13 in `dadb737` and silently blocked `git add` for new durable knowledge files (e.g. new role-memory docs). Already-tracked knowledge files were never affected because `.gitignore` does not un-track. Canonical ignore set: `.xlfg/`, `docs/xlfg/runs/*`, `!docs/xlfg/runs/.gitkeep`, `!docs/xlfg/runs/README.md`.
 - `plugins/xlfg-engineering/CLAUDE.md:49` — fixed stale `/xlfg:init` → `/xlfg-init`, and added a line for the new read-only `/xlfg-audit`.
 - `tests/test_codex_plugin.py` — version assertions bumped to `3.3.0`.
 
 Why this matters:
 - The repo's own living docs (`plugins/xlfg-engineering/CLAUDE.md`, `docs/planning-autonomy-2026-refresh.md`) still referenced `/xlfg-init` as a maintenance command, so the deletion left a dangling contract. Restore makes the docs honest.
-- `/xlfg-audit` is the only deterministic way to catch harness regressions (version drift, frontmatter rot, standalone-pack divergence) without running a full `/xlfg` cycle. v3.0.0 lost that safety net; this restores it without re-introducing Python.
+- `/xlfg-audit` is the only deterministic way to catch harness regressions (version drift, frontmatter rot) without running a full `/xlfg` cycle. v3.0.0 lost that safety net; this restores it without re-introducing Python.
 - The blanket-ignore drift was silently hostile to knowledge-tracking runs. Fixing it is part of the "smart scaffold" story.
 
 If you continue from here:
@@ -74,7 +74,7 @@ What changed:
 - Deleted `plugins/xlfg-engineering/.mcp.json`.
 - Removed the `mcpServers` block from `.claude-plugin/plugin.json` and the
   `mcpServers` key from `.codex-plugin/plugin.json`.
-- `xlfg-researcher` (plugin + standalone) no longer advertises the Context7
+- `xlfg-researcher` no longer advertises the Context7
   tool. Research now goes through `WebSearch` / `WebFetch` only.
 - `tests/test_codex_plugin.py` no longer asserts on `mcpServers`.
 
@@ -129,7 +129,7 @@ If you continue from here:
 
 ## Previous state (3.1.1)
 
-3.1.1 is a CI/tooling patch on top of 3.1.0. `scripts/lint_plugin.py` walked every markdown file under `plugins/xlfg-engineering/agents/**` expecting agent frontmatter, so the new shared reference at `agents/_shared/output-template.md` (shipped in 3.1.0) failed the frontmatter check and broke CI. The linter and the standalone-parity counter now skip any path containing `_shared`, which is the home for cross-agent reference material rather than agent definitions. Also resyncs `plugin.json` / `.cursor-plugin/plugin.json` — 3.1.0 shipped without bumping them.
+3.1.1 is a CI/tooling patch on top of 3.1.0. `scripts/lint_plugin.py` walked every markdown file under `plugins/xlfg-engineering/agents/**` expecting agent frontmatter, so the new shared reference at `agents/_shared/output-template.md` (shipped in 3.1.0) failed the frontmatter check and broke CI. The linter now skips any path containing `_shared`, which is the home for cross-agent reference material rather than agent definitions. Also resyncs `plugin.json` / `.cursor-plugin/plugin.json` — 3.1.0 shipped without bumping them.
 
 If you continue from here: when adding new cross-agent reference docs, keep them under `agents/_shared/` so the linter knows to skip them. Real agents still live under `agents/{planning,implementation,verify,review}/` and must keep YAML frontmatter.
 
@@ -140,11 +140,11 @@ If you continue from here: when adding new cross-agent reference docs, keep them
 What changed:
 - `plugins/xlfg-engineering/scripts/subagent-stop-guard.mjs` parses YAML frontmatter `status:` first, falls back to the legacy bare `Status:` first line for backward compatibility. New templates prescribe YAML only.
 - 54 agent files (27 × 2 packs) converted from bare `Status: DONE | BLOCKED | FAILED` to YAML frontmatter. Completion-barrier prose, turn-budget rule, and preseed convention all point at the YAML shape.
-- `plugins/xlfg-engineering/agents/_shared/output-template.md` (mirrored to standalone) is the single reference for frontmatter / preseed / final-chat shape.
+- `plugins/xlfg-engineering/agents/_shared/output-template.md` is the single reference for frontmatter / preseed / final-chat shape.
 - `plugins/xlfg-engineering/skills/xlfg-context-phase/SKILL.md:29` replaces `always run xlfg-repo-mapper` with a conditional skip when `memory-recall.md` already grep-cites coverage.
 - `plugins/xlfg-engineering/skills/xlfg-verify-phase/SKILL.md:34` adds a task-checker-DA-coverage gate to the UI-designer re-fire.
-- `plugins/xlfg-engineering/scripts/render-workboard.mjs` (mirrored to standalone) renders the `## Phase status` block from `.xlfg/phase-state.json` between HTML-comment markers. Phase skills no longer write phase-completion rows.
-- `plugins/xlfg-engineering/commands/xlfg.md` (and standalone `xlfg/SKILL.md`) add `TaskCreate`/`TaskUpdate`/`TaskList` to `allowed-tools`, and a "Harness task bridge" startup step that creates `xlfg: <phase>` tasks.
+- `plugins/xlfg-engineering/scripts/render-workboard.mjs` renders the `## Phase status` block from `.xlfg/phase-state.json` between HTML-comment markers. Phase skills no longer write phase-completion rows.
+- `plugins/xlfg-engineering/commands/xlfg.md` adds `TaskCreate`/`TaskUpdate`/`TaskList` to `allowed-tools`, and a "Harness task bridge" startup step that creates `xlfg: <phase>` tasks.
 - `docs/xlfg/knowledge/ledger-schema.md` is the canonical shape. `plugins/xlfg-engineering/scripts/ledger-append.mjs` is the only allowed writer.
 
 Why this matters:
@@ -160,7 +160,7 @@ If you continue from here:
 - Phase skills still own the task / objective / blocker sections of `workboard.md`. They MUST NOT hand-write phase-status rows — the renderer owns that region.
 - The `TaskCreate` bridge is startup-only and completion-only. Do NOT create harness tasks for specialists or sub-packets.
 - Historical note: before Codex support, behavior changes bumped both `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json`. Current changes must also bump `.codex-plugin/plugin.json` per the 3.2.0 section above.
-- Keep plugin and standalone packs in sync. `test_standalone_agent_pack_matches_plugin_agents` + new `test_standalone_stop_guard_matches_plugin` + `test_standalone_renderer_matches_plugin` enforce this at CI time.
+- Keep the plugin agent pack consistent across updates. CI enforces frontmatter and structure checks on every agent.
 
 Intentionally not done in 3.1.0 (known-open):
 - Phase B from the plan (CONTEXT_DIGEST per phase + shared delegation-rules doc) — user deferred.
@@ -177,7 +177,7 @@ What changed:
 - `/xlfg-audit` and `/xlfg-init` plugin commands deleted (CLI wrappers)
 - `docs/benchmarking.md` and `evals/intent/` deleted (CLI-fed fixtures)
 - "prefer the local xlfg helper CLI" wording removed from all commands and phase skills
-- `tests/test_xlfg.py` pruned to ~20 plugin/standalone shape tests; `test_versions_are_synced` rewritten to read from plugin.json only
+- `tests/test_xlfg.py` pruned to ~20 plugin shape tests; `test_versions_are_synced` rewritten to read from plugin.json only
 - Historical version tracking at 3.0.0 moved from Python package files to the Claude/Cursor plugin manifests; 3.2.0 adds the Codex manifest to that sync set
 
 Why this matters:
@@ -188,13 +188,13 @@ Why this matters:
 If you continue from here:
 - Do **not** recreate a Python package or pyproject.toml. The plugin-only architecture is intentional.
 - Historical note: before Codex support, behavior changes bumped both `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json`. Current changes must also bump `.codex-plugin/plugin.json` per the 3.2.0 section above.
-- Keep plugin and standalone packs in sync (skills, agents, hooks, scripts).
+- Keep the plugin skills, agents, hooks, and scripts consistent across updates.
 
 ## Previous state (2.9.0) — for reference
 
 2.8.2 closes two residual risks from the 2.8.1 follow-up work:
 
-- `phase-gate.mjs` (both plugin and standalone copies) now exits 0 immediately on empty stdin. Before this change, the hook would read the cwd-relative `.xlfg/phase-state.json` even when no stop-event payload was present, which caused `test_allows_on_empty_stdin` to flake inside an active /xlfg run and, more importantly, let the hook block legitimate non-xlfg invocations that happened to share the cwd.
+- `phase-gate.mjs` now exits 0 immediately on empty stdin. Before this change, the hook would read the cwd-relative `.xlfg/phase-state.json` even when no stop-event payload was present, which caused `test_allows_on_empty_stdin` to flake inside an active /xlfg run and, more importantly, let the hook block legitimate non-xlfg invocations that happened to share the cwd.
 - The phase-gate fix (2.8.2) and xlfg-debug alias (2.8.1) remain in effect.
 
 2.8.1 added the `/xlfg-debug` short alias. 2.8.1 also introduced `xlfg-ui-designer` (conditional plan-phase + verify-phase specialist for UI-related work).
@@ -205,7 +205,7 @@ What changed:
 - a Stop hook (`phase-gate.mjs`) now blocks the conductor from ending before all 8 phases complete
 - `.xlfg/phase-state.json` tracks which phases have completed; the Stop hook reads this file to decide block/allow
 - verify-fix and review-fix loopback cycles are now capped at 2 iterations to prevent unbounded context growth
-- the Stop hook is registered in both plugin `hooks.json` and standalone/plugin conductor frontmatter
+- the Stop hook is registered in plugin `hooks.json` and conductor frontmatter
 - audit module detects `conductor_stop_gate` as a new feature flag
 
 Why this matters:
@@ -217,7 +217,7 @@ If you continue from here:
 - preserve the **one public conductor + hidden phase skills + separated specialists** architecture
 - do not flatten back into one monolithic prompt
 - do not reintroduce duplicated intent docs
-- keep plugin and standalone packs synchronized on conductor frontmatter, hooks, and scripts
+- keep conductor frontmatter, hooks, and scripts consistent across updates
 - the phase-gate hook has a safety valve (max 3 blocks) — do not remove it or the model may hang when it genuinely cannot make progress
 
 
@@ -241,5 +241,5 @@ If you continue from here:
 
 ## 2.7.5 note
 
-- A later drift had plugin specialists back at `maxTurns: 100` while the standalone pack still had bounded budgets. This patch restores parity and adds tests so that mismatch is easier to catch.
+- A later drift had plugin specialists back at `maxTurns: 100` when bounded budgets were intended. This patch restores the bounded budgets and adds tests so that mismatch is easier to catch.
 - Conductors and phase skills now say the quiet rule out loud: specialists are leaf workers, nested delegation is not allowed, and lean fan-out wins by default.

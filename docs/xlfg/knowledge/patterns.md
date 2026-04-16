@@ -9,13 +9,13 @@ Reusable patterns discovered while shipping.
 - **Implementation notes**: Write `.xlfg/phase-state.json` after startup (all phases listed, none completed). Update `completed` array after each phase. Reset `block_count` to 0 on each advance. Hook increments `block_count` on each block. Safety valve at 3 blocks.
 - **What shortcut it replaces**: Relying on the model to follow "invoke these 8 skills in order" from memory through heavy context
 - **Pitfalls**: Don't register the same hook in both command frontmatter and hooks.json (double-fires). Always allow on `max_tokens`. Always allow when no state file exists.
-- **Examples / links**: `standalone/.claude/hooks/xlfg-phase-gate.mjs`, run 20260403-phase-reliability
+- **Examples / links**: `plugins/xlfg-engineering/scripts/phase-gate.mjs`, run 20260403-phase-reliability
 
-## Pattern: Plugin vs standalone hook registration
+## Pattern: Version-bump sweep
 
-- **When to use**: When adding any hook to both plugin and standalone packs
-- **Why it works**: Plugin hooks.json fires at plugin level; SKILL.md frontmatter fires at skill level. They can overlap.
-- **Implementation notes**: Plugin → `hooks.json` only. Standalone → SKILL.md frontmatter only. Never both for the same event.
-- **What shortcut it replaces**: Copying the hook registration to every possible location "just in case"
-- **Pitfalls**: Double-registration causes double-firing, which breaks block_count-based safety valves
-- **Examples / links**: `plugins/xlfg-engineering/hooks/hooks.json` (Stop + SubagentStop), `standalone/.claude/skills/xlfg/SKILL.md` (Stop in frontmatter)
+- **When to use**: Every time the plugin version string changes.
+- **Why it works**: The three `plugin.json` manifests (`.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`) are explicitly asserted equal by `test_versions_are_synced_across_plugin_manifests`, but hardcoded version strings elsewhere (e.g. `tests/test_codex_plugin.py`'s `self.assertEqual(manifest["version"], "X.Y.Z")`) have also failed at least twice when missed.
+- **Implementation notes**: Before bumping, `rg -n "\\"X\\.Y\\.Z\\"" --type py` for the outgoing version across the repo. Bump every hit, not just the three manifests. `docs/xlfg/meta.json` has a `tool_version` field too — worth checking.
+- **What shortcut it replaces**: "Bump the three manifests and run tests" (the test failure from a missed hardcoded assertion reads as a sync bug, not a missed file).
+- **Pitfalls**: CHANGELOG entries that say "bumped tests/test_codex_plugin.py version assertions to X.Y.Z" are evidence the file has been a recurring trap (v3.3.0 and v3.3.1 entries both named it).
+- **Examples / links**: run 20260416-delete-standalone-bump caught it at implement-phase harness failure; v3.3.1 CHANGELOG explicitly documents the same bookkeeping. Retroactively promoted as a pattern.

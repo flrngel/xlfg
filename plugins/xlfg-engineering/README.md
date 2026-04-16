@@ -16,7 +16,7 @@ The 2.9.0 design target is simple:
 
 - `/xlfg-init` and `/xlfg-audit` are back as manual maintenance commands after being swept up in the v3.0.0 CLI removal.
 - `/xlfg-init` is an idempotent scaffold repair: creates missing xlfg directories and durable knowledge skeletons without overwriting, and ensures `.gitignore` has the canonical xlfg ignore set.
-- `/xlfg-audit` is a deterministic harness self-audit: version sync across the three plugin manifests, SDLC phase coverage, workflow load (word counts), Claude Code compatibility, standalone parity, and Codex surface integrity. No Python; no network.
+- `/xlfg-audit` is a deterministic harness self-audit: version sync across the three plugin manifests, SDLC phase coverage, workflow load (word counts), Claude Code compatibility, and Codex surface integrity. No Python; no network.
 - `/xlfg` and `/xlfg-debug` behavior is unchanged.
 
 ## What changed in 2.7.1
@@ -25,8 +25,7 @@ The 2.9.0 design target is simple:
 - The batch still includes the mandatory **intent phase**, but now the next weak layer is hardened too: specialist agents have stronger personas, explicit tool allowlists, and foreground-only bias.
 - Specialists stay leaf-only and bounded by a generous safety ceiling (`maxTurns: 150`), with prompt-side write-first rules carrying the forcing-function load so a bad lane gets re-split rather than drifting silently.
 - Review specialists now write their own artifacts under `reviews/`, so the conductor synthesizes from real expert output instead of vague subagent summaries.
-- The standalone pack now mirrors plugin agents under `.claude/agents/` for parity with the skill pack.
-- Audit, lint, docs, and tests now check proactive specialist descriptions, explicit tool scopes, artifact-writing review lanes, and standalone agent parity.
+- Audit, lint, docs, and tests now check proactive specialist descriptions, explicit tool scopes, and artifact-writing review lanes.
 ## Quick start
 
 ### Plugin form (shared / team use)
@@ -42,12 +41,6 @@ Install `xlfg-engineering` from the repo marketplace at
 
 - `$xlfg "fix the login timeout flow"`
 - `$xlfg-debug "diagnose the failing login timeout flow"`
-
-### Standalone form (short `/xlfg` command)
-
-Copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run:
-
-- `/xlfg "fix the login timeout flow"`
 
 ## Core files
 
@@ -86,7 +79,7 @@ Optional only when they add decision value:
 ## 2.7.5 note
 
 - The conductor and phase skills now explicitly forbid nested specialist delegation; only the conductor may fan out work.
-- Plugin and standalone agent packs are back in sync on `maxTurns`, restoring the intended short-lived specialist behavior.
+- Specialists use bounded `maxTurns` budgets, restoring the intended short-lived specialist behavior.
 - Review fan-out is leaner by default, and packet waiting is documented as artifact-first rather than chat-first.
 
 

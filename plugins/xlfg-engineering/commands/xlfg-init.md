@@ -50,7 +50,7 @@ Create `docs/xlfg/meta.json` if missing. A minimal valid shape:
 }
 ```
 
-Read `plugins/xlfg-engineering/.claude-plugin/plugin.json` to fill `tool_version`. If `meta.json` already exists, leave it alone.
+Read `.claude-plugin/plugin.json` inside the plugin root to fill `tool_version`. If `meta.json` already exists, leave it alone.
 
 ### Gitignore (canonical set)
 

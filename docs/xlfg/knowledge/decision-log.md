@@ -14,6 +14,24 @@ Record durable architectural and product decisions made during `/xlfg` runs.
 
 ---
 
+## 2026-04-16 — Remove the `standalone/` pack (v4.0.0)
+
+- **Date**: 2026-04-16
+- **Decision**: Delete the entire `standalone/` directory at repo root. Bump all three plugin manifests (`.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`) to **4.0.0** in lockstep. Remove the `BROKEN_PLUGIN_PATH_RE` drive-by lint violations that v3.3.0 inherited in `commands/xlfg-audit.md` and `commands/xlfg-init.md`. Retire the `current-state.md` and `patterns.md` entries that promised plugin↔standalone parity.
+- **Context**: `standalone/` was meant as a "plugin loader unavailable" fallback in mid-2025 beta. Evidence accumulated during pre-run research showed it was already failing its job: it sat three minor versions behind the plugin (v3.1.0 / v2.8.1 last touched vs. plugin at v3.3.1), had `effort: medium` vs. the plugin's `effort: high` (behavioral drift, not cosmetic), was missing `/xlfg-audit` and `/xlfg-init` restored in v3.3.0, and — most critically — had no `hooks.json` wiring, so a user who copy-pasted `standalone/.claude/` into their project got `phase-gate.mjs` and `subagent-stop-guard.mjs` silently disabled. The Claude Code plugin marketplace has been GA in 2026, so the original rationale is obsolete.
+- **Alternatives considered**:
+  - Keep the pack and auto-generate from the plugin in CI — **rejected**: adds a build step and verification surface for an install path whose user base can't be verified, while the plugin marketplace covers the same need.
+  - Keep as-is and patch the drift — **rejected**: this is what v3.1.0 already tried ("standalone pack now includes `.claude/agents/` parity") and drift recurred within 3 minor versions.
+  - Minor bump (3.4.0) — **rejected**: `README.md:71-73` explicitly documented "Manual standalone install" as a supported fallback. Removing that is breaking, same shape as v3.0.0's CLI removal.
+- **Rejected shortcut**: Strip only the `standalone/` tree and the linter parity check, leaving README / architecture / AGENTS / `NEXT_AGENT_CONTEXT.md` / plugin README + CLAUDE + `xlfg-audit.md` still advertising it. Partial deletion leaves a confusing paper trail and invites someone to resurrect the pack.
+- **Consequences**:
+  - Single install surface: the Claude Code plugin (with Codex + Cursor plugin variants sharing the same source tree).
+  - CI stays green via 5 deleted test methods, 9 stripped-arm methods, and one renamed `test_ui_designer_agent_exists`.
+  - `/xlfg-audit` lost its "Standalone parity" check (old §5). Downstream sections renumbered (§6 → §5, §7 → §6) and `parity_ok` dropped from headline scores.
+  - Durable knowledge layer retired 4 parity-promising rules in `current-state.md` and the entire "Pattern: Plugin vs standalone hook registration" block in `patterns.md`. Replaced with a new "Version-bump sweep" pattern that captures the recurring bite of hardcoded version strings in `tests/test_codex_plugin.py` (missed this run at intent time, caught by the harness during implement).
+  - Historical record preserved in CHANGELOG, decision-log, ledger, migrations, and runs — intentionally not rewritten.
+- **Links**: run `docs/xlfg/runs/20260416-122805-delete-standalone-bump/`; CHANGELOG 4.0.0 entry at `plugins/xlfg-engineering/CHANGELOG.md`; predecessor decision that kept both packs synchronized: 2026-04-14 v2.9.0 (maxTurns 150 across both packs).
+
 ## 2026-04-16 — Restore `/xlfg-init` and `/xlfg-audit` (v3.3.0)
 
 - **Date**: 2026-04-16

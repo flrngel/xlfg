@@ -1,3 +1,39 @@
+## 4.0.0
+
+**Breaking — removed the `standalone/` pack.** For users who followed README's "Manual standalone install" path, switch to the plugin marketplace (`/plugin install xlfg-engineering`) or clone the repo and `cp -r plugins/xlfg-engineering/ ~/.claude/plugins/xlfg-engineering/` for offline installs.
+
+### Why
+
+The pack had silently drifted from `plugins/xlfg-engineering/`:
+
+- 3 minor versions behind by the start of this run (`standalone/` last touched at v3.1.0 / v2.8.1 while the plugin was at v3.3.1).
+- Missing `hooks.json` wiring, so `phase-gate.mjs` and `subagent-stop-guard.mjs` were silently disabled on copy-paste installs — the exact proof gates `/xlfg` relies on.
+- Missing `/xlfg-audit` and `/xlfg-init` (restored in v3.3.0 plugin-side).
+- Specialist `effort: medium` vs. plugin's `effort: high` — a behavioral drift, not cosmetic.
+- The original "plugin loader unavailable" rationale is obsolete now that Claude Code's plugin marketplace is generally available.
+
+Keeping parity had failed repeatedly (v3.1.0's "standalone pack now includes `.claude/agents/` parity" bullet was itself a drift-patch that went stale again). Auto-generating from the plugin was rejected as unneeded complexity for a user base whose existence is unverified in 2026.
+
+### Removed
+
+- `standalone/` directory and everything under it.
+- `scripts/lint_plugin.py` standalone-parity check (four-line block at the old line 178-181).
+- 5 test methods that only asserted parity: `test_standalone_agent_pack_matches_plugin_agents`, `test_standalone_stop_guard_matches_plugin`, `test_standalone_renderer_matches_plugin`, `test_standalone_script_exists`, and `test_ui_designer_agent_exists_in_both_packs_with_dual_mode` (replaced by a plugin-only existence check).
+- Standalone-path arms inside 9 additional test methods across `tests/test_xlfg.py` and `tests/test_xlfg_debug.py`.
+- The "Standalone parity" audit check (previously check 5) in `plugins/xlfg-engineering/commands/xlfg-audit.md`; downstream sections renumbered (old 6 → 5, old 7 → 6). The `parity_ok` headline score is gone.
+- Active-policy standalone references in `README.md`, `docs/architecture.md`, `AGENTS.md`, `NEXT_AGENT_CONTEXT.md`, `plugins/xlfg-engineering/README.md`, and `plugins/xlfg-engineering/CLAUDE.md`.
+
+### Fixed (drive-by)
+
+- `plugins/xlfg-engineering/commands/xlfg-audit.md` and `plugins/xlfg-engineering/commands/xlfg-init.md` had ~21 combined `plugins/xlfg-engineering/...` literal path references that had been tripping the linter's `BROKEN_PLUGIN_PATH_RE` rule since v3.3.0 (commit 41693af restored both commands with the broken paths). Rewrote each to drop the repo-relative prefix (e.g., `plugins/xlfg-engineering/agents/` → `agents/`). The audit logic still targets the same files; only the wording changed. `python3 scripts/lint_plugin.py` now exits 0 on a clean checkout.
+
+### Preserved (not rewritten)
+
+- `plugins/xlfg-engineering/CHANGELOG.md` history — every prior release entry that mentioned "both packs" stays as record.
+- `docs/xlfg/knowledge/decision-log.md`, `docs/xlfg/knowledge/ledger.jsonl`, `docs/xlfg/migrations/**`, `docs/xlfg/runs/**`.
+
+Bumped to **4.0.0** (major) — withdrawing a publicly-documented install path is the same breaking-change shape as v3.0.0's Python CLI removal.
+
 ## 3.3.1
 
 `/xlfg-audit` upgrade — lead with a per-check summary table, and optionally file the report as a GitHub issue with personal-info redaction baked in. Pure-prompt change; no new runtime.

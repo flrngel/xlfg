@@ -50,15 +50,12 @@ class TestXLFG(unittest.TestCase):
     def test_main_xlfg_entrypoints_are_self_contained_and_batch_phase_driven(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         command_path = repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md"
-        standalone_path = repo_root / "standalone" / ".claude" / "skills" / "xlfg" / "SKILL.md"
         plugin_skill_path = repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg" / "SKILL.md"
 
         self.assertTrue(command_path.exists())
-        self.assertTrue(standalone_path.exists())
         self.assertFalse(plugin_skill_path.exists())
 
         command_md = command_path.read_text(encoding="utf-8")
-        standalone_md = standalone_path.read_text(encoding="utf-8")
 
         plugin_phase_names = [
             "xlfg-engineering:xlfg-recall-phase",
@@ -70,68 +67,42 @@ class TestXLFG(unittest.TestCase):
             "xlfg-engineering:xlfg-review-phase",
             "xlfg-engineering:xlfg-compound-phase",
         ]
-        standalone_phase_names = [name.replace("xlfg-engineering:", "") for name in plugin_phase_names]
 
         self.assertIn("allowed-tools:", command_md)
-        self.assertIn("allowed-tools:", standalone_md)
         self.assertIn("effort: high", command_md)
-        self.assertIn("effort: high", standalone_md)
         self.assertIn("ExitPlanMode", command_md)
-        self.assertIn("ExitPlanMode", standalone_md)
         self.assertIn("one autonomous run", command_md.lower())
-        self.assertIn("one autonomous run", standalone_md.lower())
         self.assertIn("batch of hidden phase skills", command_md.lower())
-        self.assertIn("batch of hidden phase skills", standalone_md.lower())
         self.assertIn("do not ask the user to run internal skills", command_md.lower())
-        self.assertIn("do not ask the user to run internal skills", standalone_md.lower())
         self.assertIn("single source of truth", command_md.lower())
-        self.assertIn("single source of truth", standalone_md.lower())
         self.assertIn("atomic packet", command_md.lower())
-        self.assertIn("atomic packet", standalone_md.lower())
         self.assertIn("resume the **same specialist**", command_md.lower())
-        self.assertIn("resume the **same specialist**", standalone_md.lower())
         self.assertIn("Sync scaffold if missing or stale", command_md)
-        self.assertIn("Sync scaffold if missing or stale", standalone_md)
         self.assertIn("write the lean core run directories", command_md)
-        self.assertIn("write the lean core run directories", standalone_md)
         self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", command_md)
-        self.assertNotIn("plugins/xlfg-engineering/skills/xlfg/SKILL.md", standalone_md)
         self.assertIn("\nname: xlfg", command_md)
-        self.assertNotIn("\nname:", standalone_md)
 
         for phase_name in plugin_phase_names:
             self.assertIn(phase_name, command_md)
-        for phase_name in standalone_phase_names:
-            self.assertIn(phase_name, standalone_md)
 
         self.assertIn("Skill(xlfg-engineering:xlfg-intent-phase *)", command_md)
-        self.assertIn("Skill(xlfg-intent-phase *)", standalone_md)
-        # Reject the stale standalone `Task` tool name (replaced by `Agent` or
-        # `Skill`). `TaskCreate` / `TaskUpdate` / `TaskList` (v3.1.0 task bridge)
+        # Reject the stale `Task` tool name (replaced by `Agent` or `Skill`).
+        # `TaskCreate` / `TaskUpdate` / `TaskList` (v3.1.0 task bridge)
         # are legitimate and MUST NOT be rejected here.
         for stale in (", Task,", ", Task\n", ", Task ", " Task(", " Task "):
             self.assertNotIn(stale, command_md, f"stale `Task` tool name in command: {stale!r}")
-            self.assertNotIn(stale, standalone_md, f"stale `Task` tool name in standalone: {stale!r}")
 
         # Phase-state tracking and loopback cap (v2.8.0)
         self.assertIn("phase-state.json", command_md)
-        self.assertIn("phase-state.json", standalone_md)
         self.assertIn("phase-state tracking", command_md.lower())
-        self.assertIn("phase-state tracking", standalone_md.lower())
 
         # v3.2.2 regression guard: startup must clear any stale
         # `.xlfg/phase-state.json` from a prior run. Without this, Claude
         # Code's Write tool errors with "File has not been read yet. Read
         # it first before writing to it." on every repeat /xlfg run.
         self.assertIn("rm -f .xlfg/phase-state.json", command_md)
-        self.assertIn("rm -f .xlfg/phase-state.json", standalone_md)
-        # Stop hook: standalone has it in SKILL.md frontmatter; plugin has it in hooks.json only
-        self.assertIn("Stop:", standalone_md)
-        self.assertIn("phase-gate.mjs", standalone_md)
         self.assertIn("max 2 loopbacks", command_md.lower())
-        self.assertIn("max 2 loopbacks", standalone_md.lower())
         self.assertIn("loopback_count", command_md)
-        self.assertIn("loopback_count", standalone_md)
 
 
     def test_runtime_prompts_do_not_depend_on_query_contract_file(self) -> None:
@@ -140,7 +111,6 @@ class TestXLFG(unittest.TestCase):
             repo_root / "plugins" / "xlfg-engineering" / "commands",
             repo_root / "plugins" / "xlfg-engineering" / "skills",
             repo_root / "plugins" / "xlfg-engineering" / "agents",
-            repo_root / "standalone" / ".claude" / "skills",
         ]
         # `xlfg-audit.md` is the meta self-audit and intentionally names
         # forbidden tokens (including `query-contract.md`) so it can sweep
@@ -163,13 +133,6 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("user-invocable: false", text)
 
 
-    def test_standalone_agent_pack_matches_plugin_agents(self) -> None:
-        repo_root = Path(__file__).resolve().parents[1]
-        plugin_agents = sorted((repo_root / "plugins" / "xlfg-engineering" / "agents").rglob("*.md"))
-        standalone_agents = sorted((repo_root / "standalone" / ".claude" / "agents").rglob("*.md"))
-        self.assertGreater(len(plugin_agents), 0)
-        self.assertEqual(len(plugin_agents), len(standalone_agents))
-
     def test_all_agents_have_proactive_descriptions_tools_and_foreground(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         for agent_path in sorted((repo_root / "plugins" / "xlfg-engineering" / "agents").rglob("*.md")):
@@ -184,20 +147,17 @@ class TestXLFG(unittest.TestCase):
 
     def test_all_specialist_agents_are_leaf_workers_with_short_turn_budgets(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        for root in [
-            repo_root / "plugins" / "xlfg-engineering" / "agents",
-            repo_root / "standalone" / ".claude" / "agents",
-        ]:
-            for agent_path in sorted(root.rglob("*.md")):
-                if "_shared" in agent_path.parts:
-                    continue
-                text = agent_path.read_text(encoding="utf-8")
-                tools = _frontmatter_value(text, "tools") or ""
-                max_turns = _frontmatter_value(text, "maxTurns")
-                self.assertIsNotNone(max_turns, f"Missing maxTurns in {agent_path}")
-                self.assertLessEqual(int(max_turns), 150, f"Turn budget too large in {agent_path}")
-                self.assertNotIn("Agent", tools, f"Nested delegation tool leaked into {agent_path}")
-                self.assertNotIn("SendMessage", tools, f"Resume tool leaked into {agent_path}")
+        root = repo_root / "plugins" / "xlfg-engineering" / "agents"
+        for agent_path in sorted(root.rglob("*.md")):
+            if "_shared" in agent_path.parts:
+                continue
+            text = agent_path.read_text(encoding="utf-8")
+            tools = _frontmatter_value(text, "tools") or ""
+            max_turns = _frontmatter_value(text, "maxTurns")
+            self.assertIsNotNone(max_turns, f"Missing maxTurns in {agent_path}")
+            self.assertLessEqual(int(max_turns), 150, f"Turn budget too large in {agent_path}")
+            self.assertNotIn("Agent", tools, f"Nested delegation tool leaked into {agent_path}")
+            self.assertNotIn("SendMessage", tools, f"Resume tool leaked into {agent_path}")
 
     def test_review_agents_write_artifacts_under_reviews_dir(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
@@ -257,10 +217,8 @@ class TestXLFG(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         targets = [
             repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md",
-            repo_root / "standalone" / ".claude" / "skills" / "xlfg" / "SKILL.md",
         ]
         targets.extend(sorted((repo_root / "plugins" / "xlfg-engineering" / "skills").glob("xlfg-*-phase/SKILL.md")))
-        targets.extend(sorted((repo_root / "standalone" / ".claude" / "skills").glob("xlfg-*-phase/SKILL.md")))
         for path in targets:
             text = path.read_text(encoding="utf-8")
             is_main_entry = path.name == "xlfg.md" or path.parent.name == "xlfg"
@@ -281,23 +239,17 @@ class TestXLFG(unittest.TestCase):
             "xlfg-verify-phase",
             "xlfg-review-phase",
         ]
-        for base in [
-            repo_root / "plugins" / "xlfg-engineering" / "skills",
-            repo_root / "standalone" / ".claude" / "skills",
-        ]:
-            for phase_name in phase_names:
-                text = (base / phase_name / "SKILL.md").read_text(encoding="utf-8")
-                self.assertIn("Only the phase conductor may delegate.", text)
+        base = repo_root / "plugins" / "xlfg-engineering" / "skills"
+        for phase_name in phase_names:
+            text = (base / phase_name / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("Only the phase conductor may delegate.", text)
 
     def test_review_phase_keeps_small_fanout(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        for base in [
-            repo_root / "plugins" / "xlfg-engineering" / "skills",
-            repo_root / "standalone" / ".claude" / "skills",
-        ]:
-            text = (base / "xlfg-review-phase" / "SKILL.md").read_text(encoding="utf-8")
-            self.assertIn("standard: 1 lens", text)
-            self.assertIn("up to 2 lenses", text)
+        base = repo_root / "plugins" / "xlfg-engineering" / "skills"
+        text = (base / "xlfg-review-phase" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("standard: 1 lens", text)
+        self.assertIn("up to 2 lenses", text)
 
     def test_review_agents_have_lean_context_sources(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
@@ -331,18 +283,11 @@ class TestXLFG(unittest.TestCase):
         self.assertIn("one change cluster plus one review lens", review_phase)
         self.assertIn("architecture-R1.md", review_phase)
 
-    def test_ui_designer_agent_exists_in_both_packs_with_dual_mode(self) -> None:
+    def test_ui_designer_agent_exists(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
-        standalone = repo_root / "standalone" / ".claude" / "agents" / "planning" / "xlfg-ui-designer.md"
         plugin = repo_root / "plugins" / "xlfg-engineering" / "agents" / "planning" / "xlfg-ui-designer.md"
-        self.assertTrue(standalone.exists(), f"missing {standalone}")
         self.assertTrue(plugin.exists(), f"missing {plugin}")
-        self.assertEqual(
-            standalone.read_text(encoding="utf-8"),
-            plugin.read_text(encoding="utf-8"),
-            "xlfg-ui-designer must stay byte-identical across packs",
-        )
-        text = standalone.read_text(encoding="utf-8")
+        text = plugin.read_text(encoding="utf-8")
         self.assertIn("DOCS_RUN_DIR/ui-design.md", text)
         self.assertIn("DOCS_RUN_DIR/ui-verification.md", text)
         self.assertIn("## Specialist identity", text)
@@ -351,7 +296,6 @@ class TestXLFG(unittest.TestCase):
     def test_ui_designer_is_wired_into_plan_phase_with_conditional_trigger(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         for path in [
-            repo_root / "standalone" / ".claude" / "skills" / "xlfg-plan-phase" / "SKILL.md",
             repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-plan-phase" / "SKILL.md",
         ]:
             text = path.read_text(encoding="utf-8")
@@ -362,7 +306,6 @@ class TestXLFG(unittest.TestCase):
     def test_ui_designer_is_wired_into_verify_phase_with_conditional_trigger(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         for path in [
-            repo_root / "standalone" / ".claude" / "skills" / "xlfg-verify-phase" / "SKILL.md",
             repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-verify-phase" / "SKILL.md",
         ]:
             text = path.read_text(encoding="utf-8")

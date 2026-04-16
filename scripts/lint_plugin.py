@@ -175,11 +175,6 @@ def main() -> int:
             issues.append(LintIssue(p, "Active runtime prompts should not depend on query-contract.md; keep the intent contract in spec.md instead."))
 
 
-    plugin_agents = [p for p in sorted((PLUGIN_ROOT / "agents").rglob("*.md")) if "_shared" not in p.parts]
-    standalone_agents = [p for p in sorted((PLUGIN_ROOT.parents[1] / "standalone" / ".claude" / "agents").rglob("*.md")) if "_shared" not in p.parts]
-    if len(plugin_agents) != len(standalone_agents):
-        issues.append(LintIssue(PLUGIN_ROOT, "Standalone .claude/agents pack should mirror plugin agent count for parity."))
-
     for skill_dir in sorted((PLUGIN_ROOT / "skills").iterdir()):
         if not skill_dir.is_dir():
             continue

@@ -141,14 +141,3 @@ class TestSubagentStopGuard(unittest.TestCase):
             self.assertEqual(code, 0)
             data = json.loads(out)
             self.assertEqual(data["decision"], "block")
-
-    def test_standalone_stop_guard_matches_plugin(self) -> None:
-        """Both packs share the stop-guard script; divergence risks behavior drift."""
-        repo_root = Path(__file__).resolve().parents[1]
-        plugin = repo_root / "plugins" / "xlfg-engineering" / "scripts" / "subagent-stop-guard.mjs"
-        standalone = repo_root / "standalone" / ".claude" / "hooks" / "xlfg-subagent-stop-guard.mjs"
-        self.assertTrue(standalone.exists())
-        self.assertEqual(
-            plugin.read_text(encoding="utf-8"),
-            standalone.read_text(encoding="utf-8"),
-        )

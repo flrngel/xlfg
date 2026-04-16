@@ -27,7 +27,6 @@ Every shipped bundle must contain enough context that the next agent can continu
 ## Entry model
 
 - Public plugin entrypoint: `/xlfg-engineering:xlfg` (aliased as `/xlfg` via `name: xlfg` in command frontmatter)
-- Public standalone entrypoint: `/xlfg`
 - Public Codex entrypoints: `$xlfg` and `$xlfg-debug` through `plugins/xlfg-engineering/codex/skills/`
 - The main command uses `name: xlfg` to register `/xlfg` as a short alias. Do not remove it.
 - Hidden support and phase skills under `plugins/xlfg-engineering/skills/` should stay `user-invocable: false`.

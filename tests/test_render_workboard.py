@@ -108,13 +108,3 @@ class TestRenderWorkboard(unittest.TestCase):
             )
             self.assertEqual(code, 2)
             self.assertIn("missing run_id", err)
-
-    def test_standalone_renderer_matches_plugin(self) -> None:
-        repo_root = Path(__file__).resolve().parents[1]
-        plugin = repo_root / "plugins" / "xlfg-engineering" / "scripts" / "render-workboard.mjs"
-        standalone = repo_root / "standalone" / ".claude" / "hooks" / "xlfg-render-workboard.mjs"
-        self.assertTrue(standalone.exists())
-        self.assertEqual(
-            plugin.read_text(encoding="utf-8"),
-            standalone.read_text(encoding="utf-8"),
-        )

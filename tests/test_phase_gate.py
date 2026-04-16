@@ -146,14 +146,3 @@ class TestPhaseGate(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0)
         self.assertEqual(proc.stdout.strip(), "")
-
-    def test_standalone_script_exists(self) -> None:
-        """Standalone pack should have the same phase-gate hook."""
-        repo_root = Path(__file__).resolve().parents[1]
-        standalone = repo_root / "standalone" / ".claude" / "hooks" / "xlfg-phase-gate.mjs"
-        self.assertTrue(standalone.exists())
-        plugin = repo_root / "plugins" / "xlfg-engineering" / "scripts" / "phase-gate.mjs"
-        self.assertEqual(
-            standalone.read_text(encoding="utf-8"),
-            plugin.read_text(encoding="utf-8"),
-        )

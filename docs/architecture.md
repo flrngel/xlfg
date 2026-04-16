@@ -1,4 +1,4 @@
-# xlfg architecture (3.2.0)
+# xlfg architecture (4.0.0)
 
 `/xlfg` is intentionally simple at the top level:
 
@@ -8,13 +8,12 @@
        recall -> intent -> context -> plan -> implement -> verify -> review -> compound
 ```
 
-There are three supported install modes:
+There are two supported install modes:
 
 - **Claude Code plugin**: `/xlfg-engineering:xlfg` with `/xlfg` alias
 - **Codex plugin**: `$xlfg`
-- **Standalone Claude pack**: `/xlfg`
 
-The standalone Claude pack is the clearest short-name slash UX. The Claude plugin form is for shared team distribution and therefore namespaced. The Codex form is an installable skill plugin because Codex plugins distribute skills, MCP config, apps, and metadata.
+The Claude plugin form is for shared team distribution and is namespaced; the `/xlfg` short alias is registered via `name:` frontmatter. The Codex form is an installable skill plugin because Codex plugins distribute skills, MCP config, apps, and metadata.
 
 ## Run-state architecture
 
