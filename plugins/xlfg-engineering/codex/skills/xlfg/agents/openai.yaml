@@ -1,0 +1,6 @@
+interface:
+  display_name: "xlfg"
+  short_description: "Proof-first SDLC run"
+  default_prompt: "$xlfg \"implement the requested change with proof\""
+policy:
+  allow_implicit_invocation: false

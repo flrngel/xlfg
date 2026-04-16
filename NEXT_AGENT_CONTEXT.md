@@ -1,6 +1,51 @@
 # Next agent context
 
-## Current state (3.1.1)
+## Current state (3.2.0)
+
+3.2.0 adds first-class Codex support without changing the existing Claude Code
+entry model. The new Codex surface is intentionally separate:
+
+- `plugins/xlfg-engineering/.codex-plugin/plugin.json` is the Codex manifest.
+  It points at `./codex/skills/` and reuses `./.mcp.json` for Context7.
+- `.agents/plugins/marketplace.json` exposes the local plugin to Codex from
+  `./plugins/xlfg-engineering`.
+- `plugins/xlfg-engineering/codex/skills/xlfg/SKILL.md` and
+  `plugins/xlfg-engineering/codex/skills/xlfg-debug/SKILL.md` are the only
+  public Codex skills. They invoke as `$xlfg` and `$xlfg-debug`.
+- `plugins/xlfg-engineering/codex/references/phases/` holds the Codex internal
+  phase guidance. Do not add extra public Codex phase skills unless the entry
+  model deliberately changes.
+- `plugins/xlfg-engineering/codex/references/model-policy.md` states that
+  Codex must not load the Claude specialist definitions under
+  `plugins/xlfg-engineering/agents/**`; their `model` / `effort` frontmatter is
+  Claude Code-only.
+
+Why the split matters:
+- Codex skills require `name` and `description` frontmatter, while the existing
+  Claude plugin hidden phase skills intentionally omit `name:` and stay
+  `user-invocable: false`.
+- Codex plugins currently package skills, MCP config, apps, and metadata. This
+  release does not attempt hard hook parity; the Codex skills use prompt-level
+  barriers plus `.xlfg/phase-state.json` and file-backed artifacts.
+- Codex uses the active session model/effort by default and selects built-in
+  Codex roles (`explorer`, `worker`, `default`) by lane shape unless the user or
+  project config supplies a Codex custom agent.
+- The current Claude Code `/xlfg` and `/xlfg-debug` command surfaces are
+  unchanged.
+
+If you continue from here:
+- Bump **all three** manifests for behavior changes:
+  `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, and
+  `.codex-plugin/plugin.json`.
+- Keep the Codex public skill count at exactly two unless the public Codex
+  entry model changes.
+- Keep Claude-only concepts out of `plugins/xlfg-engineering/codex/**`
+  (`allowed-tools`, `Skill(...)`, `TaskCreate`, `TaskUpdate`, `TaskList`,
+  `ExitPlanMode`, `PermissionRequest`, `CLAUDE_PLUGIN_ROOT`,
+  `user-invocable`).
+- Run `python3 scripts/lint_plugin.py` and `python3 -m unittest discover tests/`.
+
+## Previous state (3.1.1)
 
 3.1.1 is a CI/tooling patch on top of 3.1.0. `scripts/lint_plugin.py` walked every markdown file under `plugins/xlfg-engineering/agents/**` expecting agent frontmatter, so the new shared reference at `agents/_shared/output-template.md` (shipped in 3.1.0) failed the frontmatter check and broke CI. The linter and the standalone-parity counter now skip any path containing `_shared`, which is the home for cross-agent reference material rather than agent definitions. Also resyncs `plugin.json` / `.cursor-plugin/plugin.json` — 3.1.0 shipped without bumping them.
 
@@ -32,7 +77,7 @@ If you continue from here:
 - When appending to `ledger.jsonl`, always go through `scripts/ledger-append.mjs`. Direct `echo >>` is forbidden and will drift again.
 - Phase skills still own the task / objective / blocker sections of `workboard.md`. They MUST NOT hand-write phase-status rows — the renderer owns that region.
 - The `TaskCreate` bridge is startup-only and completion-only. Do NOT create harness tasks for specialists or sub-packets.
-- Bump version in **both** `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json` for every behavior change.
+- Historical note: before Codex support, behavior changes bumped both `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json`. Current changes must also bump `.codex-plugin/plugin.json` per the 3.2.0 section above.
 - Keep plugin and standalone packs in sync. `test_standalone_agent_pack_matches_plugin_agents` + new `test_standalone_stop_guard_matches_plugin` + `test_standalone_renderer_matches_plugin` enforce this at CI time.
 
 Intentionally not done in 3.1.0 (known-open):
@@ -51,7 +96,7 @@ What changed:
 - `docs/benchmarking.md` and `evals/intent/` deleted (CLI-fed fixtures)
 - "prefer the local xlfg helper CLI" wording removed from all commands and phase skills
 - `tests/test_xlfg.py` pruned to ~20 plugin/standalone shape tests; `test_versions_are_synced` rewritten to read from plugin.json only
-- Version tracking: canonical version is now `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json`; `xlfg/__init__.py` and `pyproject.toml` are gone
+- Historical version tracking at 3.0.0 moved from Python package files to the Claude/Cursor plugin manifests; 3.2.0 adds the Codex manifest to that sync set
 
 Why this matters:
 - Single authoritative install path; no dual-track CLI-or-manual ambiguity in run flow
@@ -60,7 +105,7 @@ Why this matters:
 
 If you continue from here:
 - Do **not** recreate a Python package or pyproject.toml. The plugin-only architecture is intentional.
-- Bump version in **both** `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json` for every behavior change. The `CLAUDE.md` versioning checklist has been updated to reflect these paths.
+- Historical note: before Codex support, behavior changes bumped both `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json`. Current changes must also bump `.codex-plugin/plugin.json` per the 3.2.0 section above.
 - Keep plugin and standalone packs in sync (skills, agents, hooks, scripts).
 
 ## Previous state (2.9.0) — for reference

@@ -8,7 +8,8 @@ Every behavior change MUST update:
 2. `README.md`
 3. `plugins/xlfg-engineering/.claude-plugin/plugin.json`
 4. `plugins/xlfg-engineering/.cursor-plugin/plugin.json`
-5. `NEXT_AGENT_CONTEXT.md`
+5. `plugins/xlfg-engineering/.codex-plugin/plugin.json`
+6. `NEXT_AGENT_CONTEXT.md`
 
 Normal evolution should bump **patch** unless the public entry model changes materially.
 
@@ -27,8 +28,10 @@ Every shipped bundle must contain enough context that the next agent can continu
 
 - Public plugin entrypoint: `/xlfg-engineering:xlfg` (aliased as `/xlfg` via `name: xlfg` in command frontmatter)
 - Public standalone entrypoint: `/xlfg`
+- Public Codex entrypoints: `$xlfg` and `$xlfg-debug` through `plugins/xlfg-engineering/codex/skills/`
 - The main command uses `name: xlfg` to register `/xlfg` as a short alias. Do not remove it.
 - Hidden support and phase skills under `plugins/xlfg-engineering/skills/` should stay `user-invocable: false`.
+- Do not add Codex `name:` frontmatter to the Claude hidden phase skills; Codex-specific public skills live under `codex/skills/`.
 - Do not point a command at a repo-relative plugin file path. Installed plugins are not laid out like the source repo.
 - The correct architecture is **one public entrypoint that batches hidden phase skills**.
 

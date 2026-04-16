@@ -1,4 +1,4 @@
-# xlfg architecture (2.6.0)
+# xlfg architecture (3.2.0)
 
 `/xlfg` is intentionally simple at the top level:
 
@@ -8,12 +8,13 @@
        recall -> intent -> context -> plan -> implement -> verify -> review -> compound
 ```
 
-There are two supported install modes:
+There are three supported install modes:
 
-- **Plugin**: `/xlfg-engineering:xlfg`
-- **Standalone**: `/xlfg`
+- **Claude Code plugin**: `/xlfg-engineering:xlfg` with `/xlfg` alias
+- **Codex plugin**: `$xlfg`
+- **Standalone Claude pack**: `/xlfg`
 
-The standalone pack is the clearest short-name UX. The plugin form is for shared team distribution and therefore namespaced.
+The standalone Claude pack is the clearest short-name slash UX. The Claude plugin form is for shared team distribution and therefore namespaced. The Codex form is an installable skill plugin because Codex plugins distribute skills, MCP config, apps, and metadata.
 
 ## Run-state architecture
 
@@ -48,3 +49,4 @@ The standalone pack is the clearest short-name UX. The plugin form is for shared
 - The helper CLI may be used when installed to make scaffold sync, run creation, recall, doctoring, and verification deterministic.
 - Support skills exist only as background helpers. They should not compete with the main `/xlfg` entrypoint.
 - Entry-point correctness matters: no command+skill collisions for the same slash name, and no repo-relative plugin path assumptions.
+- The Codex surface is separate from the Claude hidden-skill surface because Codex skills require `name` and `description` metadata.

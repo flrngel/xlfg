@@ -1,6 +1,12 @@
 # xlfg-engineering
 
-`xlfg` is an autonomous, proof-first SDLC harness for Claude Code.
+`xlfg` is an autonomous, proof-first SDLC harness for Claude Code and Codex.
+
+Version 3.2.0 adds first-class Codex support. Codex installs through
+`.codex-plugin/plugin.json` and the repo marketplace at
+`.agents/plugins/marketplace.json`, exposing `$xlfg` and `$xlfg-debug` as
+public Codex skills backed by Codex-specific phase references. The existing
+Claude Code `/xlfg` and `/xlfg-debug` entrypoints are unchanged.
 
 Version 3.1.1 is a tooling-only patch: the plugin frontmatter linter now skips `agents/_shared/` (which holds cross-agent reference material like `output-template.md`, not agent definitions), so CI no longer fails on the shared template introduced in 3.1.0. Plugin manifests are also resynced to match the shipped version.
 
@@ -20,9 +26,10 @@ Version 3.0.0 removed the `xlfg` Python CLI package entirely. Install via the pl
 ## What is in this repo
 
 1. A Claude Code plugin in `plugins/xlfg-engineering/`
-2. A standalone `.claude/skills/` pack in `standalone/`
-3. Research notes on recent subagent / harness hardening in `docs/subagent-hardening-2026.md`
-4. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
+2. A Codex plugin surface in `plugins/xlfg-engineering/.codex-plugin/` and `plugins/xlfg-engineering/codex/`
+3. A standalone `.claude/skills/` pack in `standalone/`
+4. Research notes on recent subagent / harness hardening in `docs/subagent-hardening-2026.md`
+5. A repo handoff file in `NEXT_AGENT_CONTEXT.md`
 
 
 ## Quick start
@@ -45,6 +52,18 @@ Both short forms are aliases of `/xlfg-engineering:xlfg` and `/xlfg-engineering:
 
 Update with `/plugin marketplace update xlfg`.
 
+### Install in Codex
+
+Codex reads the repo marketplace at `.agents/plugins/marketplace.json`, which
+points to `./plugins/xlfg-engineering`. Restart Codex after checkout, open the
+plugin directory, choose the local xlfg marketplace, and install
+`xlfg-engineering`. After install:
+
+- `$xlfg "what you want built"` - full SDLC run
+- `$xlfg-debug "what is broken"` - diagnosis-only run (no source edits)
+
+Codex uses skill invocation rather than the Claude Code slash-command aliases.
+
 ### Manual standalone install
 
 For environments where the plugin loader is unavailable, copy the full `standalone/.claude/` directory into your target repo’s `.claude/`, then run `/xlfg` or `/xlfg-debug`.
@@ -53,6 +72,7 @@ For environments where the plugin loader is unavailable, copy the full `standalo
 
 - `/xlfg` owns the whole SDLC run and loads hidden phase skills just in time: recall, intent, context, plan, implement, verify, review, compound.
 - `/xlfg-debug` is the diagnosis-only sibling: recall → intent → context → debug. It finds the deep root cause and names the likely repair surface without touching source, tests, fixtures, migrations, or configs.
+- `$xlfg` and `$xlfg-debug` are the Codex public skill forms. They use Codex-specific public skills plus shared phase references instead of the Claude command/hidden-skill surface.
 - Neither command asks the user to run phase subcommands or internal skills.
 - `spec.md` is the run card and single source of truth.
 - Optional docs exist only when they change a decision or proof.
