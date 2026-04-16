@@ -14,6 +14,26 @@ Record durable architectural and product decisions made during `/xlfg` runs.
 
 ---
 
+## 2026-04-16 — Restore `/xlfg-init` and `/xlfg-audit` (v3.3.0)
+
+- **Date**: 2026-04-16
+- **Decision**: Restore `plugins/xlfg-engineering/commands/xlfg-init.md` and `plugins/xlfg-engineering/commands/xlfg-audit.md`, both deleted in v3.0.0 as part of the Python CLI removal. Remove the blanket `docs/xlfg/` line from `.gitignore` that was added in `dadb737` on 2026-04-13. Bump to **3.3.0** (minor).
+- **Context**: User asked where `xlfg-init.md` went. Investigation showed it was deleted by `23bda22` (v3.0.0) along with the whole `xlfg/` Python package, `/xlfg-audit`, `docs/benchmarking.md`, and `evals/intent/`. The deletion commit's own rationale ("CLI wrappers") was only accurate for audit; `xlfg-init.md` was always pure-prompt markdown with zero CLI dependency. Living docs (`plugins/xlfg-engineering/CLAUDE.md:49`, `docs/planning-autonomy-2026-refresh.md:113`) still named both commands as manual maintenance, so the deletion broke its own contract.
+- **Alternatives considered**:
+  - **Leave both deleted** — keeps the repo plugin-only and simple, but leaves the living-docs references dangling and removes the only deterministic harness self-check. **Rejected**: the docs contract and the regression-detection value outweigh the simplicity win.
+  - **Restore init only, leave audit deleted** — simplest, but gives up the harness self-audit. **Rejected**: the audit is salvageable as a deterministic markdown command (every check is a file read or frontmatter inspection) without re-introducing Python.
+  - **Restore audit as a verbatim copy** — quick, but keeps its old "run the CLI, fall back to qualitative" design. The CLI is gone, so the fallback path is all that remains, and it produced hand-wavy scores. **Rejected**: violates global CLAUDE.md "don't cheat" rule. Rewrite was the honest path.
+  - **Leave the `.gitignore` blanket alone** — respects the user's 2026-04-13 commit. **Rejected** after inspection: the blanket silently blocked new durable knowledge files from `git add`. User's actual memory rule is "never commit docs/xlfg/runs or .xlfg; only product changes" — that's already enforced by `docs/xlfg/runs/*` and `.xlfg/`. The blanket was over-aggressive.
+- **Rejected shortcut**: Copying the old `xlfg-audit.md` back verbatim and shipping it with the dead "if the CLI is available, run xlfg audit" prefix. That would produce a command that claims a scoring contract it can't honor.
+- **Consequences**:
+  - Two public commands come back. Public entry model otherwise unchanged; `/xlfg` and `/xlfg-debug` behavior is unchanged.
+  - The audit is now deterministic and reproducible across runs — any future agent can run it and get the same pass/fail per check on the same tree. That was never true of the old "CLI-or-qualitative" design.
+  - Knowledge tracking works by default again. Before this fix, adding a new `docs/xlfg/knowledge/*.md` required `git add -f`, which was a hidden papercut on any compound-phase run that tried to persist new durable knowledge.
+  - No Python. The v3.0.0 plugin-only architecture is preserved.
+- **Links**: v3.0.0 deletion commit `23bda22`; gitignore drift commit `dadb737`; this change ships as v3.3.0.
+
+---
+
 ## 2026-04-14 — Specialist `maxTurns` raised from 12 to 150 (ceiling, not target)
 
 - **Date**: 2026-04-14

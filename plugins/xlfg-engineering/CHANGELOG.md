@@ -1,3 +1,15 @@
+## 3.3.0
+
+Restore `/xlfg-init` and `/xlfg-audit` — both were deleted in v3.0.0 as part of the Python CLI removal. That deletion was over-broad: `xlfg-init.md` was always a pure-prompt markdown command with zero CLI calls, and `xlfg-audit.md` was salvageable as a deterministic harness self-audit without the Python scoring pipeline. Living docs (`plugins/xlfg-engineering/CLAUDE.md:49`, `docs/planning-autonomy-2026-refresh.md:113`) still named both as maintenance commands, so the deletion broke its own contract.
+
+- Added `plugins/xlfg-engineering/commands/xlfg-init.md`. Idempotent scaffold repair. Creates missing directories (`docs/xlfg/knowledge/`, `docs/xlfg/knowledge/agent-memory/`, `docs/xlfg/migrations/`, `docs/xlfg/runs/`, `.xlfg/runs/`), creates missing durable knowledge files without overwriting, and ensures `.gitignore` carries the canonical four-line xlfg ignore set. Includes a drift warning that flags blanket `docs/xlfg/` ignore lines (they block new knowledge additions from `git add`).
+- Added `plugins/xlfg-engineering/commands/xlfg-audit.md`. Deterministic rewrite: every check is a concrete file read or frontmatter inspection Claude can perform, not a Python call. Covers version sync across the three manifests, SDLC phase-skill coverage, workflow load (word count), Claude Code compatibility (command + phase-skill frontmatter, forbidden-token sweep, specialist `maxTurns` + leaf-worker tool check), standalone parity, Codex surface integrity, and scaffold self-consistency. Output format: comparison table, top load drivers, top compatibility gaps, best cost-to-confidence improvements, verdict.
+- Fixed `.gitignore` drift. Removed the blanket `docs/xlfg/` line (added 2026-04-13 in `dadb737`) that silently blocked new durable knowledge files from staging. Canonical ignore set is now `.xlfg/`, `docs/xlfg/runs/*`, and the two `!docs/xlfg/runs/...` unignores. Already-tracked knowledge files were unaffected; the blanket only hit untracked paths.
+- `plugins/xlfg-engineering/CLAUDE.md` safety section refers to `/xlfg-init` (was stale `/xlfg:init`) and adds a line for `/xlfg-audit`.
+- `tests/test_codex_plugin.py` version assertions updated to `3.3.0`.
+
+Bumped to **3.3.0** (minor) — restoring two public commands is more than a patch but does not change the default run flow. `/xlfg` and `/xlfg-debug` behavior is unchanged.
+
 ## 3.2.2
 
 Bug fix — every `/xlfg` or `/xlfg-debug` run on a project that had previously

@@ -12,6 +12,13 @@ The 2.9.0 design target is simple:
 
 > **One public entrypoint, one run card, one intent contract, hidden phase skills loaded just in time, and specialist subagents that actually own their lanes — under a generous turn-budget ceiling so prompt-side write-first rules carry the forcing-function load.**
 
+## What changed in 3.3.0
+
+- `/xlfg-init` and `/xlfg-audit` are back as manual maintenance commands after being swept up in the v3.0.0 CLI removal.
+- `/xlfg-init` is an idempotent scaffold repair: creates missing xlfg directories and durable knowledge skeletons without overwriting, and ensures `.gitignore` has the canonical xlfg ignore set.
+- `/xlfg-audit` is a deterministic harness self-audit: version sync across the three plugin manifests, SDLC phase coverage, workflow load (word counts), Claude Code compatibility, standalone parity, and Codex surface integrity. No Python; no network.
+- `/xlfg` and `/xlfg-debug` behavior is unchanged.
+
 ## What changed in 2.7.1
 
 - `/xlfg-engineering:xlfg` stays the single public plugin entrypoint, and this baseline keeps the short `/xlfg` alias through `name: xlfg` on the plugin command.

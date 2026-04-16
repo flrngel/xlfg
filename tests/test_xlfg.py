@@ -142,8 +142,16 @@ class TestXLFG(unittest.TestCase):
             repo_root / "plugins" / "xlfg-engineering" / "agents",
             repo_root / "standalone" / ".claude" / "skills",
         ]
+        # `xlfg-audit.md` is the meta self-audit and intentionally names
+        # forbidden tokens (including `query-contract.md`) so it can sweep
+        # the rest of the runtime for them. Exempting it keeps the check
+        # honest: it enforces "no dependency on query-contract.md", not
+        # "no mention of the string anywhere".
+        audit_path = repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-audit.md"
         for target in runtime_paths:
             for path in sorted(target.rglob("*.md")):
+                if path == audit_path:
+                    continue
                 text = path.read_text(encoding="utf-8")
                 self.assertNotIn("query-contract.md", text, msg=str(path.relative_to(repo_root)))
 

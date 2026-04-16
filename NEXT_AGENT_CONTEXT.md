@@ -1,6 +1,28 @@
 # Next agent context
 
-## Current state (3.2.2)
+## Current state (3.3.0)
+
+3.3.0 restores `/xlfg-init` and `/xlfg-audit`, two plugin commands deleted in v3.0.0 as part of the Python CLI removal. The v3.0.0 cleanup was over-broad: `xlfg-init.md` was always a pure-prompt markdown file with zero CLI calls (it just told the model to create directories with Write), so bundling it with the CLI removal was an accident. `xlfg-audit.md` did have a Python scoring pipeline behind it, but the markdown-only fallback is salvageable as a deterministic self-audit if every numeric check is rewritten to concrete file reads and frontmatter inspections.
+
+What changed:
+- `plugins/xlfg-engineering/commands/xlfg-init.md` — idempotent scaffold repair. Creates missing tracked directories (`docs/xlfg/knowledge/`, `docs/xlfg/knowledge/agent-memory/`, `docs/xlfg/migrations/`), local-only directories (`docs/xlfg/runs/`, `.xlfg/runs/`), and missing durable knowledge files without overwriting any existing file. Ensures `.gitignore` has the canonical four-line xlfg ignore set. Flags blanket `docs/xlfg/` ignore lines as drift and asks before removing.
+- `plugins/xlfg-engineering/commands/xlfg-audit.md` — every check is a file read Claude can perform: version sync across the three manifests, SDLC coverage (9 phase-skill directories), workflow load (wc -w on the main command + phase skills, with top-3 load drivers called out), Claude Code compatibility (command + phase-skill frontmatter, forbidden-token sweep for stale `Task` tool name and `query-contract.md`, specialist `maxTurns` ≤ 150 + leaf-worker rule), standalone parity (agent count match), Codex surface integrity (exactly two public skills, no Claude-only tokens), and scaffold self-consistency (`meta.json.tool_version` vs `plugin.json.version`).
+- `.gitignore` — removed the blanket `docs/xlfg/` line. That line was added 2026-04-13 in `dadb737` and silently blocked `git add` for new durable knowledge files (e.g. new role-memory docs). Already-tracked knowledge files were never affected because `.gitignore` does not un-track. Canonical ignore set: `.xlfg/`, `docs/xlfg/runs/*`, `!docs/xlfg/runs/.gitkeep`, `!docs/xlfg/runs/README.md`.
+- `plugins/xlfg-engineering/CLAUDE.md:49` — fixed stale `/xlfg:init` → `/xlfg-init`, and added a line for the new read-only `/xlfg-audit`.
+- `tests/test_codex_plugin.py` — version assertions bumped to `3.3.0`.
+
+Why this matters:
+- The repo's own living docs (`plugins/xlfg-engineering/CLAUDE.md`, `docs/planning-autonomy-2026-refresh.md`) still referenced `/xlfg-init` as a maintenance command, so the deletion left a dangling contract. Restore makes the docs honest.
+- `/xlfg-audit` is the only deterministic way to catch harness regressions (version drift, frontmatter rot, standalone-pack divergence) without running a full `/xlfg` cycle. v3.0.0 lost that safety net; this restores it without re-introducing Python.
+- The blanket-ignore drift was silently hostile to knowledge-tracking runs. Fixing it is part of the "smart scaffold" story.
+
+If you continue from here:
+- Do **not** re-introduce a Python CLI. Both restored commands are pure-prompt markdown; they must stay that way.
+- If the audit checks grow, keep them deterministic (file reads, grep, frontmatter parsing). No shelling to a CLI, no network calls.
+- If the scaffold gains new durable knowledge files, add them to the `xlfg-init.md` create-if-missing list AND the audit's coverage check.
+- When touching `.gitignore` in the xlfg scaffold, keep the canonical set intact. If you need to add a new ignore, add it *above* or *below* the canonical block with a comment, not inside it.
+
+## Previous state (3.2.2)
 
 3.2.2 is a startup-hygiene bug fix. Before this, every repeat `/xlfg` or
 `/xlfg-debug` run on a project that already had a `.xlfg/phase-state.json`

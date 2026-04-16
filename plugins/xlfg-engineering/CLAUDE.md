@@ -46,7 +46,8 @@ Put examples and long guidance in the body (loads on invocation).
 
 ## Safety
 
-- `/xlfg:init` is manual bootstrap / repair only.
+- `/xlfg-init` is manual bootstrap / repair only.
+- `/xlfg-audit` is a read-only harness self-audit; it does not change product state.
 - `/xlfg` is autonomous by default and should not ask the user to run internal phases.
 - `/xlfg` must always use deterministic recall before broad repo scanning.
 - `/xlfg` must resolve intent before broad repo/context fan-out; the intent contract lives in `spec.md`.
