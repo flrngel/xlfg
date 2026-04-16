@@ -1,3 +1,21 @@
+## 3.2.1
+
+Dependency removal — Context7 MCP was wired into the plugin manifests but no
+runtime code or specialist lane actually called into it, so the server was
+pure install-surface risk. Removing it.
+
+- Deleted `plugins/xlfg-engineering/.mcp.json`.
+- Removed the `mcpServers` block from `.claude-plugin/plugin.json` and the
+  `mcpServers` key from `.codex-plugin/plugin.json`.
+- `plugins/xlfg-engineering/agents/planning/xlfg-researcher.md` and its
+  standalone mirror no longer advertise Context7; they use WebSearch +
+  WebFetch for external facts.
+- `tests/test_codex_plugin.py` no longer asserts on `mcpServers` and pins all
+  three manifests at 3.2.1.
+- README and NEXT_AGENT_CONTEXT.md no longer reference Context7.
+
+Bumped to **3.2.1** (patch) — public entry model unchanged.
+
 ## 3.2.0
 
 Codex support release - adds a first-class Codex plugin surface beside the

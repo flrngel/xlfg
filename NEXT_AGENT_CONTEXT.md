@@ -1,12 +1,31 @@
 # Next agent context
 
-## Current state (3.2.0)
+## Current state (3.2.1)
+
+3.2.1 removes the Context7 MCP dependency. Nothing in the runtime actually
+called into it, so keeping the server wired up was just a surface risk. The
+public entry model is unchanged — `/xlfg`, `/xlfg-debug`, `$xlfg`,
+`$xlfg-debug` still run end to end.
+
+What changed:
+- Deleted `plugins/xlfg-engineering/.mcp.json`.
+- Removed the `mcpServers` block from `.claude-plugin/plugin.json` and the
+  `mcpServers` key from `.codex-plugin/plugin.json`.
+- `xlfg-researcher` (plugin + standalone) no longer advertises the Context7
+  tool. Research now goes through `WebSearch` / `WebFetch` only.
+- `tests/test_codex_plugin.py` no longer asserts on `mcpServers`.
+
+If you continue from here: do not re-introduce an MCP server dependency unless
+a specialist lane actually calls into it. The researcher agent's tool list is
+the canonical signal — add the server only if that agent uses it.
+
+## Previous state (3.2.0)
 
 3.2.0 adds first-class Codex support without changing the existing Claude Code
 entry model. The new Codex surface is intentionally separate:
 
 - `plugins/xlfg-engineering/.codex-plugin/plugin.json` is the Codex manifest.
-  It points at `./codex/skills/` and reuses `./.mcp.json` for Context7.
+  It points at `./codex/skills/`.
 - `.agents/plugins/marketplace.json` exposes the local plugin to Codex from
   `./plugins/xlfg-engineering`.
 - `plugins/xlfg-engineering/codex/skills/xlfg/SKILL.md` and

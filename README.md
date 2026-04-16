@@ -43,7 +43,7 @@ Inside Claude Code, add this repo as a marketplace and install the plugin:
 /plugin install xlfg-engineering@xlfg
 ```
 
-Claude Code fetches the marketplace manifest from `.claude-plugin/marketplace.json`, resolves the plugin at `./plugins/xlfg-engineering`, and caches it under `~/.claude/plugins/`. Commands, skills, hooks, specialist agents, and the `context7` MCP server all activate together. After install:
+Claude Code fetches the marketplace manifest from `.claude-plugin/marketplace.json`, resolves the plugin at `./plugins/xlfg-engineering`, and caches it under `~/.claude/plugins/`. Commands, skills, hooks, and specialist agents all activate together. After install:
 
 - `/xlfg "what you want built"` — full SDLC run
 - `/xlfg-debug "what is broken"` — diagnosis-only run (no source edits)

@@ -95,15 +95,15 @@ Gather external knowledge that the codebase alone can't provide: best practices,
 ## Tools available
 
 - **WebSearch** — Search for best practices, common pitfalls, recent advisories
-- **Context7 MCP** (`resolve-library-id` → `query-docs`) — Get up-to-date framework/library documentation
+- **WebFetch** — Pull authoritative pages (official docs, RFCs, advisories) referenced from search results
 
 ## Process
 
 1. **Read `DOCS_RUN_DIR/context.md`** (and `spec.md` if present) to identify research topics.
 2. **Identify libraries/frameworks involved** from the codebase (check `package.json`, `Cargo.toml`, `go.mod`, etc.).
 3. **For each relevant library:**
-   - Use Context7 `resolve-library-id` to find the library
-   - Use Context7 `query-docs` with a targeted topic query
+   - Use WebSearch to locate the official docs / release notes / advisories for the exact version in use
+   - Use WebFetch to read the authoritative source directly before citing it
 4. **For domain-specific concerns** (security patterns, API design, migration strategies):
    - Use WebSearch for current best practices and known pitfalls
 5. **Synthesize findings** into actionable guidance.
@@ -137,7 +137,7 @@ status: DONE | BLOCKED | FAILED
 ## Findings
 
 ### <Topic 1>
-**Source:** <URL or Context7 library>
+**Source:** <URL to authoritative doc / advisory / release note>
 **Key insight:** ...
 **Actionable for this task:** ...
 

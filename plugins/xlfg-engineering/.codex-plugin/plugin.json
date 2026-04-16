@@ -1,6 +1,6 @@
 {
   "name": "xlfg-engineering",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "Autonomous, proof-first SDLC harness for Codex with file-backed run cards, scenario proof, review, and compounding.",
   "author": {
     "name": "xlfg",
@@ -17,7 +17,6 @@
     "codex"
   ],
   "skills": "./codex/skills/",
-  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "xlfg Engineering",
     "shortDescription": "Proof-first SDLC runs in Codex",
