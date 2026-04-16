@@ -1,3 +1,32 @@
+## 4.1.0
+
+**`/xlfg-audit` is now a feedback loop to the xlfg maintainers.** The optional `--issue` flag is gone. After every audit, the command asks the user whether to submit the redacted report to `flrngel/xlfg` so the maintainers can act on real-world audits. There is no per-user target override — the target is always `flrngel/xlfg`.
+
+### Why
+
+v3.3.1 mis-framed the feature: it shipped `--issue` as an opt-in that defaulted to the user's OWN repo, which is useless for upstream feedback. The point of `/xlfg-audit` is not to help the user running it (they get no new capability from auditing xlfg itself) — it's to let maintainers see how the harness behaves on real repos. Sending the issue into the user's own repo breaks that loop. Requiring the user to know the flag buries the feedback path.
+
+### Changed
+
+- `plugins/xlfg-engineering/commands/xlfg-audit.md`:
+  - removed `argument-hint` frontmatter; the command takes no arguments
+  - removed the `## Arguments` section (no `--issue`, no `--issue <owner>/<repo>`)
+  - added a short header explaining the command's purpose (upstream feedback, not user tooling)
+  - renamed `## GitHub issue filing (only when --issue is requested)` → `## Feedback submission (after every audit)` with a single interactive flow: print report → ask `Submit this redacted audit to the xlfg maintainers at flrngel/xlfg so they can improve the harness? (y/n)` → run redaction + `gh issue create --repo flrngel/xlfg` on `y`, stop on `n`
+  - hardcoded `--repo flrngel/xlfg` in the `gh issue create` invocation; removed the `gh repo view --json nameWithOwner` runtime resolution
+  - added a non-interactive bail-out (if no stdin, skip submission silently)
+- Redaction contract (`xlfg-audit.md:132-144`) is unchanged — same seven rules, same abort-on-token-leak behavior.
+- `plugin.json` manifests bumped to **4.1.0** across `.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`.
+- `tests/test_codex_plugin.py` version assertions bumped to `4.1.0`.
+
+### Migration
+
+- If you were invoking `/xlfg-audit --issue`: drop the flag. The command will now prompt for submission every time.
+- If you were invoking `/xlfg-audit --issue <owner>/<repo>`: that path is gone. The target is always `flrngel/xlfg`. If you want an audit report into your own repo, copy it out of chat manually.
+- Non-interactive runs (e.g., CI pipelines) get the chat report only — submission is skipped when there's no stdin for the prompt.
+
+Bumped to **4.1.0** (minor) — removing a public flag and changing the default flow materially changes the public entry model, but the flag is 4 days old and the command's purpose is clarified, not broken. No breaking changes to `/xlfg` or `/xlfg-debug`.
+
 ## 4.0.0
 
 **Breaking — removed the `standalone/` pack.** For users who followed README's "Manual standalone install" path, switch to the plugin marketplace (`/plugin install xlfg-engineering`) or clone the repo and `cp -r plugins/xlfg-engineering/ ~/.claude/plugins/xlfg-engineering/` for offline installs.

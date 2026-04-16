@@ -1,6 +1,29 @@
 # Next agent context
 
-## Current state (3.3.1)
+## Current state (4.1.0)
+
+4.1.0 makes `/xlfg-audit` a feedback loop to the xlfg maintainers. The command takes no arguments. After every audit:
+
+1. Print the full chat report (summary table first, detail after).
+2. Ask the user verbatim: `Submit this redacted audit to the xlfg maintainers at flrngel/xlfg so they can improve the harness? (y/n)`
+3. On `y`: run the redaction contract, then `gh issue create --repo flrngel/xlfg …`. On `n` (or any non-`y`): print `ok, not submitting.` and stop. On non-interactive contexts: skip submission silently.
+
+The target is **always `flrngel/xlfg`**. There is no per-user override, no `--issue` flag, and no `gh repo view` runtime resolution. The point of `/xlfg-audit` is not to help the user running it — they get no new capability from auditing xlfg itself. It exists so the maintainers can see how the harness behaves on real repos and fix what breaks. The v3.3.1 design (opt-in flag defaulting to the user's own repo) broke that loop; 4.1.0 flips it into a phone-home feedback path where the answer is the submission itself.
+
+Why this matters:
+- A feature that only runs behind a flag the user has to know yields zero submissions in practice. Maintainers see nothing. Burying the feedback path defeats the command.
+- Filing into the user's own repo is actively wrong — the audit is about xlfg, not about the user's project, so the user's own tracker is the wrong destination.
+- The prompt-every-time design means the user is always in the loop about the submission; there is no silent phone-home.
+
+If you continue from here:
+- Do **not** re-introduce a `--issue` flag or any per-user target override. The target is `flrngel/xlfg`, hardcoded. If someone asks to file into their own repo, tell them to copy the chat report manually.
+- Do **not** re-introduce `gh repo view --json nameWithOwner` resolution. 3.3.1's "default to the user's cwd repo" behavior is gone and must not return.
+- Do **not** remove the prompt. Always-submit-silently is a phone-home without consent, which is worse than the 3.3.1 opt-in design.
+- Keep the redaction contract intact. Home paths, emails, git identity, hostnames, Signed-off-by, Co-authored-by — all still stripped before filing. Token-shape detection still **aborts** filing rather than trying to clean.
+- If the audit grows new sections, the summary-table row count must still match the section count, same rule as 3.3.1.
+- This supersedes the 3.3.1 guidance that said "Do not turn `/xlfg-audit --issue` into a prompt-before-filing flow." That rule applied to the old CI-friendly opt-in design. The command's purpose has since been clarified: it is a feedback tool, not a CI artifact producer. The prompt-always design is the correct shape for the clarified purpose.
+
+## Previous state (3.3.1)
 
 3.3.1 is a pure-prompt upgrade to `/xlfg-audit`. Two behaviors changed and nothing else:
 

@@ -1,6 +1,5 @@
 ---
-description: Audit the xlfg harness itself — version sync, SDLC coverage, workflow load, and Claude Code compatibility. Optional GitHub issue filing with personal-info redaction.
-argument-hint: "[--issue | --issue <owner/repo>]"
+description: Audit the xlfg harness itself — version sync, SDLC coverage, workflow load, Claude Code compatibility. Offers to submit the redacted report to flrngel/xlfg to improve the harness.
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, LS, Bash
 effort: medium
@@ -10,17 +9,11 @@ effort: medium
 
 Measure the harness itself, not the user's project.
 
-Unlike pre-3.0.0 audit, this command has no Python CLI behind it. Every check below is a concrete file read or frontmatter inspection Claude can perform deterministically. Run each check, collect the values, then produce the per-check summary table FIRST, followed by the supporting detail described at the bottom.
+`/xlfg-audit` exists so the xlfg maintainers can see how the harness behaves on real repos and fix what breaks. The user running the command does not get a new feature from the audit — they get a way to help upstream improve xlfg. That is the whole point of the command.
 
-## Arguments
+Unlike pre-3.0.0 audit, this command has no Python CLI behind it. Every check below is a concrete file read or frontmatter inspection Claude can perform deterministically. Run each check, collect the values, print the per-check summary table FIRST followed by the supporting detail, then always offer to submit the redacted report to `flrngel/xlfg`.
 
-INPUT: `$ARGUMENTS`
-
-- no arguments — run the audit and print the report to the chat only
-- `--issue` — run the audit, then file the redacted report as a GitHub issue in the current repo (uses `gh issue create`, current repo inferred from `gh repo view --json nameWithOwner`)
-- `--issue <owner>/<repo>` — file the redacted report as a GitHub issue in the named repo instead
-
-If `--issue` is requested but `gh` is not installed or not authenticated (`gh auth status` fails), skip issue creation, print a one-line warning, and still show the full report in chat.
+Takes no arguments.
 
 ## Checks
 
@@ -119,15 +112,19 @@ Produce, in this order:
 - No network calls during check execution. Everything is a deterministic read of files already in the repo.
 - If a check cannot be performed because a file is missing, report `fail` with the missing path, not `skip`.
 
-## GitHub issue filing (only when `--issue` is requested)
+## Feedback submission (after every audit)
 
-When the user passes `--issue`, after producing the chat report, also file a GitHub issue with the report body. Do this only if:
+After printing the full chat report, always offer to submit a redacted copy to the xlfg maintainers' tracker at `flrngel/xlfg` so they can act on the audit. The target repo is fixed — it is always `flrngel/xlfg`, never the user's own repo. That is the point of the feedback loop.
 
-- the first argument is exactly `--issue` (optionally followed by a single `<owner>/<repo>` token)
-- `gh auth status` succeeds (run it and check exit code)
-- we are inside a git repo OR an explicit `<owner>/<repo>` was given
+Flow:
 
-If any precondition fails, print one warning line explaining which precondition failed and skip the `gh` call. Do not prompt, do not retry.
+1. Run the audit and print the full report to chat (summary table first, detail after).
+2. Ask the user one yes/no question, verbatim: `Submit this redacted audit to the xlfg maintainers at flrngel/xlfg so they can improve the harness? (y/n)`
+3. Wait for the user's answer.
+4. On `n` (or any non-`y` response): print `ok, not submitting.` and stop.
+5. On `y`: check `gh auth status`. If it fails, print one warning line (`gh not authenticated — skipping submission`) and stop. Otherwise run the redaction contract, then file the issue. Do not retry on failure; print `gh` stderr verbatim and stop.
+
+Never run step 2 in a non-interactive context where prompting is impossible (e.g., a scripted pipeline with no stdin). If the model cannot ask the user, skip submission silently and end on the chat report.
 
 ### Redaction contract (mandatory before filing)
 
@@ -151,10 +148,11 @@ Do the redaction in a scratch variable before invoking `gh`. Show the user a one
 
 ### Invocation
 
-Use `gh issue create` with a heredoc so the body preserves Markdown:
+Always file into `flrngel/xlfg`. The target is hardcoded; there is no per-user override. Use `gh issue create` with a heredoc so the body preserves Markdown:
 
 ```bash
 gh issue create \
+  --repo flrngel/xlfg \
   --title "xlfg-audit report — v<version> — <date>" \
   --body-file <(cat <<'EOF'
 <redacted report>
@@ -163,6 +161,4 @@ EOF
   --label audit --label xlfg
 ```
 
-If `<owner>/<repo>` was supplied, pass `--repo <owner>/<repo>` as well.
-
-On success, print the issue URL that `gh` returns. On failure, print the `gh` stderr verbatim and keep the chat report — do not retry.
+On success, print the issue URL that `gh` returns so the user can see where the feedback went. On failure, print the `gh` stderr verbatim and keep the chat report — do not retry.

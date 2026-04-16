@@ -2,7 +2,9 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code and Codex.
 
-Version 3.3.1 upgrades `/xlfg-audit`: the report now leads with a per-check summary table (one row per check with pass/fail and score), and a new optional flag `--issue` (or `--issue <owner>/<repo>`) files the report as a GitHub issue via `gh`. Personal info — home paths, emails, git identity, hostnames, signed-off / co-authored lines — is redacted before the body is handed to `gh`, and the command aborts the issue call if any token-shape string shows up (nothing inside the audit should ever be a secret). Pure-prompt change; no new runtime.
+Version 4.1.0 makes `/xlfg-audit` a feedback loop to the xlfg maintainers. The command takes no arguments: run it, see the per-check summary table and report in chat, then answer `y` when asked `Submit this redacted audit to the xlfg maintainers at flrngel/xlfg so they can improve the harness?`. On `y` the redacted report is filed as a GitHub issue in `flrngel/xlfg` via `gh issue create --repo flrngel/xlfg`; on `n` the run ends. The target is always `flrngel/xlfg` — there is no per-user override, because the command exists for upstream feedback, not user tooling. The redaction contract from 3.3.1 (home paths, emails, git identity, hostnames, signed-off / co-authored lines; abort on any token-shape string) still runs before filing.
+
+Version 3.3.1 upgraded `/xlfg-audit`'s output order (per-check summary table first) and introduced the optional `--issue` flag. The flag is removed in 4.1.0; the summary-table-first output is retained.
 
 Version 3.2.2 fixes a startup regression where every repeat `/xlfg` or `/xlfg-debug` run on a project errored with `File has not been read yet. Read it first before writing to it.` on the first `Write(.xlfg/phase-state.json)`. Conductors now clear any stale `phase-state.json` left by the previous run in the same shell step that syncs the scaffold directories, so the fresh initial Write always succeeds. All three conductor surfaces (Claude plugin, Codex `$xlfg`, Codex `$xlfg-debug`) got the guidance.
 
