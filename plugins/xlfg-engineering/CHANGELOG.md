@@ -1,3 +1,16 @@
+## 3.3.1
+
+`/xlfg-audit` upgrade — lead with a per-check summary table, and optionally file the report as a GitHub issue with personal-info redaction baked in. Pure-prompt change; no new runtime.
+
+- `plugins/xlfg-engineering/commands/xlfg-audit.md` now prints a **per-check summary table first** (one row per check 1–7 with `status`, `score`, `note`). Headline scores, top load drivers, compatibility gaps, improvements, and verdict follow the table. This inverts the old order so a reader can see pass/fail at a glance before scrolling into detail.
+- `xlfg-audit` accepts `--issue` (file into the current repo via `gh repo view`) or `--issue <owner>/<repo>` (file into a named repo). Preconditions: `gh auth status` succeeds, we are in a git repo or a `<owner>/<repo>` was given. If a precondition fails, the command warns once and still prints the chat report — it never prompts, never retries.
+- Added a **redaction contract** that runs before any `gh issue create` call: strip `/Users/<name>/…`, `/home/<name>/…`, `C:\\Users\\<name>\\…` paths (inside-repo paths collapse to repo-relative; outside-repo paths get `<redacted>`), replace emails with `<email-redacted>`, drop git identity / hostname / `Signed-off-by` / `Co-authored-by` lines, and **abort** the `gh` call if any token-shape string (`ghp_`, `github_pat_`, `xox[baprs]-`, `sk-`, `AIza`, `AKIA`, `-----BEGIN`) appears — the audit body should never contain secrets, so a hit means something leaked.
+- Issue shape: title `xlfg-audit report — v<plugin_version> — <YYYY-MM-DD>`, body is the redacted Markdown report (summary table on top), labels `audit` and `xlfg` (added non-fatal — `gh` fails silently if the target repo doesn't have them).
+- `argument-hint` updated from `[no arguments]` to `[--issue | --issue <owner/repo>]`; command `description` now mentions the optional GitHub issue filing.
+- `tests/test_codex_plugin.py` version assertions bumped to `3.3.1`.
+
+Bumped to **3.3.1** (patch) — public entry model unchanged; the default `/xlfg-audit` invocation stays local-only.
+
 ## 3.3.0
 
 Restore `/xlfg-init` and `/xlfg-audit` — both were deleted in v3.0.0 as part of the Python CLI removal. That deletion was over-broad: `xlfg-init.md` was always a pure-prompt markdown command with zero CLI calls, and `xlfg-audit.md` was salvageable as a deterministic harness self-audit without the Python scoring pipeline. Living docs (`plugins/xlfg-engineering/CLAUDE.md:49`, `docs/planning-autonomy-2026-refresh.md:113`) still named both as maintenance commands, so the deletion broke its own contract.

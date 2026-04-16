@@ -1,6 +1,24 @@
 # Next agent context
 
-## Current state (3.3.0)
+## Current state (3.3.1)
+
+3.3.1 is a pure-prompt upgrade to `/xlfg-audit`. Two behaviors changed and nothing else:
+
+1. **Summary table leads.** The report now prints a per-check table (one row per check 1–7 with `status` / `score` / `note`) as the very first block. Headline scores, load drivers, gaps, improvements, and verdict come after. The old layout buried the table between the checks and the prose; a reader could not see pass/fail at a glance without scrolling.
+2. **Optional GitHub issue filing with redaction.** `/xlfg-audit --issue` (or `/xlfg-audit --issue <owner>/<repo>`) files the redacted report as a `gh issue create` call. Preconditions are checked up front (`gh auth status`, inside a git repo or explicit `<owner>/<repo>`) and on failure the command prints a single warning and keeps the chat report — it does not prompt, does not retry. The redaction contract strips home paths (`/Users/<name>/…`, `/home/<name>/…`, `C:\Users\<name>\…`), emails, git identity, hostnames, `Signed-off-by` / `Co-authored-by` lines, and **aborts** the `gh` call if any token-shape string appears (`ghp_`, `github_pat_`, `xox[baprs]-`, `sk-`, `AIza`, `AKIA`, `-----BEGIN`).
+
+Why this matters:
+- The per-check summary table was already in the output format, but buried. Moving it to the top makes the audit scannable in the same way that `gh pr checks` is — a reader sees the verdict before the detail.
+- Filing the audit as an issue is how harness regressions get prioritized on real repos. Doing it via the command (rather than copy-paste) lets the redaction contract run deterministically every time instead of depending on the user to remember to scrub paths.
+- The redaction rules are *conservative*: if a secret-shape string leaks into the audit body, we abort filing rather than try to clean it, because a leak means something upstream is broken and filing it to GitHub would make it worse.
+
+If you continue from here:
+- Do **not** turn `/xlfg-audit --issue` into a prompt-before-filing flow. It is a deliberate "quiet if preconditions fail, file if they hold" design. Adding a confirmation prompt would break its usefulness inside a non-interactive CI / run loop.
+- If the audit grows new sections, keep the summary table row count aligned with the section count. New checks must add a row.
+- Keep the redaction list a **hard-coded set** inside the command prompt. Do not delegate redaction to a helper script — the prompt is the only place the rules are actually enforced right now, and splitting them into a script would re-introduce the Python-CLI surface that 3.0.0 removed.
+- When adding labels to the issue, never auto-create them on the target repo; the current shape lets `gh` fail silently on missing labels, which is correct behavior for a third-party tool filing into someone else's repo.
+
+## Previous state (3.3.0)
 
 3.3.0 restores `/xlfg-init` and `/xlfg-audit`, two plugin commands deleted in v3.0.0 as part of the Python CLI removal. The v3.0.0 cleanup was over-broad: `xlfg-init.md` was always a pure-prompt markdown file with zero CLI calls (it just told the model to create directories with Write), so bundling it with the CLI removal was an accident. `xlfg-audit.md` did have a Python scoring pipeline behind it, but the markdown-only fallback is salvageable as a deterministic self-audit if every numeric check is rewritten to concrete file reads and frontmatter inspections.
 
