@@ -1,6 +1,32 @@
 # Next agent context
 
-## Current state (4.1.1)
+## Current state (4.2.0)
+
+4.2.0 splits the audit surface into two commands serving two audiences. The previous `/xlfg-audit` was a category error: every "check" it ran (version sync, SDLC coverage, word counts, frontmatter regex, forbidden-token sweep) was a deterministic file read pretending to need an LLM. It also gave the user running it nothing — the report only existed to be phoned home to upstream maintainers. 4.1.1 fixed a path-anchoring bug inside that wrong shape; 4.2.0 fixes the shape itself.
+
+**The split:**
+
+- **`scripts/audit-harness.mjs` (new)** — port of all 6 former audit checks as a deterministic Node CLI. Wired into `.github/workflows/ci.yml` so every PR runs it. Exit 1 on any failure. Maintainer concern, runs without an LLM. Stale-`Task` sweep was tightened to inspect only the frontmatter `tools:` field (the previous regex flagged "## Task decomposition" headings in agent files as false positives).
+- **`/xlfg-audit` slash command (rewritten body)** — per-run post-mortem for the user who just ran `/xlfg`. Delegates to `scripts/post-mortem.mjs`, which reads the latest run dir's `phase-timings.jsonl`, lists artifacts and ledger entries, and emits a per-phase wall-time table plus heuristic suggestions for what could be faster or leaner. Submission to `flrngel/xlfg` is preserved with the same redaction contract plus a new rule for `RUN_ID` slug content.
+- **`scripts/phase-tick.mjs` (new)** — every phase Skill call in `commands/xlfg.md` and `commands/xlfg-debug.md` is now bracketed by two `phase-tick` invocations (start before, end after). Loopbacks emit fresh start/end pairs that the post-mortem sums. Best-effort writes — failures exit 0 so the conductor is never blocked.
+
+**Why this matters:**
+
+- The new `/xlfg-audit` answers the question users actually ask after a long run ("where did the time go?"). The old one answered a question only maintainers cared about, and answered it badly enough that the 4.1.1 anchoring bug shipped unnoticed.
+- The submitted-upstream report now contains real run data (per-phase wall time, loopback counts, which lane was slow). That's actionable feedback for the harness; the static manifest checks the old audit submitted were not.
+- `phase-timings.jsonl` is also useful outside `/xlfg-audit` — any future tooling that wants per-phase cost analysis (parallelization opportunities, retry budgets, specialist dispatch tuning) can read it.
+
+**If you continue from here:**
+
+- Do **not** put computation into `commands/xlfg-audit.md` — the body is intentionally a thin orchestrator. All data work lives in `scripts/post-mortem.mjs`. If you need a new metric, add it to the script (and a test under `tests/test_post_mortem.py`), not to the markdown.
+- Do **not** re-add manifest/frontmatter checks to the slash command. Those belong in `scripts/audit-harness.mjs` and CI. The slash command and the harness audit MUST stay separate.
+- Do **not** drop the `phase-tick` calls from the conductors. Without them, the post-mortem can only show artifact shape, not wall time, and the user's "why so slow" question goes unanswered. The phase-tick script is best-effort by design — write failures must never block the conductor, but the conductor must always emit the call.
+- Do **not** widen the stale-`Task` sweep back to body text. The frontmatter-only scope is the correct one; the previous body sweep had false positives on every legitimate use of the English word "Task".
+- The `flrngel/xlfg` submission target stays hardcoded. Same rule as 4.1.0 — no per-user override, no `--issue` flag, no `gh repo view` runtime resolution.
+
+This supersedes the 4.1.1 path-anchor work in the slash command (the body has been replaced) but the architectural principle behind 4.1.1 — that an audit reads the right files for what it is auditing — is preserved by the new split. `audit-harness.mjs` reads the plugin; `post-mortem.mjs` reads the cwd's run dir. The two never overlap, so the anchor bug class can't return.
+
+## Previous state (4.1.1)
 
 4.1.1 fixes a real bug in `/xlfg-audit`: it never anchored its file reads to the installed plugin location, so when run from any target repo the dispatched agents scanned the user's cwd instead. The audit's own opening line says "Measure the harness itself, not the user's project" — and yet the implementation did the opposite anywhere outside the xlfg source repo.
 

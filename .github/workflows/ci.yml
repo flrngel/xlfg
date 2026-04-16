@@ -18,3 +18,9 @@ jobs:
       - name: Run unit tests
         run: |
           python3 -m unittest discover -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: xlfg harness self-audit
+        run: |
+          node plugins/xlfg-engineering/scripts/audit-harness.mjs

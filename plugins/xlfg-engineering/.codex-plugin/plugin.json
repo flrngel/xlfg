@@ -1,6 +1,6 @@
 {
   "name": "xlfg-engineering",
-  "version": "4.1.1",
+  "version": "4.2.0",
   "description": "Autonomous, proof-first SDLC harness for Codex with file-backed run cards, scenario proof, review, and compounding.",
   "author": {
     "name": "xlfg",

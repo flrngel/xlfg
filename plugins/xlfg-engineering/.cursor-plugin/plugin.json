@@ -1,6 +1,6 @@
 {
   "name": "xlfg-engineering",
-  "version": "4.1.1",
+  "version": "4.2.0",
   "description": "Skill-first autonomous SDLC harness for Claude Code with lean run cards, proof, review, and compounding.",
   "author": {
     "name": "xlfg",

@@ -1,5 +1,5 @@
 {
-  "tool_version": "2.7.1",
+  "tool_version": "4.2.0",
   "scaffold_schema_version": 12,
   "run_tracking": "local-only",
   "knowledge_tracking": "tracked",

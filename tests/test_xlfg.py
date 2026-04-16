@@ -125,42 +125,30 @@ class TestXLFG(unittest.TestCase):
                 text = path.read_text(encoding="utf-8")
                 self.assertNotIn("query-contract.md", text, msg=str(path.relative_to(repo_root)))
 
-    def test_xlfg_audit_anchors_plugin_paths_to_plugin_root(self) -> None:
+    def test_xlfg_audit_is_per_run_post_mortem_not_harness_self_check(self) -> None:
+        # As of v4.2.0 /xlfg-audit is the per-run user post-mortem.
+        # The harness self-check moved to scripts/audit-harness.mjs and
+        # runs in CI. The slash command body must:
+        #   - delegate to scripts/post-mortem.mjs (no inline computation)
+        #   - preserve the flrngel/xlfg submission flow (with redaction)
+        #   - NOT attempt to inspect plugin manifests / SKILL frontmatter
         repo_root = Path(__file__).resolve().parents[1]
         audit_text = (repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-audit.md").read_text(encoding="utf-8")
 
-        # The "Locate the plugin" preamble must exist and resolve a $PLUGIN
-        # variable from $CLAUDE_PLUGIN_ROOT with a source-repo fallback.
-        # Without this, the audit scans the user's cwd instead of the
-        # installed plugin.
-        self.assertIn("## Locate the plugin", audit_text)
-        self.assertIn('PLUGIN="${CLAUDE_PLUGIN_ROOT:-}"', audit_text)
-        self.assertIn("./plugins/xlfg-engineering/.claude-plugin", audit_text)
-
-        # Every path that targets a plugin-internal file in checks 1-5 must
-        # be prefixed with $PLUGIN/. Spot-check the canonical entries; if
-        # any of these regress to a bare path, the audit will start
-        # scanning the user's cwd again.
-        for required in (
-            "$PLUGIN/.claude-plugin/plugin.json",
-            "$PLUGIN/.cursor-plugin/plugin.json",
-            "$PLUGIN/.codex-plugin/plugin.json",
-            "$PLUGIN/skills/xlfg-recall-phase/",
-            "$PLUGIN/skills/xlfg-debug-phase/",
-            "$PLUGIN/commands/xlfg.md",
-            "$PLUGIN/commands/xlfg-debug.md",
-            "$PLUGIN/agents/**/*.md",
-            "$PLUGIN/codex/skills/xlfg/SKILL.md",
-            "$PLUGIN/codex/skills/xlfg-debug/SKILL.md",
-        ):
-            self.assertIn(required, audit_text, msg=f"missing $PLUGIN anchor: {required}")
-
-        # Check 6 is the only one allowed to read from cwd (it inspects
-        # the user's scaffold). Confirm it still does, and confirm the
-        # missing-file outcome is `warn:` not `fail:` — invoking the
-        # audit outside an xlfg-initialized project is legitimate.
-        self.assertIn("./docs/xlfg/meta.json", audit_text)
-        self.assertIn("warn: no scaffold in cwd", audit_text)
+        # delegates to the post-mortem script
+        self.assertIn("scripts/post-mortem.mjs", audit_text)
+        # preserves submission target (hardcoded; no per-user override)
+        self.assertIn("--repo flrngel/xlfg", audit_text)
+        # preserves redaction contract
+        self.assertIn("Redaction contract", audit_text)
+        # is no longer pretending to be the harness self-check
+        self.assertNotIn("Version sync", audit_text)
+        self.assertNotIn("SDLC coverage", audit_text)
+        self.assertNotIn("workflow_load_score", audit_text)
+        # forbidden tokens that previously lived in the audit body must
+        # NOT appear here either — the new body is a thin orchestrator,
+        # not a check definition
+        self.assertNotIn("query-contract.md", audit_text)
 
     def test_plugin_support_skills_are_hidden_background_helpers(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

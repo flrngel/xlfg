@@ -1,3 +1,38 @@
+## 4.2.0
+
+**`/xlfg-audit` is now the per-run user post-mortem.** The harness self-check (manifests, frontmatter, word counts) moved to `scripts/audit-harness.mjs` and runs in CI on every PR. Phase boundaries are now timed: every `/xlfg` and `/xlfg-debug` run records a `phase-timings.jsonl` in its run dir, and `/xlfg-audit` reads it to produce a per-phase wall-time table plus concrete, data-driven suggestions for how the harness can be faster or leaner. The `flrngel/xlfg` submission flow is preserved — but now what gets submitted is real run data, not static manifest checks.
+
+### Why
+
+The previous `/xlfg-audit` was a category error. Every check was a deterministic file read (`jq .version`, `wc -w`, regex on frontmatter) wearing a slash-command costume. It needed no LLM and gave the user running it nothing — it existed only to phone home harness shape to upstream maintainers. The 4.1.1 path-anchor bug was exactly the kind of bug that doesn't happen when an actual script with a hardcoded `__dirname` is doing the work.
+
+Meanwhile, the question users actually ask after a 45-minute `/xlfg` run is "what did this run do, and why was it slow?" — and the harness had no answer because it never recorded per-phase timings.
+
+4.2.0 splits the two concerns:
+
+- **Maintainer concern → script + CI.** `scripts/audit-harness.mjs` runs all 6 checks deterministically. Wired into `.github/workflows/ci.yml`. Exits 1 on any check fail, so PR review surfaces drift automatically.
+- **User concern → slash command.** `/xlfg-audit` reads the latest run dir, computes per-phase wall time from `phase-timings.jsonl`, lists artifacts and ledger entries, and emits suggestions tied to the data (loopback count, slow-phase identification, oversized artifacts). Submission to `flrngel/xlfg` is preserved with the same redaction contract plus a new rule for run-slug content.
+
+### Changed
+
+- `plugins/xlfg-engineering/scripts/phase-tick.mjs` (new): writes `{run, phase, event, ts}` to `docs/xlfg/runs/<RUN_ID>/phase-timings.jsonl`. Best-effort: write failures exit 0 so the conductor is never blocked.
+- `plugins/xlfg-engineering/scripts/post-mortem.mjs` (new): deterministic per-run report. Reads timings, run artifacts, and ledger entries; emits Markdown or JSON. Heuristic suggestions for slow phases, loopbacks, and oversized artifacts.
+- `plugins/xlfg-engineering/scripts/audit-harness.mjs` (new): port of all 6 former audit checks (version sync, SDLC coverage, workflow load, Claude Code compat, Codex surface integrity, scaffold consistency). Deterministic. Stale-`Task`-token sweep tightened to inspect only the frontmatter `tools:` field, fixing two false positives on `## Task decomposition` headings in agent files.
+- `plugins/xlfg-engineering/commands/xlfg-audit.md`: body completely rewritten as the per-run post-mortem orchestrator. Delegates to `scripts/post-mortem.mjs`, prints output, asks the user about submission, redacts, files into `flrngel/xlfg`. New redaction rule covers `RUN_ID` slug content (titles can carry product names).
+- `plugins/xlfg-engineering/commands/xlfg.md` and `xlfg-debug.md`: each phase Skill call is now bracketed by two `phase-tick` invocations (start before, end after). Loopbacks emit fresh start/end pairs. Best-effort writes never block the conductor.
+- `.github/workflows/ci.yml`: adds a Node 20 step that runs `node plugins/xlfg-engineering/scripts/audit-harness.mjs`. Failing audit fails CI.
+- `docs/xlfg/meta.json`: `tool_version` synced to `4.2.0` (was stale at `2.7.1` and surfaced by the new audit-harness check 6).
+- `plugin.json` manifests bumped to **4.2.0** across `.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`.
+- `tests/test_phase_tick.py`, `tests/test_post_mortem.py`, `tests/test_audit_harness.py` (new): 13 new tests covering JSONL output, wall-time computation, loopback handling, exit codes, and the false-positive regression on the stale-`Task` sweep.
+- `tests/test_xlfg.py`: replaced `test_xlfg_audit_anchors_plugin_paths_to_plugin_root` (no longer relevant — the audit body is now a thin orchestrator) with `test_xlfg_audit_is_per_run_post_mortem_not_harness_self_check`.
+- `tests/test_codex_plugin.py`: version pins bumped to `4.2.0`.
+
+### Migration
+
+- **For users:** `/xlfg-audit` now reports on your latest run instead of the harness. If you ran `/xlfg` before installing 4.2.0, that run will say `n/a (no phase-timings.jsonl)` because timings only start being recorded from 4.2.0 onward. The next `/xlfg` you start will produce a fully timed post-mortem.
+- **For maintainers:** the harness self-check now runs in CI automatically. To run it locally: `node plugins/xlfg-engineering/scripts/audit-harness.mjs`. JSON output is available with `--json` for tooling.
+- **No breaking changes** for consumers of the slash command surface — `/xlfg-audit` is still the right command to run after a long run; the report it produces is just useful now.
+
 ## 4.1.1
 
 **`/xlfg-audit` now anchors every check to `$CLAUDE_PLUGIN_ROOT` instead of guessing.** Previously the command said "read the plugin manifests" without naming a path, so when run from a target repo the dispatched agents scanned the user's cwd and either found nothing or conflated user-project files with plugin files. The audit was effectively broken outside the xlfg source repo.
