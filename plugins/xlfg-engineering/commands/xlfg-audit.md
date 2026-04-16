@@ -15,31 +15,51 @@ Unlike pre-3.0.0 audit, this command has no Python CLI behind it. Every check be
 
 Takes no arguments.
 
+## Locate the plugin (run this FIRST)
+
+Every check in sections 1–5 inspects the **installed plugin**, not the user's project. Resolve the plugin root once at the start of the audit and reuse it for every path:
+
+```bash
+PLUGIN="${CLAUDE_PLUGIN_ROOT:-}"
+if [ -z "$PLUGIN" ] && [ -d "./plugins/xlfg-engineering/.claude-plugin" ]; then
+  PLUGIN="$(pwd)/plugins/xlfg-engineering"   # running from the xlfg source repo
+fi
+if [ -z "$PLUGIN" ] || [ ! -f "$PLUGIN/.claude-plugin/plugin.json" ]; then
+  echo "fail: cannot locate plugin root (CLAUDE_PLUGIN_ROOT unset and no source-repo fallback)" >&2
+  exit 1
+fi
+echo "PLUGIN=$PLUGIN"
+```
+
+Print the resolved `$PLUGIN` value in the chat output so the user can see which install was audited. Every `Read`, `Grep`, `Glob`, and `Bash` path in checks 1–5 below MUST be prefixed with `$PLUGIN/`. Do NOT scan the cwd, do NOT scan the user's repo, and do NOT dispatch a subagent that searches outside `$PLUGIN`. Only check 6 reads from the user's project (`./docs/xlfg/meta.json`).
+
+If you delegate any check to an Agent, the prompt MUST include the resolved absolute `$PLUGIN` path and the explicit instruction "do not look outside this directory."
+
 ## Checks
 
 ### 1. Version sync
 
-Read the `version` field from all three plugin manifests:
+Read the `version` field from all three plugin manifests under `$PLUGIN`:
 
-- `.claude-plugin/plugin.json`
-- `.cursor-plugin/plugin.json`
-- `.codex-plugin/plugin.json`
+- `$PLUGIN/.claude-plugin/plugin.json`
+- `$PLUGIN/.cursor-plugin/plugin.json`
+- `$PLUGIN/.codex-plugin/plugin.json`
 
 **Pass** if all three agree. Otherwise list which manifests disagree.
 
 ### 2. SDLC coverage
 
-For each expected phase skill, check that the directory exists and contains a `SKILL.md`:
+For each expected phase skill, check that the directory exists under `$PLUGIN/skills/` and contains a `SKILL.md`:
 
-- `skills/xlfg-recall-phase/`
-- `skills/xlfg-intent-phase/`
-- `skills/xlfg-context-phase/`
-- `skills/xlfg-plan-phase/`
-- `skills/xlfg-implement-phase/`
-- `skills/xlfg-verify-phase/`
-- `skills/xlfg-review-phase/`
-- `skills/xlfg-compound-phase/`
-- `skills/xlfg-debug-phase/`
+- `$PLUGIN/skills/xlfg-recall-phase/`
+- `$PLUGIN/skills/xlfg-intent-phase/`
+- `$PLUGIN/skills/xlfg-context-phase/`
+- `$PLUGIN/skills/xlfg-plan-phase/`
+- `$PLUGIN/skills/xlfg-implement-phase/`
+- `$PLUGIN/skills/xlfg-verify-phase/`
+- `$PLUGIN/skills/xlfg-review-phase/`
+- `$PLUGIN/skills/xlfg-compound-phase/`
+- `$PLUGIN/skills/xlfg-debug-phase/`
 
 `sdlc_coverage_score` = present / 9. Higher is better.
 
@@ -47,32 +67,32 @@ For each expected phase skill, check that the directory exists and contains a `S
 
 Compute word counts (via `wc -w`) for:
 
-- `commands/xlfg.md`
-- `commands/xlfg-debug.md`
-- each `skills/xlfg-*-phase/SKILL.md`
+- `$PLUGIN/commands/xlfg.md`
+- `$PLUGIN/commands/xlfg-debug.md`
+- each `$PLUGIN/skills/xlfg-*-phase/SKILL.md`
 
 Report each file's word count. `workflow_load_score` = total words across the above files. **Lower is better.** Also list the top 3 files by size (the top load drivers) so future tuning can target them.
 
 ### 4. Claude Code compatibility
 
-For the two public commands (`commands/xlfg.md` and `commands/xlfg-debug.md` inside the plugin), confirm the frontmatter contains:
+For the two public commands (`$PLUGIN/commands/xlfg.md` and `$PLUGIN/commands/xlfg-debug.md`), confirm the frontmatter contains:
 
 - `allowed-tools:`
 - `effort:` (should be `high` for these)
 - `disable-model-invocation: true`
 - `hooks:` with a `PermissionRequest` → `ExitPlanMode` auto-allow
 
-For every phase skill under `skills/xlfg-*-phase/SKILL.md`, confirm the frontmatter contains:
+For every phase skill under `$PLUGIN/skills/xlfg-*-phase/SKILL.md`, confirm the frontmatter contains:
 
 - `user-invocable: false`
 - no `name:` field (hidden skills must omit `name` per the Codex split)
 
-Forbidden-token sweep across `commands/**`, `skills/**`, and `agents/**` inside the plugin:
+Forbidden-token sweep across `$PLUGIN/commands/**`, `$PLUGIN/skills/**`, and `$PLUGIN/agents/**`:
 
 - stale `Task` tool name (check with word-boundary patterns `, Task,`, `, Task\n`, `, Task `, ` Task(`, ` Task `) — `TaskCreate`/`TaskUpdate`/`TaskList` are legitimate and must not trigger
 - `query-contract.md` (forbidden reference to a deleted file)
 
-For every specialist agent under `agents/**/*.md` (excluding `_shared`) inside the plugin:
+For every specialist agent under `$PLUGIN/agents/**/*.md` (excluding `_shared`):
 
 - `maxTurns:` present and ≤ 150
 - no `Agent` or `SendMessage` in its `tools:` list (leaf-worker rule)
@@ -83,14 +103,14 @@ For every specialist agent under `agents/**/*.md` (excluding `_shared`) inside t
 
 Confirm exactly two public Codex skills:
 
-- `codex/skills/xlfg/SKILL.md`
-- `codex/skills/xlfg-debug/SKILL.md`
+- `$PLUGIN/codex/skills/xlfg/SKILL.md`
+- `$PLUGIN/codex/skills/xlfg-debug/SKILL.md`
 
 Confirm neither file contains any of these Claude-only tokens: `allowed-tools`, `Skill(`, `TaskCreate`, `TaskUpdate`, `TaskList`, `ExitPlanMode`, `PermissionRequest`, `CLAUDE_PLUGIN_ROOT`, `user-invocable`, `model:`, `effort:`, `sonnet`, `haiku`, `opus`.
 
 ### 6. Scaffold self-consistency
 
-If the current repo has a `docs/xlfg/meta.json`, read `tool_version` and compare against the plugin.json version from check 1. Flag drift.
+This is the ONLY check that reads from the user's current project (cwd), not from `$PLUGIN`. If `./docs/xlfg/meta.json` exists in the cwd, read `tool_version` and compare against the plugin.json version from check 1. Flag drift. If the file does not exist, report `warn: no scaffold in cwd` rather than `fail` — the user may have invoked the audit outside an xlfg-initialized project.
 
 ## Output format
 

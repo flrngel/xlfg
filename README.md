@@ -2,6 +2,8 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code and Codex.
 
+Version 4.1.1 fixes `/xlfg-audit` so every check is anchored to `$CLAUDE_PLUGIN_ROOT` (with a fallback for the xlfg source repo). Before this fix, the audit had no path anchor and the dispatched agents scanned the user's cwd instead of the installed plugin — meaning the audit either inspected the wrong files or conflated user-project state with plugin state. Only check 6 (scaffold self-consistency) still reads from cwd; that's the only check that's *supposed* to look at the user's project. Output, scoring, and the `flrngel/xlfg` submission flow from 4.1.0 are unchanged.
+
 Version 4.1.0 makes `/xlfg-audit` a feedback loop to the xlfg maintainers. The command takes no arguments: run it, see the per-check summary table and report in chat, then answer `y` when asked `Submit this redacted audit to the xlfg maintainers at flrngel/xlfg so they can improve the harness?`. On `y` the redacted report is filed as a GitHub issue in `flrngel/xlfg` via `gh issue create --repo flrngel/xlfg`; on `n` the run ends. The target is always `flrngel/xlfg` — there is no per-user override, because the command exists for upstream feedback, not user tooling. The redaction contract from 3.3.1 (home paths, emails, git identity, hostnames, signed-off / co-authored lines; abort on any token-shape string) still runs before filing.
 
 Version 3.3.1 upgraded `/xlfg-audit`'s output order (per-check summary table first) and introduced the optional `--issue` flag. The flag is removed in 4.1.0; the summary-table-first output is retained.

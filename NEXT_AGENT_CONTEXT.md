@@ -1,6 +1,20 @@
 # Next agent context
 
-## Current state (4.1.0)
+## Current state (4.1.1)
+
+4.1.1 fixes a real bug in `/xlfg-audit`: it never anchored its file reads to the installed plugin location, so when run from any target repo the dispatched agents scanned the user's cwd instead. The audit's own opening line says "Measure the harness itself, not the user's project" — and yet the implementation did the opposite anywhere outside the xlfg source repo.
+
+The fix is a `## Locate the plugin (run this FIRST)` preamble that resolves `PLUGIN="${CLAUDE_PLUGIN_ROOT:-}"`, falls back to `./plugins/xlfg-engineering` when invoked from the source repo (detected via the presence of `./plugins/xlfg-engineering/.claude-plugin/`), and aborts with `fail: cannot locate plugin root` if neither resolves. Every path in checks 1–5 (manifests, phase skills, public commands, agents, codex skills) is now prefixed with `$PLUGIN/`. Check 6 (scaffold self-consistency) remains the only check that reads from cwd, because that's where the user's `docs/xlfg/meta.json` actually lives — and its missing-file outcome was downgraded from `fail` to `warn` because invoking the audit outside an xlfg-initialized project is a legitimate use of the command.
+
+If you continue from here:
+- Do **not** drop the `$PLUGIN/` prefix from any check 1–5 path. The regression test `test_xlfg_audit_anchors_plugin_paths_to_plugin_root` will catch that, but the architectural intent matters more than the test: the audit inspects the plugin, not the user's repo.
+- Do **not** add `$PLUGIN/` to check 6. That check is **about** the user's project (it reads `./docs/xlfg/meta.json` to detect scaffold drift). Anchoring it to `$PLUGIN` would silently turn the check into a no-op.
+- Do **not** remove the source-repo fallback. `CLAUDE_PLUGIN_ROOT` is unset when developers run the audit against the xlfg source itself; the fallback is the only thing that keeps the audit usable during plugin development.
+- If a future audit grows a new check, decide explicitly which side it lives on (plugin vs. cwd) and document it in the same way as checks 1–5 vs. check 6.
+
+This supersedes nothing in the 4.1.0 guidance — the `flrngel/xlfg` feedback loop, the prompt-every-time submission flow, and the redaction contract are all unchanged. 4.1.1 is purely a "the audit now reads the right files" fix.
+
+## Previous state (4.1.0)
 
 4.1.0 makes `/xlfg-audit` a feedback loop to the xlfg maintainers. The command takes no arguments. After every audit:
 

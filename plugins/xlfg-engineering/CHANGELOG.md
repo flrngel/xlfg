@@ -1,3 +1,26 @@
+## 4.1.1
+
+**`/xlfg-audit` now anchors every check to `$CLAUDE_PLUGIN_ROOT` instead of guessing.** Previously the command said "read the plugin manifests" without naming a path, so when run from a target repo the dispatched agents scanned the user's cwd and either found nothing or conflated user-project files with plugin files. The audit was effectively broken outside the xlfg source repo.
+
+### Why
+
+Every other entrypoint (`commands/xlfg.md`, `hooks/hooks.json`) uses `${CLAUDE_PLUGIN_ROOT}/...` to locate plugin-internal scripts. The audit was the lone exception. With no anchor, the `Bash`/`Grep`/`Glob` calls inside the audit defaulted to the current working directory, which is the user's project — exactly the thing the audit is *not* supposed to inspect (per the command's own opening line: "Measure the harness itself, not the user's project."). In the xlfg source repo it accidentally worked because `plugins/xlfg-engineering/` happens to live in cwd; in any installed-plugin context it failed.
+
+### Changed
+
+- `plugins/xlfg-engineering/commands/xlfg-audit.md`:
+  - added a `## Locate the plugin (run this FIRST)` preamble that resolves `PLUGIN="${CLAUDE_PLUGIN_ROOT:-}"` with a source-repo fallback (`./plugins/xlfg-engineering` if the `.claude-plugin/` dir is present in cwd) and aborts with a `fail:` line if neither resolves
+  - prefixed every path in checks 1–5 with `$PLUGIN/` (manifests, phase skills, public commands, agents, codex skills)
+  - clarified that check 6 (scaffold self-consistency) is the **only** check that reads from cwd, and downgraded its missing-file outcome from `fail` to `warn: no scaffold in cwd` because invoking the audit outside an xlfg-initialized project is legitimate
+  - explicit instruction that any delegated Agent prompt must include the absolute `$PLUGIN` path and the directive "do not look outside this directory"
+- `plugin.json` manifests bumped to **4.1.1** across `.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`.
+- `tests/test_codex_plugin.py` version assertions bumped to `4.1.1`.
+- `tests/test_xlfg.py` adds `test_xlfg_audit_anchors_plugin_paths_to_plugin_root` to lock the anchor pattern so the next refactor cannot silently drop it.
+
+### Migration
+
+No user-visible behavior change for the audit's output — same checks, same scoring, same submission flow. The fix is invisible when you happen to be in the xlfg source repo (the fallback catches it) and visible everywhere else as "the audit now actually inspects the installed plugin instead of your project."
+
 ## 4.1.0
 
 **`/xlfg-audit` is now a feedback loop to the xlfg maintainers.** The optional `--issue` flag is gone. After every audit, the command asks the user whether to submit the redacted report to `flrngel/xlfg` so the maintainers can act on real-world audits. There is no per-user target override — the target is always `flrngel/xlfg`.
