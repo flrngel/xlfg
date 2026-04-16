@@ -118,6 +118,13 @@ class TestXLFG(unittest.TestCase):
         self.assertIn("phase-state.json", standalone_md)
         self.assertIn("phase-state tracking", command_md.lower())
         self.assertIn("phase-state tracking", standalone_md.lower())
+
+        # v3.2.2 regression guard: startup must clear any stale
+        # `.xlfg/phase-state.json` from a prior run. Without this, Claude
+        # Code's Write tool errors with "File has not been read yet. Read
+        # it first before writing to it." on every repeat /xlfg run.
+        self.assertIn("rm -f .xlfg/phase-state.json", command_md)
+        self.assertIn("rm -f .xlfg/phase-state.json", standalone_md)
         # Stop hook: standalone has it in SKILL.md frontmatter; plugin has it in hooks.json only
         self.assertIn("Stop:", standalone_md)
         self.assertIn("phase-gate.mjs", standalone_md)

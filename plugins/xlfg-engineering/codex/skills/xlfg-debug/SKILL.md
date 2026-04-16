@@ -27,6 +27,8 @@ Treat the invocation as one autonomous diagnosis run. Do not edit product source
 
 ## Phase State
 
+Before writing `.xlfg/phase-state.json`, clear any stale file from a prior run (`rm -f .xlfg/phase-state.json`). Write-tools in some harnesses (for example Claude Code) refuse to overwrite a file the session has not read; removing it first keeps startup unblocked across surfaces.
+
 Write `.xlfg/phase-state.json` after startup:
 
 ```json

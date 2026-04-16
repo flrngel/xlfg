@@ -1,6 +1,29 @@
 # Next agent context
 
-## Current state (3.2.1)
+## Current state (3.2.2)
+
+3.2.2 is a startup-hygiene bug fix. Before this, every repeat `/xlfg` or
+`/xlfg-debug` run on a project that already had a `.xlfg/phase-state.json`
+from a prior run died on the first `Write(.xlfg/phase-state.json)` with
+`File has not been read yet. Read it first before writing to it.` — Claude
+Code's Write tool refuses to overwrite an existing file the current session
+has never read, and the conductor's very first Write was against a stale
+file from the previous run.
+
+The fix is a single instruction in each conductor entrypoint: run
+`rm -f .xlfg/phase-state.json` in the same shell step that syncs the
+scaffold directories, so the initial Write always sees an absent target.
+The phase-gate Stop hook already tolerates a missing `phase-state.json`
+(exits 0), and the conductor writes the initial state immediately after,
+so the removal window is trivial. The same `rm -f` guidance was added to
+the Codex `$xlfg` and `$xlfg-debug` skills for consistency.
+
+Do not roll this back into a "Read first if present, then Write" pattern.
+The reset semantics are intentional: each run starts from a clean phase
+ledger, which also prevents the Stop hook from carrying forward
+`completed` entries from a previous run.
+
+## Previous state (3.2.1)
 
 3.2.1 removes the Context7 MCP dependency. Nothing in the runtime actually
 called into it, so keeping the server wired up was just a surface risk. The

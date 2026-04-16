@@ -2,6 +2,8 @@
 
 `xlfg` is an autonomous, proof-first SDLC harness for Claude Code and Codex.
 
+Version 3.2.2 fixes a startup regression where every repeat `/xlfg` or `/xlfg-debug` run on a project errored with `File has not been read yet. Read it first before writing to it.` on the first `Write(.xlfg/phase-state.json)`. Conductors now clear any stale `phase-state.json` left by the previous run in the same shell step that syncs the scaffold directories, so the fresh initial Write always succeeds. All four conductor surfaces (Claude plugin, standalone, Codex `$xlfg`, Codex `$xlfg-debug`) got the guidance.
+
 Version 3.2.0 adds first-class Codex support. Codex installs through
 `.codex-plugin/plugin.json` and the repo marketplace at
 `.agents/plugins/marketplace.json`, exposing `$xlfg` and `$xlfg-debug` as

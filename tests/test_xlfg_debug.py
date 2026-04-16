@@ -54,6 +54,10 @@ class TestXLFGDebug(unittest.TestCase):
         self.assertIn("Sync scaffold if missing or stale", standalone_md)
         self.assertIn("write the lean core run directories", command_md)
         self.assertIn("write the lean core run directories", standalone_md)
+        # v3.2.2 regression guard: repeat runs must not error on the first
+        # phase-state Write because a stale file exists from a prior run.
+        self.assertIn("rm -f .xlfg/phase-state.json", command_md)
+        self.assertIn("rm -f .xlfg/phase-state.json", standalone_md)
         self.assertIn("xlfg-engineering:xlfg-debug-phase", command_md)
         self.assertIn("xlfg-debug-phase", standalone_md)
         self.assertIn("Stop:", standalone_md)

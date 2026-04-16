@@ -1,3 +1,26 @@
+## 3.2.2
+
+Bug fix — every `/xlfg` or `/xlfg-debug` run on a project that had previously
+invoked xlfg hit `File has not been read yet. Read it first before writing to
+it.` on the very first `Write(.xlfg/phase-state.json)`. Claude Code's Write
+tool refuses to overwrite an existing file the current session has not read,
+so the stale `phase-state.json` left by the prior run was effectively a
+poison pill for the next conductor.
+
+- `plugins/xlfg-engineering/commands/xlfg.md` and `xlfg-debug.md` startup
+  step 1 now tells the conductor to `rm -f .xlfg/phase-state.json` in the
+  same shell step that creates the scaffold directories, and explains why.
+- Standalone mirrors (`standalone/.claude/skills/xlfg/SKILL.md` and
+  `standalone/.claude/skills/xlfg-debug/SKILL.md`) got the same update.
+- Codex conductors (`plugins/xlfg-engineering/codex/skills/xlfg/SKILL.md`
+  and `xlfg-debug/SKILL.md`) got the same `rm -f` guidance so Codex runs
+  also always start from a fresh phase-state file.
+- `tests/test_xlfg.py` asserts the `rm -f .xlfg/phase-state.json` instruction
+  is present in both Claude entrypoints so this regression can't silently
+  come back.
+
+Bumped to **3.2.2** (patch) — public entry model unchanged.
+
 ## 3.2.1
 
 Dependency removal — Context7 MCP was wired into the plugin manifests but no

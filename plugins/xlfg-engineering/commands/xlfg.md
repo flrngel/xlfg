@@ -36,7 +36,7 @@ Treat this invocation as **one autonomous run**.
 
 ## Startup
 
-1. Sync scaffold if missing or stale: ensure `docs/xlfg/runs/`, `.xlfg/runs/`, `docs/xlfg/knowledge/`, and `.xlfg/` directories exist; create any missing ones.
+1. Sync scaffold if missing or stale: ensure `docs/xlfg/runs/`, `.xlfg/runs/`, `docs/xlfg/knowledge/`, and `.xlfg/` directories exist; create any missing ones. In the same shell step, run `rm -f .xlfg/phase-state.json` to clear any stale file left by a prior run — otherwise the fresh Write in "Phase-state tracking" below will fail with `File has not been read yet. Read it first before writing to it.` because Claude Code's Write tool refuses to overwrite an existing file the session has never read.
 2. Create `RUN_ID` as `<YYYYMMDD>-<HHMMSS>-<slug>` where `<slug>` is a short kebab-case summary of `$ARGUMENTS`; write the lean core run directories and `spec.md` skeleton manually.
 3. Resolve `DOCS_RUN_DIR=docs/xlfg/runs/<RUN_ID>` and `DX_RUN_DIR=.xlfg/runs/<RUN_ID>`.
 
