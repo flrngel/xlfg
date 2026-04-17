@@ -64,7 +64,7 @@ Before calling any phase `Skill`, set `in_progress_phase` to that phase name (`"
 
 The hook never resets `completed`, `loopback_count`, or `in_progress_phase`. It only mutates `block_count` (and only when `in_progress_phase` is empty).
 
-Then run `node ${CLAUDE_PLUGIN_ROOT}/scripts/render-workboard.mjs` to refresh the `## Phase status` block in `docs/xlfg/runs/<RUN_ID>/workboard.md` from the just-updated `phase-state.json`. Phase skills MUST NOT hand-write phase completion rows into `workboard.md` — the renderer owns that section, bounded by `<!-- BEGIN: rendered-phase-status -->` / `<!-- END: rendered-phase-status -->` markers. Phase skills still own the task, objective, and blocker sections of the same file.
+Then run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/render_workboard.py` to refresh the `## Phase status` block in `docs/xlfg/runs/<RUN_ID>/workboard.md` from the just-updated `phase-state.json`. Phase skills MUST NOT hand-write phase completion rows into `workboard.md` — the renderer owns that section, bounded by `<!-- BEGIN: rendered-phase-status -->` / `<!-- END: rendered-phase-status -->` markers. Phase skills still own the task, objective, and blocker sections of the same file.
 
 ## Harness task bridge
 
@@ -98,18 +98,18 @@ Use the `Skill` tool to load each phase just-in-time instead of carrying all pha
 
 ### Phase boundary timings
 
-Bracket every phase Skill call with two `phase-tick` invocations so the post-mortem (`/xlfg-audit`) can compute per-phase wall time honestly, including loopbacks. Both ticks are best-effort — a write failure in `phase-tick.mjs` exits 0 and never blocks the conductor.
+Bracket every phase Skill call with two `phase-tick` invocations so the post-mortem (`/xlfg-audit`) can compute per-phase wall time honestly, including loopbacks. Both ticks are best-effort — a write failure in `phase_tick.py` exits 0 and never blocks the conductor.
 
 Before the Skill call:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/phase-tick.mjs" --run "<RUN_ID>" --phase <phase> --event start
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/phase_tick.py" --run "<RUN_ID>" --phase <phase> --event start
 ```
 
 After the Skill returns (whether DONE, BLOCKED, or FAILED):
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/phase-tick.mjs" --run "<RUN_ID>" --phase <phase> --event end
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/phase_tick.py" --run "<RUN_ID>" --phase <phase> --event end
 ```
 
 If a phase loops back, emit a fresh `start`/`end` pair for the re-run — the post-mortem sums across invocations.
@@ -162,7 +162,7 @@ The digest carries **decisions + rationale + path refs**, not just raw facts. If
 
 ### Other rules (authoritative source: `_shared/dispatch-rules.md`)
 
-- `ARTIFACT_KIND` is optional (default `planning-doc`). Set it explicitly for source/config/test files — YAML frontmatter on `.py` / `.json` / `.yaml` / `.ts` / `.mjs` breaks those files.
+- `ARTIFACT_KIND` is optional (default `planning-doc`). Set it explicitly for source/config/test files — YAML frontmatter on `.py` / `.json` / `.yaml` / `.ts` breaks those files.
 - Preseed **planning-doc** artifacts with YAML frontmatter `status: IN_PROGRESS`, mission, and a checklist **before** dispatch. For non-markdown artifacts, do not preseed with YAML; lifecycle rides on the `RETURN_CONTRACT` line.
 - Never wait on a specialist without a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT`.
 - The ownership boundary must be specific enough to prevent overlap. Examples: `xlfg-test-strategist owns proof commands, not flow steps`; `xlfg-task-implementer owns source changes, not test ownership when a test packet exists`; `xlfg-ux-reviewer owns net-new UX findings, not DA rows already passed by ui-verification.md`.

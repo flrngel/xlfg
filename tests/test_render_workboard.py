@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 class TestRenderWorkboard(unittest.TestCase):
-    """Tests for plugins/xlfg-engineering/scripts/render-workboard.mjs (v3.1.0)."""
+    """Tests for plugins/xlfg-engineering/scripts/render_workboard.py."""
 
     def _script(self) -> Path:
         return (
@@ -16,11 +16,11 @@ class TestRenderWorkboard(unittest.TestCase):
             / "plugins"
             / "xlfg-engineering"
             / "scripts"
-            / "render-workboard.mjs"
+            / "render_workboard.py"
         )
 
     def _run(self, *, cwd: str | None = None, args: list[str] | None = None) -> tuple[int, str, str]:
-        cmd = ["node", str(self._script())]
+        cmd = ["python3", str(self._script())]
         if args:
             cmd.extend(args)
         proc = subprocess.run(

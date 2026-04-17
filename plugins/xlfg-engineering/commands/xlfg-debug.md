@@ -69,18 +69,18 @@ Use the `Skill` tool to load each phase just-in-time instead of carrying all pha
 
 ### Phase boundary timings
 
-Bracket every phase Skill call with two `phase-tick` invocations so the post-mortem (`/xlfg-audit`) can compute per-phase wall time honestly, including loopbacks. Both ticks are best-effort — a write failure in `phase-tick.mjs` exits 0 and never blocks the conductor.
+Bracket every phase Skill call with two `phase-tick` invocations so the post-mortem (`/xlfg-audit`) can compute per-phase wall time honestly, including loopbacks. Both ticks are best-effort — a write failure in `phase_tick.py` exits 0 and never blocks the conductor.
 
 Before the Skill call:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/phase-tick.mjs" --run "<RUN_ID>" --phase <phase> --event start
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/phase_tick.py" --run "<RUN_ID>" --phase <phase> --event start
 ```
 
 After the Skill returns (whether DONE, BLOCKED, or FAILED):
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/phase-tick.mjs" --run "<RUN_ID>" --phase <phase> --event end
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/phase_tick.py" --run "<RUN_ID>" --phase <phase> --event end
 ```
 
 If a phase loops back, emit a fresh `start`/`end` pair for the re-run — the post-mortem sums across invocations.

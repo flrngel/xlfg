@@ -36,7 +36,7 @@ Perform deterministic recall before broad repo scanning and record only the smal
    - rejected near-matches
    - an explicit no-hit statement when nothing relevant applies
 5. Update `spec.md` so the recall summary is visible in the single source of truth.
-6. Update the task/objective/next-action sections of `workboard.md` if needed. The `## Phase status` block (including `recall: DONE`) is rendered by the conductor via `render-workboard.mjs` after the phase returns — do not hand-write phase completion rows.
+6. Update the task/objective/next-action sections of `workboard.md` if needed. The `## Phase status` block (including `recall: DONE`) is rendered by the conductor via `render_workboard.py` after the phase returns — do not hand-write phase completion rows.
 
 ## Guardrails
 

@@ -10,9 +10,9 @@ from pathlib import Path
 class TestSubagentStopGuard(unittest.TestCase):
     def _run_guard(self, payload: dict) -> tuple[int, str]:
         repo_root = Path(__file__).resolve().parents[1]
-        script = repo_root / "plugins" / "xlfg-engineering" / "scripts" / "subagent-stop-guard.mjs"
+        script = repo_root / "plugins" / "xlfg-engineering" / "scripts" / "subagent_stop_guard.py"
         proc = subprocess.run(
-            ["node", str(script)],
+            ["python3", str(script)],
             input=json.dumps(payload),
             text=True,
             capture_output=True,

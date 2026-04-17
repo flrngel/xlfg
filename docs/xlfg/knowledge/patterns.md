@@ -9,7 +9,7 @@ Reusable patterns discovered while shipping.
 - **Implementation notes**: Write `.xlfg/phase-state.json` after startup (all phases listed, none completed). Update `completed` array after each phase. Reset `block_count` to 0 on each advance. Hook increments `block_count` on each block. Safety valve at 3 blocks.
 - **What shortcut it replaces**: Relying on the model to follow "invoke these 8 skills in order" from memory through heavy context
 - **Pitfalls**: Don't register the same hook in both command frontmatter and hooks.json (double-fires). Always allow on `max_tokens`. Always allow when no state file exists.
-- **Examples / links**: `plugins/xlfg-engineering/scripts/phase-gate.mjs`, run 20260403-phase-reliability
+- **Examples / links**: `plugins/xlfg-engineering/scripts/phase_gate.py`, run 20260403-phase-reliability
 
 ## Pattern: Version-bump sweep
 

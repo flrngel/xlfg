@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 class TestPhaseTick(unittest.TestCase):
-    """Tests for plugins/xlfg-engineering/scripts/phase-tick.mjs (v4.2.0)."""
+    """Tests for plugins/xlfg-engineering/scripts/phase_tick.py."""
 
     def _script(self) -> Path:
         return (
@@ -16,12 +16,12 @@ class TestPhaseTick(unittest.TestCase):
             / "plugins"
             / "xlfg-engineering"
             / "scripts"
-            / "phase-tick.mjs"
+            / "phase_tick.py"
         )
 
     def _run(self, *, cwd: str, args: list[str]) -> tuple[int, str, str]:
         proc = subprocess.run(
-            ["node", str(self._script()), *args],
+            ["python3", str(self._script()), *args],
             cwd=cwd,
             text=True,
             capture_output=True,

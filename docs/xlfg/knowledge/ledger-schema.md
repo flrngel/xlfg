@@ -69,14 +69,14 @@ ui, backend, cli, test, docs, workflow, scale, dispatch, security
 
 ## Writer
 
-All writes MUST go through `plugins/xlfg-engineering/scripts/ledger-append.mjs`.
+All writes MUST go through `plugins/xlfg-engineering/scripts/ledger_append.py`.
 The writer validates against this schema and appends a single JSON line.
 Direct `echo >> ledger.jsonl` or inline edits are forbidden.
 
 Usage:
 
 ```bash
-node plugins/xlfg-engineering/scripts/ledger-append.mjs \
+python3 plugins/xlfg-engineering/scripts/ledger_append.py \
   --ts 2026-04-15T14:33:07Z \
   --run 20260415-143307-example \
   --type feature \
@@ -88,7 +88,7 @@ Or pipe a JSON object on stdin:
 
 ```bash
 echo '{"ts":"2026-04-15T14:33:07Z","run":"...","type":"feature","version":"3.1.0","summary":"..."}' \
-  | node plugins/xlfg-engineering/scripts/ledger-append.mjs
+  | python3 plugins/xlfg-engineering/scripts/ledger_append.py
 ```
 
 The writer exits non-zero and prints the first validation failure when the input is invalid.

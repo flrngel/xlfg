@@ -80,7 +80,7 @@ scaffolding, no aspirational clauses.
 
 `PRIMARY_ARTIFACT` may point at a source file, config, or test file — not
 only markdown. YAML frontmatter in a `.py` / `.json` / `.yaml` / `.sql` /
-`.ts` / `.mjs` file breaks it at the parser level.
+`.ts` file breaks it at the parser level.
 
 Apply this guard before any write:
 

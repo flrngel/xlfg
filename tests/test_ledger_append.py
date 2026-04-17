@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 class TestLedgerAppend(unittest.TestCase):
-    """Tests for plugins/xlfg-engineering/scripts/ledger-append.mjs (v3.1.0)."""
+    """Tests for plugins/xlfg-engineering/scripts/ledger_append.py."""
 
     def _script(self) -> Path:
         return (
@@ -16,11 +16,11 @@ class TestLedgerAppend(unittest.TestCase):
             / "plugins"
             / "xlfg-engineering"
             / "scripts"
-            / "ledger-append.mjs"
+            / "ledger_append.py"
         )
 
     def _run(self, *, stdin: str = "", args: list[str] | None = None) -> tuple[int, str, str]:
-        cmd = ["node", str(self._script())]
+        cmd = ["python3", str(self._script())]
         if args:
             cmd.extend(args)
         proc = subprocess.run(

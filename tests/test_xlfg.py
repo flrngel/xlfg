@@ -127,16 +127,16 @@ class TestXLFG(unittest.TestCase):
 
     def test_xlfg_audit_is_per_run_post_mortem_not_harness_self_check(self) -> None:
         # As of v4.2.0 /xlfg-audit is the per-run user post-mortem.
-        # The harness self-check moved to scripts/audit-harness.mjs and
+        # The harness self-check moved to scripts/audit_harness.py and
         # runs in CI. The slash command body must:
-        #   - delegate to scripts/post-mortem.mjs (no inline computation)
+        #   - delegate to scripts/post_mortem.py (no inline computation)
         #   - preserve the flrngel/xlfg submission flow (with redaction)
         #   - NOT attempt to inspect plugin manifests / SKILL frontmatter
         repo_root = Path(__file__).resolve().parents[1]
         audit_text = (repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-audit.md").read_text(encoding="utf-8")
 
         # delegates to the post-mortem script
-        self.assertIn("scripts/post-mortem.mjs", audit_text)
+        self.assertIn("scripts/post_mortem.py", audit_text)
         # files only the privacy-safe maintainer report, not the local chat report
         self.assertIn("--public", audit_text)
         self.assertIn("Do **not** file the local chat report", audit_text)

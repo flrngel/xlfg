@@ -1,6 +1,34 @@
 # Next agent context
 
-## Current state (5.0.0)
+## Current state (5.1.0)
+
+5.1.0 ports every runtime helper from Node to Python. Previously the plugin
+shipped 7 `.mjs` scripts (stopped hooks, phase tick, ledger append, workboard
+render, audit harness, post-mortem) plus a parallel Python test suite that
+spawned them via `node`. CI required both runtimes. The new layout collapses
+everything to one language:
+
+- `plugins/xlfg-engineering/scripts/phase_gate.py`
+- `plugins/xlfg-engineering/scripts/subagent_stop_guard.py`
+- `plugins/xlfg-engineering/scripts/phase_tick.py`
+- `plugins/xlfg-engineering/scripts/ledger_append.py`
+- `plugins/xlfg-engineering/scripts/render_workboard.py`
+- `plugins/xlfg-engineering/scripts/audit_harness.py`
+- `plugins/xlfg-engineering/scripts/post_mortem.py`
+
+The CLI contracts (flags, exit codes, stdout/stderr shapes), hook behavior,
+and file formats are preserved exactly. `hooks.json` now invokes
+`python3 "${CLAUDE_PLUGIN_ROOT}/scripts/<name>.py"`. Every reference in the
+slash commands, skills, agent templates, tests, and CI workflow was updated
+in lockstep. No `.mjs` files remain in the repo. Node is no longer a runtime
+dependency.
+
+Migration note for operators: ensure `python3` is on PATH (Python 3.11+ is
+what CI tests against, but the scripts use stdlib only and should run on any
+3.9+). No public entry surface changed: `/xlfg`, `/xlfg-debug`, `/xlfg-audit`,
+and `/xlfg-status` behave identically.
+
+## Previous state (5.0.0)
 
 5.0.0 is the dedup + cache-stable-prefix release. The 4.4–4.6 dedup fields
 (`OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`) stay. The change is

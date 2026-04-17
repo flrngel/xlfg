@@ -15,7 +15,7 @@ for required fields, the `type` enum, and the tag allow-list.
 
 ## Writer
 
-All writes MUST go through `plugins/xlfg-engineering/scripts/ledger-append.mjs`.
+All writes MUST go through `plugins/xlfg-engineering/scripts/ledger_append.py`.
 Do not `echo >> ledger.jsonl` or hand-edit the file. The writer validates each
 event and appends a single JSON line.
 

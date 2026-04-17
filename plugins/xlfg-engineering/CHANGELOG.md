@@ -1,3 +1,20 @@
+## 5.1.0
+
+**Single-runtime port: all hook and CLI helpers move from Node to Python 3.** The plugin's automation surface (`phase-gate`, `subagent-stop-guard`, `phase-tick`, `ledger-append`, `render-workboard`, `audit-harness`, `post-mortem`) was split across Node `.mjs` and Python. The Python tests orchestrated Node subprocesses, CI required both runtimes, and every new inspector tempted someone to improvise Python one-liners instead of extending a reusable script. Everything is now Python; Node is no longer a runtime dependency.
+
+### Changed
+
+- `plugins/xlfg-engineering/scripts/` — the 7 `.mjs` helpers are replaced by `phase_gate.py`, `subagent_stop_guard.py`, `phase_tick.py`, `ledger_append.py`, `render_workboard.py`, `audit_harness.py`, `post_mortem.py`. CLI contracts (flags, exit codes, stdout/stderr shape) are preserved exactly; the port is a rewrite, not a reshape.
+- `plugins/xlfg-engineering/hooks/hooks.json` — Stop and SubagentStop hooks now invoke `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/<name>.py"`.
+- `plugins/xlfg-engineering/commands/xlfg.md`, `commands/xlfg-debug.md`, `commands/xlfg-audit.md` — shell snippets updated to call `python3` and the new `.py` filenames. No behavioral change.
+- `plugins/xlfg-engineering/skills/xlfg-recall-phase/SKILL.md`, `agents/_shared/output-template.md`, `agents/_shared/agent-preamble.md`, `agents/implementation/xlfg-task-implementer.md` — narrative references updated.
+- `.github/workflows/ci.yml` — `actions/setup-node` step removed; the audit step now runs with `python3`.
+- `tests/` — every test that previously spawned `node` now spawns `python3` against the new script path.
+
+### Migration
+
+- Users who installed the plugin before v5.1.0 must have `python3` on their PATH. Node is no longer required by the plugin. Nothing in the public entry surface (`/xlfg`, `/xlfg-debug`, `/xlfg-audit`, `/xlfg-status`) changed — only the underlying runtime.
+
 ## 5.0.0
 
 **Agent preamble + dispatch-rules extraction; cache-stable prefix; epic-default packets; decision-bearing CONTEXT_DIGEST.** A major refactor motivated by four pain points: (1) tasks divided per-atomic-task instead of per-epic, (2) artifacts too detailed with overlapping criteria, (3) sub-agent prompts both too specific and duplicating boilerplate the dispatch packet already carries, (4) too many read/writes slowing runs.

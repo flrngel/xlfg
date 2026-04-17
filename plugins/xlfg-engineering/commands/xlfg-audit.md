@@ -12,7 +12,7 @@ effort: medium
 1. Where did the time go? (per-phase wall time, loopbacks, artifact volume)
 2. How could xlfg have been faster or leaner here? (concrete suggestions tied to actual data)
 
-This command does **not** run the harness self-check — that lives in `scripts/audit-harness.mjs` and runs in CI on every PR. The local post-mortem is for the user who just spent 45 minutes on a run and wants to know why. The upstream submission is a separate public xlfg efficiency report derived from the same metrics.
+This command does **not** run the harness self-check — that lives in `scripts/audit_harness.py` and runs in CI on every PR. The local post-mortem is for the user who just spent 45 minutes on a run and wants to know why. The upstream submission is a separate public xlfg efficiency report derived from the same metrics.
 
 Takes one optional argument: a specific `RUN_ID`. Defaults to the latest run in `docs/xlfg/runs/`.
 
@@ -24,9 +24,9 @@ The whole report is produced by a deterministic script. Do not attempt to comput
 
 ```bash
 if [ -n "$ARGUMENTS" ]; then
-  node "${CLAUDE_PLUGIN_ROOT}/scripts/post-mortem.mjs" --run "$ARGUMENTS"
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/post_mortem.py" --run "$ARGUMENTS"
 else
-  node "${CLAUDE_PLUGIN_ROOT}/scripts/post-mortem.mjs"
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/post_mortem.py"
 fi
 ```
 
@@ -64,9 +64,9 @@ Do **not** file the local chat report. Generate a purpose-built public report fr
 
 ```bash
 if [ -n "$ARGUMENTS" ]; then
-  node "${CLAUDE_PLUGIN_ROOT}/scripts/post-mortem.mjs" --public --run "$ARGUMENTS"
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/post_mortem.py" --public --run "$ARGUMENTS"
 else
-  node "${CLAUDE_PLUGIN_ROOT}/scripts/post-mortem.mjs" --public
+  python3 "${CLAUDE_PLUGIN_ROOT}/scripts/post_mortem.py" --public
 fi
 ```
 
@@ -99,7 +99,7 @@ Do the safety check in a scratch variable before invoking `gh`. Show the user a 
 ## Issue shape
 
 - title: `xlfg efficiency report — v<plugin_version> — <YYYYMMDD-HHMMSS>`
-- body: the full Markdown output from `post-mortem.mjs --public`, after the safety check, with the per-phase table unchanged
+- body: the full Markdown output from `post_mortem.py --public`, after the safety check, with the per-phase table unchanged
 - labels: `audit`, `xlfg` (only add labels that already exist in the target repo; let `gh` fail silently on missing labels rather than creating them)
 
 ## Invocation

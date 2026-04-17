@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 class TestPostMortem(unittest.TestCase):
-    """Tests for plugins/xlfg-engineering/scripts/post-mortem.mjs (v4.2.0)."""
+    """Tests for plugins/xlfg-engineering/scripts/post_mortem.py."""
 
     def _script(self) -> Path:
         return (
@@ -16,11 +16,11 @@ class TestPostMortem(unittest.TestCase):
             / "plugins"
             / "xlfg-engineering"
             / "scripts"
-            / "post-mortem.mjs"
+            / "post_mortem.py"
         )
 
     def _run(self, *, cwd: str, args: list[str] | None = None) -> tuple[int, str, str]:
-        cmd = ["node", str(self._script()), *(args or [])]
+        cmd = ["python3", str(self._script()), *(args or [])]
         proc = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True, check=False)
         return proc.returncode, proc.stdout, proc.stderr
 

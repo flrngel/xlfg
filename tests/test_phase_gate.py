@@ -8,12 +8,12 @@ from pathlib import Path
 
 
 class TestPhaseGate(unittest.TestCase):
-    """Tests for the xlfg-phase-gate.mjs Stop hook."""
+    """Tests for the xlfg phase_gate.py Stop hook."""
 
     def _run_gate(self, payload: dict, phase_state: dict | None = None, cwd: str | None = None) -> tuple[int, str]:
         """Run the phase-gate hook with the given payload and optional phase-state file."""
         repo_root = Path(__file__).resolve().parents[1]
-        script = repo_root / "plugins" / "xlfg-engineering" / "scripts" / "phase-gate.mjs"
+        script = repo_root / "plugins" / "xlfg-engineering" / "scripts" / "phase_gate.py"
 
         if cwd is None:
             td_ctx = tempfile.TemporaryDirectory()
@@ -33,7 +33,7 @@ class TestPhaseGate(unittest.TestCase):
 
             payload.setdefault("cwd", str(root))
             proc = subprocess.run(
-                ["node", str(script)],
+                ["python3", str(script)],
                 input=json.dumps(payload),
                 text=True,
                 capture_output=True,
@@ -136,9 +136,9 @@ class TestPhaseGate(unittest.TestCase):
     def test_allows_on_empty_stdin(self) -> None:
         """Hook should allow stopping on malformed/empty input."""
         repo_root = Path(__file__).resolve().parents[1]
-        script = repo_root / "plugins" / "xlfg-engineering" / "scripts" / "phase-gate.mjs"
+        script = repo_root / "plugins" / "xlfg-engineering" / "scripts" / "phase_gate.py"
         proc = subprocess.run(
-            ["node", str(script)],
+            ["python3", str(script)],
             input="",
             text=True,
             capture_output=True,

@@ -24,7 +24,7 @@ See `agents/_shared/agent-preamble.md` §2.
 
 ## ARTIFACT_KIND rule
 
-See `_shared/agent-preamble.md` §5 for the non-markdown guard. Accepted values: `planning-doc`, `source-file`, `config-file`, `test-file`. Writing YAML frontmatter into `.py` / `.json` / `.yaml` / `.ts` / `.mjs` etc. breaks them at the parser level; never write YAML frontmatter into a non-markdown artifact. If `ARTIFACT_KIND` is absent, infer from extension — `.md` → `planning-doc`; anything else → treat as `source-file`.
+See `_shared/agent-preamble.md` §5 for the non-markdown guard. Accepted values: `planning-doc`, `source-file`, `config-file`, `test-file`. Writing YAML frontmatter into `.py` / `.json` / `.yaml` / `.ts` etc. breaks them at the parser level; never write YAML frontmatter into a non-markdown artifact. If `ARTIFACT_KIND` is absent, infer from extension — `.md` → `planning-doc`; anything else → treat as `source-file`.
 
 ## Completion barrier
 

@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/phase-gate.mjs\""
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/phase_gate.py\""
           }
         ]
       }
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/subagent-stop-guard.mjs\""
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/subagent_stop_guard.py\""
           }
         ]
       }

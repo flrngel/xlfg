@@ -3,13 +3,13 @@
 Read this file first when entering a repo that uses xlfg. It is the shortest tracked handoff for the next agent.
 
 ## Service / product context
-- xlfg is an autonomous SDLC harness for Claude Code and Codex (v4.6.0)
+- xlfg is an autonomous SDLC harness for Claude Code and Codex (v5.1.0)
 - `/xlfg` batches 8 hidden phase skills: recall → intent → context → plan → implement → verify → review → compound
 - `$xlfg` is the Codex skill surface for the same run shape; `$xlfg-debug` is the Codex diagnosis-only sibling
 - `/xlfg-status` (v4.3.0+) is a read-only mid-run orientation command — safe after stale wakeups or context compactions
 
 ## Current high-signal truths
-- The conductor has a Stop hook (`phase-gate.mjs`) that blocks premature pipeline termination by reading `.xlfg/phase-state.json`
+- The conductor has a Stop hook (`phase_gate.py`) that blocks premature pipeline termination by reading `.xlfg/phase-state.json`
 - Verify-fix and review-fix loopback cycles are capped at 2 iterations
 - Specialists are leaf workers with a generous safety ceiling (maxTurns ≤ 150), foregrounded, and bounded by artifact completion barriers plus the prompt-side write-first / leaf-worker rules. The ceiling is a budget cap, not a target — most lanes finish in far fewer turns; needing many turns is a signal the lane was scoped wrong, not a signal to raise the cap further
 - The repo ships exactly one install surface: the Claude Code plugin in `plugins/xlfg-engineering/` (also wired for Codex via `.codex-plugin/` and Cursor via `.cursor-plugin/`). The `standalone/` pack was removed in v4.0.0 after repeated drift; "plugin loader unavailable" is no longer a supported install story now that the Claude Code marketplace is GA
@@ -30,7 +30,7 @@ Read this file first when entering a repo that uses xlfg. It is the shortest tra
 
 ## Repeated failures to avoid
 - Do not register the same hook in both command frontmatter AND hooks.json — it double-fires (found in review, run 20260403)
-- Plugin hooks live in `hooks.json` only; referenced via `${CLAUDE_PLUGIN_ROOT}/scripts/*.mjs`
+- Plugin hooks live in `hooks.json` only; referenced via `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/*.py"` (v5.1.0+ — the prior Node `.mjs` scripts were ported to Python)
 - Codex v1 support uses prompt-level barriers and file-backed state rather than adding hard hook parity
 - A version bump touches more than just the three `plugin.json` manifests: any hardcoded version string in `tests/test_codex_plugin.py` must move in lockstep (the v3.3.1 entry explicitly called this out; the delete-standalone-bump run still missed it at intent time). Grep `tests/` for the outgoing version string as part of every bump.
 - Intent-phase scoping must grep the full repo (not just the curated test file list) for the term being removed. The delete-standalone run missed `docs/subagent-hardening-2026.md` and `docs/claude-code-2026-compatibility.md` because they were not in the initial test-file enumeration; verify-phase caught them via a broader rg sweep.
@@ -39,7 +39,7 @@ Read this file first when entering a repo that uses xlfg. It is the shortest tra
 ## Open risks / debts
 - The loopback cap is prompt-instructed, not code-enforced — the Stop hook safety valve is the hard backstop
 - Sticky `in_progress_phase` on abnormal conductor exit (user interrupt, unhandled tool error) will suppress the Stop hook in the same session until cleared by hand. If a run resumes manually, verify `.xlfg/phase-state.json` does not have a stale `in_progress_phase` before continuing
-- `phase-gate.mjs` read-modify-write is NOT concurrency-safe. A conductor write between the hook's read and write can be clobbered. Mitigated but not eliminated by the `in_progress_phase` suppression (v4.3.0). Real fix (file-locking or separate ledger) deferred
+- `phase_gate.py` read-modify-write is NOT concurrency-safe. A conductor write between the hook's read and write can be clobbered. Mitigated but not eliminated by the `in_progress_phase` suppression (v4.3.0). Real fix (file-locking or separate ledger) deferred
 
 ## Best starting recall queries
 - `Grep "phase-gate" docs/xlfg/knowledge/` — conductor stop hook pattern

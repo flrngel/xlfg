@@ -131,7 +131,7 @@ Dispatch packets are contracts, not implementation recipes.
 
 ## Stop-guard contract
 
-`plugins/xlfg-engineering/scripts/subagent-stop-guard.mjs` accepts either:
+`plugins/xlfg-engineering/scripts/subagent_stop_guard.py` accepts either:
 
 1. **Canonical** — a YAML frontmatter block at the top of the file whose
    body contains `status: DONE|BLOCKED|FAILED`.
