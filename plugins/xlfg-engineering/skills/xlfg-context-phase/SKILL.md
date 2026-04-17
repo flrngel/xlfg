@@ -45,42 +45,23 @@ Gather the repo and product truth needed for an honest plan without exploding co
 
 ## Delegation packet rules
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
-- Every specialist packet must begin with machine-readable headers:
+Follow `agents/_shared/dispatch-rules.md` for the full delegation contract (packet-size ladder, preseed rule, machine-readable headers with `PRIMARY_ARTIFACT` / `DONE_CHECK` / `RETURN_CONTRACT` / `OWNERSHIP_BOUNDARY` / `CONTEXT_DIGEST` / `PRIOR_SIBLINGS` / `Do not redo` / `Consume:`, micro-packet budget, proof budget, compaction, sequential-dispatch default, resume-same-specialist-before-fallback). Only the phase conductor may delegate.
 
-```text
-PRIMARY_ARTIFACT: <exact path>
-FILE_SCOPE: <bounded files or paths>
-DONE_CHECK: <single honest check or NONE>
-RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+Every context-phase packet MUST begin with the machine-readable headers from `_shared/dispatch-rules.md §3`. `CONTEXT_DIGEST` carries decisions + rationale + path refs so siblings (`context/adjacent.md` → `context/constraints.md` → `context/unknowns.md`) skip ground already covered instead of re-deriving overlapping findings.
 
-OWNERSHIP_BOUNDARY:
-- Own: scoped repo/product facts, constraints, unknowns, harness facts, or external facts for the assigned context lane
-- Do not redo: intent decomposition, solution choice, proof command design, task splitting, or findings already covered by prior context artifacts
-- Consume: `spec.md`, `memory-recall.md`, `context.md`, and same-phase sibling artifacts listed below
+### Context ownership boundaries
 
-CONTEXT_DIGEST:
-- <quoted excerpt or bullet from spec.md / context.md / current-state.md the specialist actually needs>
+- `xlfg-repo-mapper` owns command and structure inventory; it does not choose harness intensity or proof strategy.
+- `xlfg-harness-profiler` owns budget/profile selection; it cites `repo-map.md` for command discovery instead of rediscovering commands.
+- `xlfg-context-adjacent-investigator` owns implied adjacent behaviors; it does not promote weak ideas into intent IDs.
+- `xlfg-context-constraints-investigator` owns hard constraints and dependency/security/ops boundaries; it does not restate adjacent feature scope unless the constraint changes acceptance.
+- `xlfg-context-unknowns-investigator` owns unresolved assumptions and blockers after prior context artifacts; it does not repeat already-classified adjacent or constraint findings.
+- `xlfg-env-doctor` owns runnable environment shape; it does not choose scenario proof breadth.
+- `xlfg-researcher` owns only external facts local repo truth cannot provide; it does not research topics already covered by `repo-map.md`, `context.md`, or existing `research.md`.
 
-PRIOR_SIBLINGS:
-- <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
-```
+Compact returned artifacts before updating `context.md` or `spec.md`: carry forward relevant facts, constraints, unknowns, evidence paths, and blockers only; leave long notes in the specialist artifact. Do not paste full specialist reports into canonical run files.
 
-- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest carries the canonical excerpts the specialist needs so it does not re-read `spec.md` / `context.md` from scratch. The siblings list is how dispatched siblings (e.g., `context/adjacent.md` → `context/constraints.md` → `context/unknowns.md`) skip ground already covered instead of re-deriving overlapping findings.
-- Context ownership boundaries:
-  - `xlfg-repo-mapper` owns command and structure inventory; it does not choose harness intensity or proof strategy.
-  - `xlfg-harness-profiler` owns budget/profile selection; it cites `repo-map.md` for command discovery instead of rediscovering commands.
-  - `xlfg-context-adjacent-investigator` owns implied adjacent behaviors; it does not promote weak ideas into intent IDs.
-  - `xlfg-context-constraints-investigator` owns hard constraints and dependency/security/ops boundaries; it does not restate adjacent feature scope unless the constraint changes acceptance.
-  - `xlfg-context-unknowns-investigator` owns unresolved assumptions and blockers after prior context artifacts; it does not repeat already-classified adjacent or constraint findings.
-  - `xlfg-env-doctor` owns runnable environment shape; it does not choose scenario proof breadth.
-  - `xlfg-researcher` owns only external facts local repo truth cannot provide; it does not research topics already covered by `repo-map.md`, `context.md`, or existing `research.md`.
-- Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
-- Keep each dispatch as a **micro-packet**: contract, constraints, and file:line evidence anchors only. Do not paste full source files, full prior artifacts, or a step-by-step investigation script when the specialist can read only the scoped paths it needs.
-- Compact returned artifacts before updating `context.md` or `spec.md`: carry forward relevant facts, constraints, unknowns, evidence paths, and blockers only; leave long notes in the specialist artifact.
-- Only the phase conductor may delegate. Never ask a context specialist to spawn nested subagents or to fan out its own lane.
-- Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
-- When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
+Keep dispatches as **micro-packets**: contract, constraints, and file:line evidence anchors only. Do not paste full source files, full prior artifacts, or a step-by-step investigation script when the specialist can read only the scoped paths it needs.
 
 ## Guardrails
 

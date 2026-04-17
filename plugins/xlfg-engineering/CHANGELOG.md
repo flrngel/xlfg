@@ -1,3 +1,46 @@
+## 5.0.0
+
+**Agent preamble + dispatch-rules extraction; cache-stable prefix; epic-default packets; decision-bearing CONTEXT_DIGEST.** A major refactor motivated by four pain points: (1) tasks divided per-atomic-task instead of per-epic, (2) artifacts too detailed with overlapping criteria, (3) sub-agent prompts both too specific and duplicating boilerplate the dispatch packet already carries, (4) too many read/writes slowing runs.
+
+Research anchors: Anthropic, *How we built our multi-agent research system* (sizing by complexity; subagents need complete self-sufficient instructions; consolidate overlap); Anthropic, *Effective context engineering for AI agents* ("smallest set of high-signal tokens"; just-in-time context; system prompts at the right altitude); Anthropic, *Writing effective tools for AI agents* (overlapping tools distract agents); Anthropic, *Building effective agents* (start simple; add agentic complexity only when simpler fails); Cognition, *Don't Build Multi-Agents* (share full traces including decisions, not just facts; parallel divergent actions create bad merges); Anthropic, *Prompt caching* (stable prefixes cache).
+
+### Changed
+
+**Shared preamble (cache-stable prefix)**
+- New `agents/_shared/agent-preamble.md` owns the single authoritative copy of: §1 compatibility note, §2 Execution contract, §3 Turn budget rule, §4 Tool failure recovery, §5 ARTIFACT_KIND guard, §6 Completion barrier, §7 Final response contract.
+- All 27 specialist agent files shrunk to role-delta only (frontmatter, role identity, inputs/outputs, rules, handoff format). Each agent cites the preamble by relative path instead of duplicating ~70 lines of boilerplate. Net reduction: per-agent file size −60 to −70%.
+- Prompt caching win: the preamble is identical across every dispatch, so the Anthropic prompt cache can amortize it. Prior 27-file-specific boilerplate broke caching entirely.
+
+**Shared dispatch rules**
+- New `agents/_shared/dispatch-rules.md` owns the single authoritative copy of: packet-size ladder, preseed rule, machine-readable packet headers, CONTEXT_DIGEST decisions+paths shape, OWNERSHIP_BOUNDARY contract, PRIOR_SIBLINGS contract, micro-packet budget, proof budget, compaction, dispatch discipline, resume-same-specialist rule.
+- All 6 phase skills (intent/context/plan/implement/verify/review) replaced their duplicated ~40-line "Delegation packet rules" block with a pointer to `_shared/dispatch-rules.md` plus their phase-specific ownership boundaries.
+
+**Packet-size ladder (new explicit tiers)**
+- `trivial` → conductor inline, no specialist. `standard` → one specialist, one artifact, one decision slice (default). `epic` → one specialist owns a multi-surface slice under a single decision. `split` → truly unrelated surfaces, split before dispatch.
+- `xlfg-task-divider` default is now **epic** (one packet per objective group `O1`, `O2`, ...) instead of per-atomic-task. Atomic sub-division only when surfaces are truly unrelated or genuinely independent/read-mostly. Rationale: Anthropic finds coding tasks have fewer parallelizable sub-problems than research; Cognition finds many atomic packets create parallel divergent decisions that conflict at merge.
+
+**CONTEXT_DIGEST carries decisions + rationale + path refs**
+- The digest now carries the chosen decision, its one-line rationale, the false-success trap, and file:line anchors — not just raw facts.
+- Forbidden: "digest + re-read" (the specialist re-reading canonical files the digest already summarized). The digest is authoritative for decisions; specialists pull scoped file:line ranges on demand.
+
+**Output template updated**
+- `agents/_shared/output-template.md` documents the new packet-size ladder and the revised CONTEXT_DIGEST shape. Points at the preamble and dispatch-rules for rules that belong there.
+
+**Tests updated for the new shape**
+- `test_all_agents_have_completion_barrier_and_resume_rule` now checks the preamble for boilerplate strings + each agent references the preamble.
+- `test_all_delegating_entrypoints_repeat_atomic_packet_contract` now accepts either inlined contract or a reference to `_shared/dispatch-rules.md`; the shared file must carry the canonical tokens.
+
+### Deferred (explicit non-goals of this release)
+
+- **Agent merges** (e.g., collapsing 3 context investigators into 1; folding `xlfg-test-readiness-checker` into `xlfg-test-strategist`) were scoped out because they require ~15–20 test-assertion rewrites for marginal gain over the core refactor. The "human routing test" from Anthropic's context-engineering guidance still applies and the merge set is tracked for a follow-up release.
+- **Optional artifact collapse** (e.g., folding `diagnosis.md`, `flow-spec.md`, etc. into sections of `spec.md`) deferred for the same reason. Optional docs remain opt-in per `_shared/output-template.md` guidance.
+
+### Migration
+
+No breaking change for run consumers:
+- Existing runs continue to work. Preamble and dispatch-rules files are new additions; they do not change the canonical artifact shape.
+- New runs benefit from: cache-stable dispatch prefixes, fewer per-dispatch tokens, decision-bearing digests, and (when `xlfg-task-divider` routes tasks by objective group) fewer parallel divergent decisions.
+
 ## 4.6.0
 
 **Micro-packet and proof-budget optimization pass.** Real run logs showed the

@@ -214,19 +214,27 @@ class TestXLFG(unittest.TestCase):
         self.assertIn("done_check", plan_phase)
 
     def test_all_agents_have_completion_barrier_and_resume_rule(self) -> None:
+        """v5.0.0 — boilerplate now lives in _shared/agent-preamble.md; each
+        agent must reference the preamble and keep the load-bearing tokens
+        (`status: IN_PROGRESS`, `## Completion barrier`, `## Final response contract`,
+        `DONE <artifact-path>`) visible in its role-delta."""
         repo_root = Path(__file__).resolve().parents[1]
         agent_root = repo_root / "plugins" / "xlfg-engineering" / "agents"
+        preamble = (agent_root / "_shared" / "agent-preamble.md").read_text(encoding="utf-8")
+        # The preamble is the authoritative source for the shared boilerplate.
+        self.assertIn("Do not return a progress update", preamble)
+        self.assertIn("If the parent resumes you", preamble)
         for agent_path in sorted(agent_root.rglob("*.md")):
-            # _shared is a reference doc, not an agent.
             if "_shared" in agent_path.parts:
                 continue
             text = agent_path.read_text(encoding="utf-8")
+            self.assertIn("agents/_shared/agent-preamble.md", text, f"Missing preamble reference in {agent_path.name}")
             self.assertIn("## Completion barrier", text)
-            self.assertIn("Do not return a progress update", text)
-            self.assertIn("If the parent resumes you", text)
             self.assertIn("status: IN_PROGRESS", text)
             self.assertIn("## Final response contract", text)
             self.assertIn("DONE <artifact-path>", text)
+            # Resume-rule keywords still present in the per-agent shrunken block.
+            self.assertIn("if the parent resumes you", text.lower(), f"Missing resume reference in {agent_path.name}")
 
     def test_all_agents_have_turn_budget_rule(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
@@ -243,7 +251,19 @@ class TestXLFG(unittest.TestCase):
             )
 
     def test_all_delegating_entrypoints_repeat_atomic_packet_contract(self) -> None:
+        """v5.0.0 — packet contract now lives in _shared/dispatch-rules.md; each
+        delegating entrypoint must either inline the contract or reference the
+        shared file. The shared file itself must carry the canonical tokens."""
         repo_root = Path(__file__).resolve().parents[1]
+        dispatch_rules = (
+            repo_root / "plugins" / "xlfg-engineering" / "agents" / "_shared" / "dispatch-rules.md"
+        ).read_text(encoding="utf-8")
+        # Shared file is the authoritative source for the packet contract.
+        self.assertIn("PRIMARY_ARTIFACT:", dispatch_rules)
+        self.assertIn("DONE_CHECK:", dispatch_rules)
+        self.assertIn("RETURN_CONTRACT:", dispatch_rules)
+        self.assertIn("status: IN_PROGRESS", dispatch_rules)
+
         targets = [
             repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md",
         ]
@@ -253,10 +273,18 @@ class TestXLFG(unittest.TestCase):
             is_main_entry = path.name == "xlfg.md" or path.parent.name == "xlfg"
             if not is_main_entry and "Agent" not in text and "SendMessage" not in text:
                 continue
-            self.assertIn("PRIMARY_ARTIFACT:", text, f"Missing PRIMARY_ARTIFACT in {path}")
-            self.assertIn("DONE_CHECK:", text, f"Missing DONE_CHECK in {path}")
-            self.assertIn("RETURN_CONTRACT:", text, f"Missing RETURN_CONTRACT in {path}")
-            self.assertIn("status: IN_PROGRESS", text, f"Missing artifact preseed rule in {path}")
+            # Each delegating entrypoint must either inline the contract or cite dispatch-rules.md.
+            cites_shared = "_shared/dispatch-rules.md" in text
+            if not cites_shared:
+                self.assertIn("PRIMARY_ARTIFACT:", text, f"Missing PRIMARY_ARTIFACT in {path}")
+                self.assertIn("DONE_CHECK:", text, f"Missing DONE_CHECK in {path}")
+                self.assertIn("RETURN_CONTRACT:", text, f"Missing RETURN_CONTRACT in {path}")
+                self.assertIn("status: IN_PROGRESS", text, f"Missing artifact preseed rule in {path}")
+            else:
+                # Cited entrypoints still must name the contract tokens for human legibility.
+                self.assertIn("PRIMARY_ARTIFACT", text, f"Delegating entrypoint must name PRIMARY_ARTIFACT: {path}")
+                self.assertIn("DONE_CHECK", text, f"Delegating entrypoint must name DONE_CHECK: {path}")
+                self.assertIn("RETURN_CONTRACT", text, f"Delegating entrypoint must name RETURN_CONTRACT: {path}")
 
     def test_delegating_phase_skills_forbid_nested_subagents(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]

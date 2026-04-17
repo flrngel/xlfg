@@ -12,6 +12,21 @@ The 2.9.0 design target is simple:
 
 > **One public entrypoint, one run card, one intent contract, hidden phase skills loaded just in time, and specialist subagents that actually own their lanes — under a generous turn-budget ceiling so prompt-side write-first rules carry the forcing-function load.**
 
+## What changed in 5.0.0
+
+**Major: agent preamble + dispatch-rules extraction; cache-stable prefix; epic-default packets; decision-bearing CONTEXT_DIGEST.**
+
+- New `agents/_shared/agent-preamble.md` owns the single authoritative copy of the 7 boilerplate sections (compatibility, execution contract, turn budget, tool failure recovery, ARTIFACT_KIND, completion barrier, final response contract). All 27 specialist files shrunk to role-delta only — each references the preamble rather than duplicating ~70 lines of identical boilerplate. Net per-agent file size −60% to −70%.
+- New `agents/_shared/dispatch-rules.md` owns the delegation packet contract. All 6 phase skills replaced their near-identical ~40-line "Delegation packet rules" block with a pointer.
+- Prompt caching win: the shared preamble is a **cache-stable prefix**. Prior per-agent boilerplate broke caching entirely (27 near-identical variants).
+- New packet-size ladder (`trivial` / `standard` / `epic` / `split`). `xlfg-task-divider` now defaults to **epic** (one packet per objective group `O1`, `O2`, ...) — fewer but larger packets, matching Anthropic's finding that coding tasks have fewer parallelizable sub-problems than research. Atomic sub-division only when surfaces are truly unrelated.
+- `CONTEXT_DIGEST` now carries **decisions + rationale + path refs**, not just raw facts. Forbidden: digest + re-read; specialists pull scoped file:line ranges on demand instead of re-reading canonical files the digest already summarized.
+- Tests migrated to match: boilerplate assertions now check the preamble + agent references; packet-contract assertions accept either inlined contract or reference to `_shared/dispatch-rules.md`.
+
+Research anchors: Anthropic's multi-agent research, effective context engineering, writing effective tools, building effective agents, and prompt caching posts; Cognition's *Don't Build Multi-Agents* ("share decisions, not just facts").
+
+Deferred: agent merges (3 context investigators → 1; `xlfg-test-readiness-checker` → `xlfg-test-strategist`) and full optional-artifact collapse — tracked for a follow-up release to limit test-assertion churn.
+
 ## What changed in 4.6.0
 
 - Dispatch packets now carry a micro-packet discipline: short contract, constraints, scoped evidence anchors, and proof signal, not long code excerpts or line-by-line implementation scripts.

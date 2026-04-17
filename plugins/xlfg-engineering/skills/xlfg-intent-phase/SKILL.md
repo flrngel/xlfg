@@ -61,35 +61,13 @@ If `resolution` is `needs-user-answer`:
 
 ## Delegation packet rules
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
-- Every specialist packet must begin with machine-readable headers:
+Follow `agents/_shared/dispatch-rules.md` for the full delegation contract (packet-size ladder, preseed rule, machine-readable headers with `PRIMARY_ARTIFACT` / `DONE_CHECK` / `RETURN_CONTRACT` / `OWNERSHIP_BOUNDARY` / `CONTEXT_DIGEST` / `PRIOR_SIBLINGS` / `Do not redo` / `Consume:`, micro-packet budget, proof budget, compaction, sequential-dispatch default, resume-same-specialist-before-fallback). Only the phase conductor may delegate.
 
-```text
-PRIMARY_ARTIFACT: <exact path>
-FILE_SCOPE: <bounded files or paths>
-DONE_CHECK: <single honest check or NONE>
-RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+Every intent-phase packet MUST begin with the machine-readable headers from `_shared/dispatch-rules.md §3`. Intent rarely has prior siblings (it is the first delegating phase), so `PRIOR_SIBLINGS: none` is the common case here — but the field must still be present so downstream phases inherit a consistent contract.
 
-OWNERSHIP_BOUNDARY:
-- Own: the `Intent contract` and `Objective groups` sections in `spec.md`
-- Do not redo: repo mapping, solution selection, proof command design, or implementation task splitting
-- Consume: `memory-recall.md`, `context.md`, and `current-state.md` excerpts passed in the digest
+The intent specialist owns request decomposition only (`Intent contract` and `Objective groups` sections in `spec.md`). Later context or planning specialists may propose a gap note if evidence contradicts the contract, but they must not silently rewrite intent while doing repo mapping, design, proof, or implementation work.
 
-CONTEXT_DIGEST:
-- <quoted excerpt or bullet from the user's literal request, prior recall, and current-state.md the specialist actually needs>
-
-PRIOR_SIBLINGS:
-- <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
-```
-
-- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. Intent rarely has prior siblings (it is the first delegating phase), so `PRIOR_SIBLINGS: none` is the common case here — but the field must still be present so downstream phases inherit a consistent contract.
-- The intent specialist owns request decomposition only. Later context or planning specialists may propose a gap note if evidence contradicts the contract, but they must not silently rewrite intent while doing repo mapping, design, proof, or implementation work.
-- Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
-- Keep the dispatch as a **micro-packet**: contract, constraints, and evidence anchors only. Do not paste long transcripts, whole artifacts, or a step-by-step writing recipe when the intent specialist can use the scoped digest.
-- Compact returned artifacts before updating `spec.md`: carry forward only resolution, objective groups, blockers, and direct/implied ask IDs; do not paste the full specialist report into the run card.
-- Only the phase conductor may delegate. Never ask a specialist to spawn nested subagents or fan out further from inside the lane.
-- Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
-- When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
+Compact returned artifacts before updating `spec.md`: carry forward only resolution, objective groups, blockers, and direct/implied ask IDs; do not paste the full specialist report into the run card.
 
 ## Guardrails
 

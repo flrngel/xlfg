@@ -1,18 +1,27 @@
 # xlfg agent output template (canonical)
 
-This file is the single authoritative reference for the **shape of an xlfg
-specialist's artifact** — the frontmatter that the `subagent-stop-guard` reads,
-the preseed shape the conductor writes, and the final-status values every
-specialist promises to reach.
+This file is the single authoritative reference for **the shape of an xlfg
+specialist's artifact**. It owns: the frontmatter the stop-guard reads, the
+preseed shape the conductor writes, the dispatch packet shape the conductor
+emits, and the final-status values every specialist promises to reach.
 
-The per-agent markdown files under `plugins/xlfg-engineering/agents/**` describe
-the *content* each specialist produces. The *header shape* is defined here so
-all 27 agents stay in lockstep without any single one being the authority.
+Companion files:
+
+- `agents/_shared/agent-preamble.md` — the cache-stable preamble every
+  specialist obeys (execution contract, turn budget, tool recovery,
+  completion barrier, final response contract, ARTIFACT_KIND rule). Each
+  agent file cites this preamble instead of duplicating the rules.
+- `agents/_shared/dispatch-rules.md` — the phase-skill dispatch rules
+  (packet-size ladder, preseed contract, CONTEXT_DIGEST decisions+paths
+  shape, micro-packet budget, proof budget, compaction, resume rule).
+
+Per-agent markdown files under `plugins/xlfg-engineering/agents/**` describe
+the *content* each specialist produces. The *header shape* lives here.
 
 ## Canonical frontmatter
 
-Every xlfg artifact begins with a YAML frontmatter block. Nothing precedes the
-opening fence.
+Every xlfg artifact begins with a YAML frontmatter block. Nothing precedes
+the opening fence.
 
 ```markdown
 ---
@@ -33,8 +42,8 @@ status: DONE | BLOCKED | FAILED
 
 ## Preseed (conductor writes this first)
 
-Before a specialist is dispatched, the conductor writes the `PRIMARY_ARTIFACT`
-file as:
+Before a specialist is dispatched, the conductor writes the
+`PRIMARY_ARTIFACT` file as:
 
 ```markdown
 ---
@@ -54,9 +63,8 @@ fills in the agent-specific sections.
 
 Sub-agents in xlfg communicate **through files only** — never chat. Each
 specialist receives one packet, updates one preseeded artifact, and replies
-with one final-status line. To stop sibling specialists from re-reading the
-same canonical files and re-deriving the same findings, every dispatch packet
-MUST begin with these machine-readable lines:
+with one final-status line. See `_shared/dispatch-rules.md` for the full
+packet contract. Every dispatch packet MUST begin with:
 
 ```text
 PRIMARY_ARTIFACT: <exact path>
@@ -71,67 +79,62 @@ OWNERSHIP_BOUNDARY:
 - Consume: <prior artifacts this lane must treat as input truth unless it finds explicit contradiction>
 
 CONTEXT_DIGEST:
-- <quoted excerpt or bullet from spec.md / context.md / verification.md / etc.>
-- <only the fields the specialist actually needs to do its job>
+- <chosen decisions and their rationale from spec.md / context.md / verification.md>
+- <load-bearing invariants, false-success traps, and scenario IDs the lane must respect>
+- <path refs (file:line or file) for anything the specialist may want to pull on demand>
 
 PRIOR_SIBLINGS:
 - <path/to/sibling-artifact.md>: <one-line summary of what it already covered>
 ```
 
-- `OWNERSHIP_BOUNDARY` is **mandatory**. The conductor names the lane's exact
-  ownership surface before the specialist starts. Specialists must write only
-  the sections this lane owns, cite prior artifacts for adjacent facts, and
-  avoid re-adjudicating another lane's decision unless the packet explicitly
-  asks for a contradiction check. If overlap is unavoidable, add a short
-  "Covered elsewhere" pointer instead of repeating the same analysis.
-- `CONTEXT_DIGEST` is **mandatory**. The conductor inlines the excerpts the
-  specialist needs from canonical files (`spec.md`, `context.md`,
-  `verification.md`, prior phase outputs). If the lane truly needs no extra
-  context beyond the artifact preseed, write `CONTEXT_DIGEST: see PRIMARY_ARTIFACT preseed`.
-  Specialists treat the digest as **authoritative** and must not re-read the
-  source files unless the digest is explicitly insufficient.
-- `PRIOR_SIBLINGS` is **mandatory**. The conductor lists every artifact
-  already produced **in the same phase lane** that overlaps the new
-  specialist's surface (e.g., `context/adjacent.md` when dispatching
-  `xlfg-context-constraints-investigator`; `tasks/T1/implementer-report.md`
-  when dispatching `xlfg-task-checker`). If there are no priors, write
-  `PRIOR_SIBLINGS: none`. Specialists must skim listed siblings and
-  explicitly skip ground already covered rather than re-deriving it.
-- Empty values are not allowed. Both blocks are how xlfg minimizes duplicate
-  reads, duplicate findings, and duplicate file rewrites across siblings.
+- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are all
+  mandatory. Empty values are not allowed. They are how xlfg minimizes
+  duplicate reads, duplicate findings, and duplicate file rewrites across
+  siblings.
+- `CONTEXT_DIGEST` carries **decisions + rationale + path refs**, not just
+  raw facts. If the digest carries a decision, the specialist must not
+  re-read the canonical source for the same decision.
+- Use `CONTEXT_DIGEST: see PRIMARY_ARTIFACT preseed` and
+  `PRIOR_SIBLINGS: none` only when literally true.
 
-## Micro-packet, proof-budget, and compaction rules (v4.6.0+)
+## Packet-size ladder (v5.0.0)
+
+Scale the dispatch to the complexity of the work. Default is `standard`;
+drop to `trivial` inline only when the conductor can finish without a
+specialist; use `epic` when a single owner should carry a coherent
+multi-surface slice.
+
+- `trivial` — conductor inline, no specialist.
+- `standard` — one specialist, one artifact, one coherent decision slice.
+- `epic` — one specialist owns the slice; internal checklist lives inside
+  the artifact.
+- `split` — the surfaces are truly unrelated; split before dispatch.
+
+Fragmenting a single decision into many atomic packets is the failure mode
+to avoid: it creates parallel divergent decisions that conflict at merge.
+
+## Micro-packet, proof-budget, and compaction rules
 
 Dispatch packets are contracts, not implementation recipes.
 
-- **Micro-packet budget:** aim for <=900 words per specialist packet and exceed
-  ~1,200 words only for genuinely high-risk work. If a packet wants more space,
-  split the lane or put the extra evidence in the preseeded artifact. Do not paste
-  full files, long JSX/code blocks, or exact before/after replacements into
-  `CONTEXT_DIGEST`; use file:line anchors plus the invariant the specialist must
-  preserve.
-- **No code-script packets:** the mission may name the intended behavior,
-  constraints, forbidden shortcuts, and acceptance signal. It should not dictate
-  import placement, local variable names, or line-by-line edits when the
-  specialist can infer the implementation from the scoped files.
-- **Proof budget:** `DONE_CHECK` is the cheapest honest task-local check. Full
-  builds, full suites, live acceptance, and repeated expensive checks belong in
-  verify phase (`fast_check`, `smoke_check`, `ship_check`) unless the task is the
-  final integration lane or the changed surface specifically requires that broad
-  command now. If an expensive command already passed for the current diff and no
-  owned files changed since, cite that artifact instead of rerunning it.
-- **Artifact compaction:** after a specialist returns, promote only bounded facts
-  into `spec.md` / `workboard.md`: terminal status, verdict, changed files,
-  command names/results, first blocker, and next action. Keep full reports and
-  logs in the specialist artifact; do not paste whole reports back into the run
-  card.
+- **Micro-packet budget:** aim ≤900 words per specialist packet; exceed
+  ~1,200 only for genuinely high-risk work. No full files, no long
+  before/after replacements, no line-by-line implementation scripts when
+  the specialist can read the scoped files.
+- **Proof budget:** `DONE_CHECK` is the cheapest honest task-local check.
+  Broad `fast_check` / `smoke_check` / `ship_check` proof belongs in verify
+  phase.
+- **Artifact compaction:** after a specialist returns, promote only bounded
+  facts into `spec.md` / `workboard.md`: terminal status, verdict, changed
+  files, command names/results, first blocker, next action. Keep full
+  reports and logs in the specialist artifact.
 
 ## Stop-guard contract
 
 `plugins/xlfg-engineering/scripts/subagent-stop-guard.mjs` accepts either:
 
-1. **Canonical** — a YAML frontmatter block at the top of the file whose body
-   contains `status: DONE|BLOCKED|FAILED`.
+1. **Canonical** — a YAML frontmatter block at the top of the file whose
+   body contains `status: DONE|BLOCKED|FAILED`.
 2. **Legacy** — a bare first non-empty line matching
    `Status: DONE|BLOCKED|FAILED`.
 

@@ -1,6 +1,72 @@
 # Next agent context
 
-## Current state (4.6.0)
+## Current state (5.0.0)
+
+5.0.0 is the dedup + cache-stable-prefix release. The 4.4–4.6 dedup fields
+(`OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`) stay. The change is
+that the boilerplate that every agent and every phase skill repeated is now
+extracted into two shared files. Each agent and each phase skill references
+the shared file instead of duplicating the rules.
+
+The trigger was four pain points surfaced by the user, all confirmed by
+Anthropic / Cognition guidance:
+
+1. Tasks divided per atomic-task instead of per epic.
+2. Artifacts too detailed, criteria overlap.
+3. Sub-agent prompts too specific AND dispatch packets also instruct them to
+   read detailed instructions — duplication with the agent definition.
+4. Too many read/writes slow every run.
+
+What changed:
+
+- New `agents/_shared/agent-preamble.md` owns the 7 boilerplate sections every
+  specialist carried: compatibility, execution contract, turn budget rule,
+  tool failure recovery, ARTIFACT_KIND, completion barrier, final response
+  contract. All 27 specialists shrunk to role-delta only (frontmatter +
+  identity + inputs/outputs + rules + handoff format) and cite the preamble.
+- New `agents/_shared/dispatch-rules.md` owns the delegation packet contract:
+  packet-size ladder, preseed rule, machine-readable headers, CONTEXT_DIGEST
+  decisions+paths shape, micro-packet budget, proof budget, compaction,
+  sequential dispatch default, resume-same-specialist rule. All 6 phase
+  skills replaced their ~40-line duplicated Delegation packet rules block
+  with a pointer.
+- Packet-size ladder introduced: `trivial` / `standard` / `epic` / `split`.
+  `xlfg-task-divider` default is now **epic** — one packet per objective
+  group `O1`, `O2`, ... — not per atomic task. Atomic sub-division only when
+  surfaces are truly unrelated or genuinely read-mostly independent.
+- `CONTEXT_DIGEST` now carries **decisions + rationale + path refs**, not
+  just raw facts. Digest + re-read is explicitly forbidden: if the digest
+  summarizes a decision, the specialist pulls scoped file:line on demand
+  instead of re-reading the canonical file.
+- Tests migrated: boilerplate assertions check the preamble + each agent
+  references it; packet-contract assertions accept either inline contract
+  or a reference to `_shared/dispatch-rules.md`.
+
+Research anchors (cited in CHANGELOG): Anthropic, *How we built our
+multi-agent research system*; Anthropic, *Effective context engineering for
+AI agents*; Anthropic, *Writing effective tools for AI agents*; Anthropic,
+*Building effective agents*; Anthropic, *Prompt caching*; Cognition, *Don't
+Build Multi-Agents*.
+
+If you continue from here:
+
+- Do **not** add back boilerplate to individual agent files. The preamble is
+  the single authoritative source. New agents must cite it.
+- Do **not** split an epic packet into many atomic packets just because the
+  scope "feels big". Prefer one owner per decision slice; Cognition's
+  principle — parallel divergent actions create bad merges — applies.
+- Do **not** pass a digest and *also* tell the specialist to re-read the
+  canonical file for the same decision. Pick one.
+- When adding a new phase skill or command that delegates, reference
+  `_shared/dispatch-rules.md` rather than inlining the full rule block.
+- Deferred work (tracked for a follow-up release): agent merges (3 context
+  investigators → 1; `xlfg-test-readiness-checker` → `xlfg-test-strategist`;
+  `xlfg-repo-mapper` + `xlfg-harness-profiler` → one); full optional-artifact
+  collapse into `spec.md` / `context.md` sections. Both were scoped out of
+  5.0.0 to limit test-assertion churn; they should come back with a careful
+  test migration.
+
+## Previous state (4.6.0)
 
 4.6.0 optimizes the dispatch shape that 4.4.0 and 4.5.0 made mandatory. The
 dedup fields stay: every specialist packet still needs `OWNERSHIP_BOUNDARY`,

@@ -124,7 +124,7 @@ If a phase loops back, emit a fresh `start`/`end` pair for the re-run — the po
 
 ## Atomic packet format
 
-Before dispatching any xlfg specialist, preseed the required artifact yourself and use a packet that starts with these machine-readable lines:
+Follow `agents/_shared/dispatch-rules.md` for the full delegation contract. Every specialist dispatch MUST begin with the machine-readable headers defined there. Summary for the conductor:
 
 ```text
 PRIMARY_ARTIFACT: <exact path>
@@ -134,28 +134,43 @@ DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 
 OWNERSHIP_BOUNDARY:
-- Own: <the exact decision, artifact section, code surface, or proof step this lane owns>
+- Own: <exact decision, artifact section, code surface, or proof step this lane owns>
 - Do not redo: <adjacent lane decisions or artifacts to cite instead of re-deriving>
 - Consume: <prior artifacts this lane must treat as input truth unless it finds explicit contradiction>
 
 CONTEXT_DIGEST:
-- <quoted excerpt or bullet from spec.md / context.md / verification.md / prior phase output>
+- <chosen decisions and their rationale from spec.md / context.md / verification.md / prior phase output>
+- <load-bearing invariants, false-success traps, and scenario IDs the lane must respect>
+- <path refs (file:line or file) for anything the specialist may want to pull on demand>
 
 PRIOR_SIBLINGS:
 - <path/to/sibling-artifact.md>: <one-line summary of what it already covered>
 ```
 
-- `ARTIFACT_KIND` is optional. Omit it for markdown planning docs (the default). Set it explicitly when `PRIMARY_ARTIFACT` points at application source, config, or tests — prepending YAML frontmatter to those file types breaks them at parse time.
-- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are **mandatory**. They exist to stop specialists from re-reading the same canonical files, re-deriving the same findings, and re-adjudicating adjacent lane decisions. See `agents/_shared/output-template.md` for the canonical shape and rules. Use `CONTEXT_DIGEST: see PRIMARY_ARTIFACT preseed` and `PRIOR_SIBLINGS: none` only when literally true.
+### Packet-size ladder (default = standard; prefer epic over many atomic)
+
+- `trivial` — conductor inline, no specialist (<3 file edits, 1 scenario, no cross-decision risk).
+- `standard` — one specialist, one artifact, one coherent decision slice. Default tier.
+- `epic` — one specialist owns a multi-surface slice under a single decision; internal checklist lives inside the artifact. Prefer this over many atomic packets for coding work (Anthropic multi-agent finding: fewer parallelizable sub-problems; one owner per decision avoids merge conflicts).
+- `split` — surfaces are truly unrelated (e.g. UI + migration + server). Split BEFORE dispatch.
+
+`xlfg-task-divider` defaults to **one packet per objective group** (`O1`, `O2`, ...); it subdivides only when surfaces are truly unrelated. Do not fragment a single decision into many atomic packets — that creates parallel divergent decisions that conflict at merge.
+
+### CONTEXT_DIGEST rule
+
+The digest carries **decisions + rationale + path refs**, not just raw facts. If the digest carries a decision, the specialist must not re-read the canonical file for the same decision — it may pull scoped file:line ranges on demand. This is how the run stops paying for redundant re-reads. Use `CONTEXT_DIGEST: see PRIMARY_ARTIFACT preseed` and `PRIOR_SIBLINGS: none` only when literally true.
+
+### Other rules (authoritative source: `_shared/dispatch-rules.md`)
+
+- `ARTIFACT_KIND` is optional (default `planning-doc`). Set it explicitly for source/config/test files — YAML frontmatter on `.py` / `.json` / `.yaml` / `.ts` / `.mjs` breaks those files.
+- Preseed **planning-doc** artifacts with YAML frontmatter `status: IN_PROGRESS`, mission, and a checklist **before** dispatch. For non-markdown artifacts, do not preseed with YAML; lifecycle rides on the `RETURN_CONTRACT` line.
+- Never wait on a specialist without a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT`.
 - The ownership boundary must be specific enough to prevent overlap. Examples: `xlfg-test-strategist owns proof commands, not flow steps`; `xlfg-task-implementer owns source changes, not test ownership when a test packet exists`; `xlfg-ux-reviewer owns net-new UX findings, not DA rows already passed by ui-verification.md`.
-- Preseed **planning-doc** artifacts at `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the mission, and a short remaining checklist **before** the specialist starts broad reading.
-- For **source-file / config-file / test-file** artifacts, do not preseed with YAML frontmatter. Either leave the target file as it is on disk (the specialist edits in place) or create it with a valid empty shape in the target language. The specialist reports lifecycle through the `RETURN_CONTRACT` line only.
-- Never wait on a specialist without a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT`; file-backed artifact progress is the only accepted basis for waiting.
-- Pass objective context, not just the literal query. Include the exact ask, why it matters, and any nearby constraints that change correctness.
-- Keep each packet as a **micro-packet**: contract, constraints, and evidence anchors only. Aim for <=900 words, avoid long code excerpts, and never turn the packet into a line-by-line implementation script when the specialist can read the scoped files.
-- Use `DONE_CHECK` as the cheapest honest task-local proof. Do not attach generic full builds or full suites to every task packet; reserve broad `ship_check` / acceptance proof for verify phase unless this is the final integration lane or the touched surface requires the broad check immediately.
+- Pass objective context, not just the literal query. Include the exact ask, why it matters, and nearby correctness-changing constraints.
+- Keep each packet as a **micro-packet**: contract, constraints, and evidence anchors only. Aim ≤900 words; no line-by-line implementation scripts when the specialist can read the scoped files.
+- Use `DONE_CHECK` as the cheapest honest task-local proof. Reserve broad `ship_check` / acceptance proof for verify phase unless the task is the final integration lane or the touched surface requires the broad check immediately.
 - After a specialist completes, compact its artifact before updating `spec.md` or `workboard.md`: carry forward status, verdict, changed files, command names/results, blockers, and next action only. Do not paste full specialist reports into canonical run files.
-- Default to sequential specialist dispatch for artifact-producing planning/context lanes. Parallelize only when packets are truly independent, small, and read-mostly.
+- Default to sequential specialist dispatch for artifact-producing lanes. Parallelize only when packets are truly independent, small, and read-mostly.
 
 ## Specialist completion barrier
 

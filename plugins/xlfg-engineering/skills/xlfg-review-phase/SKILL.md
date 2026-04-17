@@ -40,42 +40,21 @@ Run proportional review after verification, not cleanup theater before it.
 
 ## Delegation packet rules
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
-- Every specialist packet must begin with machine-readable headers:
+Follow `agents/_shared/dispatch-rules.md` for the full delegation contract (packet-size ladder, preseed rule, machine-readable headers with `PRIMARY_ARTIFACT` / `DONE_CHECK` / `RETURN_CONTRACT` / `OWNERSHIP_BOUNDARY` / `CONTEXT_DIGEST` / `PRIOR_SIBLINGS` / `Do not redo` / `Consume:`, micro-packet budget, proof budget, compaction, sequential-dispatch default, resume-same-specialist-before-fallback). Only the phase conductor may delegate.
 
-```text
-PRIMARY_ARTIFACT: <exact path>
-FILE_SCOPE: <bounded files or paths>
-DONE_CHECK: <single honest check or NONE>
-RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+Every review-phase packet MUST begin with the machine-readable headers from `_shared/dispatch-rules.md §3`. `CONTEXT_DIGEST` carries the relevant objective(s) and false-success trap from `spec.md`, the verdict and key findings from `verification.md`, and the changed file list. The digest saves the reviewer 3–5 turns of re-reading files the conductor already loaded. The siblings list is how a second reviewer (e.g., security after architecture) avoids re-flagging findings the first reviewer already raised — net-new findings only.
 
-OWNERSHIP_BOUNDARY:
-- Own: one review lens on one change cluster, limited to net-new findings or residual risk
-- Do not redo: verification failures, task-checker findings, prior review-lens findings, or planning-phase risk notes unless implementation evidence contradicts them
-- Consume: `spec.md`, `verification.md`, changed file list, and prior review artifacts listed below
+### Review ownership boundaries
 
-CONTEXT_DIGEST:
-- The relevant objective(s) and false-success trap from `spec.md`
-- The verdict and key findings from `verification.md`
-- The changed file list from implementation
+- Every reviewer must fill "Already covered by verification" before "Net-new findings".
+- Architecture owns structural drift and boundaries, not security, performance, or UX unless those are the structural cause.
+- Security owns auth/data/secret/injection risks, not generic maintainability or harness speed.
+- Performance owns runtime and harness cost traps, not broad architecture preference.
+- UX owns user-flow and accessibility critique not already covered by `ui-verification.md` or checker DA results.
 
-PRIOR_SIBLINGS:
-- <path/to/reviews/<other-lens>-review.md>: <one-line summary of what it already flagged, or `none`>
-```
+Keep dispatches as **micro-packets**: lens, changed-file cluster, verification verdict, and unresolved risk anchors only. Do not paste full diffs, full verification logs, or prior review reports into review packets.
 
-- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest saves the reviewer 3–5 turns of re-reading files the conductor already loaded. The siblings list is how a second reviewer (e.g., security after architecture) avoids re-flagging findings the first reviewer already raised — net-new findings only.
-- Review ownership boundaries:
-  - Every reviewer must fill "Already covered by verification" before "Net-new findings".
-  - Architecture owns structural drift and boundaries, not security, performance, or UX unless those are the structural cause.
-  - Security owns auth/data/secret/injection risks, not generic maintainability or harness speed.
-  - Performance owns runtime and harness cost traps, not broad architecture preference.
-  - UX owns user-flow and accessibility critique not already covered by `ui-verification.md` or checker DA results.
-- Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
-- Keep each dispatch as a **micro-packet**: lens, changed-file cluster, verification verdict, and unresolved risk anchors only. Do not paste full diffs, full verification logs, or prior review reports into review packets.
-- Compact review artifacts before updating `review-summary.md`, `spec.md`, or `workboard.md`: carry forward disposition, must-fix findings, fixed-in-run notes, residual risk, and next action only; leave full lens detail in `reviews/*.md`.
-- Only the phase conductor may delegate. Never ask a reviewer to spawn nested subagents or split its own review lane.
-- Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
-- When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
+Compact review artifacts before updating `review-summary.md`, `spec.md`, or `workboard.md`: carry forward disposition, must-fix findings, fixed-in-run notes, residual risk, and next action only; leave full lens detail in `reviews/*.md`. Do not paste full specialist reports into canonical run files.
 
 ## Verdicts
 

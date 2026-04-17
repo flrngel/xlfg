@@ -38,40 +38,21 @@ Implement the planned change with one conductor, specialist task owners, aligned
 
 ## Delegation packet rules
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
-- Every specialist packet must begin with machine-readable headers:
+Follow `agents/_shared/dispatch-rules.md` for the full delegation contract (packet-size ladder, preseed rule, machine-readable headers with `PRIMARY_ARTIFACT` / `DONE_CHECK` / `RETURN_CONTRACT` / `OWNERSHIP_BOUNDARY` / `CONTEXT_DIGEST` / `PRIOR_SIBLINGS` / `Do not redo` / `Consume:`, micro-packet budget, proof budget, compaction, sequential-dispatch default, resume-same-specialist-before-fallback). Only the phase conductor may delegate.
 
-```text
-PRIMARY_ARTIFACT: <exact path>
-FILE_SCOPE: <bounded files or paths>
-DONE_CHECK: <single honest check or NONE>
-RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+Every implement-phase packet MUST begin with the machine-readable headers from `_shared/dispatch-rules.md §3`. `CONTEXT_DIGEST` carries decisions + rationale + path refs, replacing the agent's "you will receive these N files" reads. Siblings is how `xlfg-task-checker` reuses the implementer-report.md instead of re-deriving the diff, and how `xlfg-test-implementer` builds on the implementer's report rather than re-reading raw source.
 
-OWNERSHIP_BOUNDARY:
-- Own: the assigned task's code surface, test surface, or checker verdict exactly as named in the task packet
-- Do not redo: planning decisions, proof strategy, sibling task changes, or verification-phase run truth
-- Consume: `task-brief.md`, `spec.md`, `test-contract.md`, same-task implementer/test reports, and same-phase sibling artifacts listed below
+### Implementation ownership boundaries
 
-CONTEXT_DIGEST:
-- <quoted excerpt or bullet from spec.md / task-brief.md / test-contract.md the specialist actually needs>
+- `xlfg-task-implementer` owns product/source changes for the task. It edits tests only when the packet explicitly includes test files in its ownership boundary or no separate `xlfg-test-implementer` lane will run.
+- `xlfg-test-implementer` owns test/proof file changes. It consumes `implementer-report.md` and must not make product/source changes except explicit test fixtures or helpers named in FILE_SCOPE.
+- `xlfg-task-checker` owns the task-local ACCEPT/REVISE verdict. It must cite implementer/test reports, inspect only targeted source when needed, and must not rerun full scenario proof or edit product/test files.
 
-PRIOR_SIBLINGS:
-- <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
-```
+If a task brief or packet has grown into an implementation script, compact it before dispatch: preserve behavior, constraints, scope, and proof; remove line-by-line recipes and full before/after snippets.
 
-- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest replaces the agent's "you will receive these N files" reads. Siblings is how `xlfg-task-checker` reuses the implementer-report.md instead of re-deriving the diff, and how `xlfg-test-implementer` builds on the implementer's report rather than re-reading raw source.
-- Implementation ownership boundaries:
-  - `xlfg-task-implementer` owns product/source changes for the task. It edits tests only when the packet explicitly includes test files in its ownership boundary or no separate `xlfg-test-implementer` lane will run.
-  - `xlfg-test-implementer` owns test/proof file changes. It consumes `implementer-report.md` and must not make product/source changes except explicit test fixtures or helpers named in FILE_SCOPE.
-  - `xlfg-task-checker` owns the task-local ACCEPT/REVISE verdict. It must cite implementer/test reports, inspect only targeted source when needed, and must not rerun full scenario proof or edit product/test files.
-- Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
-- Keep each dispatch as a **micro-packet**: contract, constraints, file:line anchors, and acceptance signal only. Do not paste long code blocks or tell the implementer exactly how to code when the scoped files contain the local pattern.
-- If a task brief or packet has grown into an implementation script, compact it before dispatch: preserve behavior, constraints, scope, and proof; remove line-by-line recipes and full before/after snippets.
-- Keep broad proof in its lane. Use `DONE_CHECK` for task-local confidence and leave full build/full-suite/live acceptance to verify phase unless this packet is explicitly the final integration lane.
-- Compact implementer/checker artifacts before updating `spec.md` or `workboard.md`: carry forward status, changed files, commands/results, blockers, and next action only; do not paste full reports into canonical run files.
-- Only the phase conductor may delegate. Never ask an implementation specialist to spawn nested subagents or create its own fan-out.
-- Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
-- When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
+Keep broad proof in its lane. Use `DONE_CHECK` for task-local confidence and leave full build/full-suite/live acceptance to verify phase unless this packet is explicitly the final integration lane.
+
+Compact implementer/checker artifacts before updating `spec.md` or `workboard.md`: carry forward status, changed files, commands/results, blockers, and next action only; do not paste full reports into canonical run files.
 
 ## Guardrails
 

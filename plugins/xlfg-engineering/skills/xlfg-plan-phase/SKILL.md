@@ -63,45 +63,25 @@ If `test-readiness.md` is `REVISE`, repair the plan yourself until it becomes `R
 
 ## Delegation packet rules
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
-- Every specialist packet must begin with machine-readable headers:
+Follow `agents/_shared/dispatch-rules.md` for the full delegation contract (packet-size ladder, preseed rule, machine-readable headers with `PRIMARY_ARTIFACT` / `DONE_CHECK` / `RETURN_CONTRACT` / `OWNERSHIP_BOUNDARY` / `CONTEXT_DIGEST` / `PRIOR_SIBLINGS` / `Do not redo` / `Consume:`, micro-packet budget, proof budget, compaction, sequential-dispatch default, resume-same-specialist-before-fallback). Only the phase conductor may delegate.
 
-```text
-PRIMARY_ARTIFACT: <exact path>
-FILE_SCOPE: <bounded files or paths>
-DONE_CHECK: <single honest check or NONE>
-RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+Every plan-phase packet MUST begin with the machine-readable headers from `_shared/dispatch-rules.md §3`. `CONTEXT_DIGEST` carries **decisions + rationale + path refs**, not just facts, so siblings (`xlfg-root-cause-analyst` → `xlfg-solution-architect` → `xlfg-test-strategist` → `xlfg-task-divider`) build on each other instead of re-deriving the same diagnosis.
 
-OWNERSHIP_BOUNDARY:
-- Own: the assigned planning decision or artifact section for this lane
-- Do not redo: prior planning lane decisions, context findings, flow details, design acceptance rows, proof commands, or task packets owned by another specialist
-- Consume: `spec.md`, `context.md`, optional planning artifacts, and same-phase sibling artifacts listed below
+### Planning ownership boundaries
 
-CONTEXT_DIGEST:
-- <quoted excerpt or bullet from spec.md / context.md / diagnosis.md / test-contract.md the specialist actually needs>
+- `xlfg-why-analyst` owns user/operator value, non-goals, and false-success traps; it does not propose the solution.
+- `xlfg-root-cause-analyst` owns causal mechanism and rejected symptom patches; it does not select the implementation option.
+- `xlfg-solution-architect` owns option comparison and chosen solution; task hints stay non-canonical until `xlfg-task-divider` writes task packets.
+- `xlfg-spec-author` owns behavior flow and scenario semantics; it does not choose proof commands or UI design acceptance IDs.
+- `xlfg-ui-designer` owns UI/a11y design acceptance (`DA*`) and verify-time conformance; it does not duplicate review-phase UX critique.
+- `xlfg-test-strategist` owns proof commands and scenario proof cards; it references flow scenario IDs and UI `DA*` IDs instead of restating their details.
+- `xlfg-test-readiness-checker` owns the `READY`/`REVISE` gate only; it does not silently repair weak plans or invent new proof strategy.
+- `xlfg-task-divider` owns canonical task IDs, scopes, owners, primary artifacts, and done checks. Default packet tier is **epic** (one packet per objective group); subdivide only when surfaces are truly unrelated.
+- `xlfg-risk-assessor` owns safety gates, rollback triggers, and residual release pressure; it does not rewrite solution choice or proof cards.
 
-PRIOR_SIBLINGS:
-- <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
-```
+Enforce the proof budget while creating task packets: each task `done_check` should be the cheapest honest task-local check, while broad build/full-suite/acceptance `ship_check` proof belongs to verify phase unless the task is the final integration lane or its changed surface requires that broad command immediately.
 
-- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest carries the canonical excerpts so the specialist does not re-read upstream phase outputs from scratch. Siblings is how `xlfg-root-cause-analyst` → `xlfg-solution-architect` → `xlfg-test-strategist` → `xlfg-task-divider` build on each other instead of re-deriving the same diagnosis.
-- Planning ownership boundaries:
-  - `xlfg-why-analyst` owns user/operator value, non-goals, and false-success traps; it does not propose the solution.
-  - `xlfg-root-cause-analyst` owns causal mechanism and rejected symptom patches; it does not select the implementation option.
-  - `xlfg-solution-architect` owns option comparison and chosen solution; task hints stay non-canonical until `xlfg-task-divider` writes task packets.
-  - `xlfg-spec-author` owns behavior flow and scenario semantics; it does not choose proof commands or UI design acceptance IDs.
-  - `xlfg-ui-designer` owns UI/a11y design acceptance (`DA*`) and verify-time conformance; it does not duplicate review-phase UX critique.
-  - `xlfg-test-strategist` owns proof commands and scenario proof cards; it references flow scenario IDs and UI `DA*` IDs instead of restating their details.
-  - `xlfg-test-readiness-checker` owns the `READY`/`REVISE` gate only; it does not silently repair weak plans or invent new proof strategy.
-  - `xlfg-task-divider` owns canonical task IDs, scopes, owners, primary artifacts, and done checks.
-  - `xlfg-risk-assessor` owns safety gates, rollback triggers, and residual release pressure; it does not rewrite solution choice or proof cards.
-- Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
-- Keep each dispatch as a **micro-packet**: contract, constraints, and evidence anchors only. Do not paste long source excerpts, entire sibling artifacts, or a line-by-line solution recipe into planning packets.
-- Enforce a proof budget while creating task packets: each task `done_check` should be the cheapest honest task-local check, while broad build/full-suite/acceptance `ship_check` proof belongs to verify phase unless the task is the final integration lane or its changed surface requires that broad command immediately.
-- Compact specialist outputs before updating `spec.md`, `test-contract.md`, `test-readiness.md`, or `workboard.md`: carry forward decisions, scenario IDs, commands, task rows, blockers, and next action only; leave full reports in their artifacts.
-- Only the phase conductor may delegate. Never ask a planning specialist to spawn nested subagents or split work by launching its own workers.
-- Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
-- When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
+Compact specialist outputs before updating `spec.md`, `test-contract.md`, `test-readiness.md`, or `workboard.md`: carry forward decisions, scenario IDs, commands, task rows, blockers, and next action only; leave full reports in their artifacts. Do not paste full specialist reports into canonical run files.
 
 ## Guardrails
 
