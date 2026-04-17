@@ -12,6 +12,14 @@ The 2.9.0 design target is simple:
 
 > **One public entrypoint, one run card, one intent contract, hidden phase skills loaded just in time, and specialist subagents that actually own their lanes — under a generous turn-budget ceiling so prompt-side write-first rules carry the forcing-function load.**
 
+## What changed in 4.6.0
+
+- Dispatch packets now carry a micro-packet discipline: short contract, constraints, scoped evidence anchors, and proof signal, not long code excerpts or line-by-line implementation scripts.
+- Task `DONE_CHECK` guidance now uses a proof budget. Task packets should run the cheapest honest local check; broad build/full-suite/live acceptance belongs to verify-phase `fast_check`, `smoke_check`, or `ship_check` unless the task is an integration lane.
+- Conductors now compact specialist artifacts before updating canonical run files. Promote status, verdict, changed files, command results, blockers, and next action; leave full reports and logs in the lane artifact.
+- `xlfg-task-implementer` now refuses out-of-scope repairs when a `DONE_CHECK` fails because of an unrelated file, fixture, test, hook, or dependency.
+- The Codex `$xlfg` and `$xlfg-debug` skills carry the same micro-packet and compaction guidance.
+
 ## What changed in 4.5.0
 
 - Sub-agent dispatch packets now require `OWNERSHIP_BOUNDARY` in addition to `CONTEXT_DIGEST` and `PRIOR_SIBLINGS`.

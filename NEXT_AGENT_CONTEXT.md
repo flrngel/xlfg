@@ -1,6 +1,56 @@
 # Next agent context
 
-## Current state (4.5.0)
+## Current state (4.6.0)
+
+4.6.0 optimizes the dispatch shape that 4.4.0 and 4.5.0 made mandatory. The
+dedup fields stay: every specialist packet still needs `OWNERSHIP_BOUNDARY`,
+`CONTEXT_DIGEST`, and `PRIOR_SIBLINGS`. The new rule is that those fields must
+stay lean. Packets are contracts, not implementation recipes.
+
+The trigger was a real run log where an implementation packet grew into a
+near-line-by-line coding script, repeated `yarn tsc --noEmit && yarn test ...`
+for task-local work, and then pushed report/artifact details back through the
+run card. That shape burns tokens twice: once in the dispatch prompt, then again
+when the conductor reads/synthesizes the artifacts.
+
+What changed:
+
+- `agents/_shared/output-template.md` now defines v4.6.0 micro-packet,
+  proof-budget, and artifact-compaction rules.
+- `/xlfg`, `/xlfg-debug`, and every delegating phase skill repeat the rule where
+  conductors draft packets: aim for <=900 words, use file:line/evidence anchors,
+  avoid long code/log excerpts, and do not dictate import placement, variable
+  names, or line-by-line edits when scoped files contain the local pattern.
+- Task-level `DONE_CHECK` now means the cheapest honest local proof. Broad
+  build/full-suite/live acceptance proof belongs to verify-phase `fast_check`,
+  `smoke_check`, or `ship_check` unless the task is a final integration lane or
+  touched shared type/schema/config surfaces that require the broad command now.
+- Conductors must compact returned specialist artifacts before updating
+  `spec.md`, `workboard.md`, `context.md`, `verification.md`, or summaries:
+  promote status, verdict, changed files, command names/results, blockers, and
+  next action only. Full reports and long logs stay in lane artifacts.
+- `xlfg-task-implementer` now explicitly refuses to patch out-of-scope files
+  just to satisfy a failing `DONE_CHECK`. If the failure comes from an
+  out-of-scope file, fixture, test, hook, or dependency, it records evidence and
+  returns `BLOCKED` or `FAILED` unless the parent packet widens `FILE_SCOPE` and
+  `OWNERSHIP_BOUNDARY`.
+- `$xlfg` and `$xlfg-debug` carry the same micro-packet guidance for Codex runs.
+
+If you continue from here:
+
+- Do **not** remove `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, or
+  `PRIOR_SIBLINGS`; make them smaller and more factual.
+- Do **not** put full code blocks, long logs, or exact before/after recipes in a
+  specialist packet unless the task is literally a mechanical rewrite.
+- Do **not** add generic full build + full suite chains to every task
+  `DONE_CHECK`. Put broad proof in verify phase unless a task truly needs it.
+- Do **not** paste full specialist reports into canonical run files. Canonical
+  files carry compact state; lane artifacts carry detail.
+- When bumping versions, remember `tests/test_codex_plugin.py`,
+  `docs/xlfg/meta.json`, `README.md`, plugin README, `CHANGELOG.md`, and this
+  file in addition to the three plugin manifests.
+
+## Previous state (4.5.0)
 
 4.5.0 adds the missing ownership half of the 4.4.0 dedup story. `CONTEXT_DIGEST` stopped specialists from re-reading canonical files; `PRIOR_SIBLINGS` stopped same-phase siblings from re-finding the same facts. The remaining waste was decision overlap: adjacent specialists still had enough freedom to re-adjudicate work another lane owned (e.g. flow spec vs test proof, source implementer vs test implementer, verify runner vs reducer, UI verification vs UX review).
 

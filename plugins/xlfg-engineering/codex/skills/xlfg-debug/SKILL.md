@@ -91,6 +91,8 @@ PRIOR_SIBLINGS:
 
 `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory for every specialist lane. Use them to prevent duplicate reads, duplicate findings, and adjacent-lane rework. A lane is complete only when the artifact exists, has `status: DONE`, `status: BLOCKED`, or `status: FAILED`, and contains concrete findings, checks, logs, reproduction steps, or cited facts. Progress notes are not completion.
 
+Keep specialist packets as **micro-packets**: diagnosis lane, constraints, scoped evidence anchors, and proof/disproof signal only. Do not paste long logs, full source files, or step-by-step debugging scripts when the worker can inspect scoped artifacts. After a lane finishes, compact its artifact before updating `spec.md` or `workboard.md`: carry forward causal claim, strongest evidence, disproof status, likely repair surface, blockers, and next proof step only.
+
 ## Loop Rules
 
 - If intent is `needs-user-answer`, stop before context gathering and ask only the blocking questions.

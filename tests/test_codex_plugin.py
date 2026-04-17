@@ -37,7 +37,7 @@ class TestCodexPlugin(unittest.TestCase):
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
         self.assertEqual(manifest["name"], "xlfg-engineering")
-        self.assertEqual(manifest["version"], "4.5.0")
+        self.assertEqual(manifest["version"], "4.6.0")
         self.assertEqual(manifest["skills"], "./codex/skills/")
         self.assertTrue(manifest["skills"].startswith("./"))
         self.assertNotIn("mcpServers", manifest)
@@ -54,7 +54,7 @@ class TestCodexPlugin(unittest.TestCase):
             path.parent.name: json.loads(path.read_text(encoding="utf-8"))["version"]
             for path in manifest_paths
         }
-        self.assertEqual(set(versions.values()), {"4.5.0"})
+        self.assertEqual(set(versions.values()), {"4.6.0"})
 
     def test_repo_codex_marketplace_exposes_local_plugin(self) -> None:
         marketplace_path = self.repo_root / ".agents" / "plugins" / "marketplace.json"
@@ -115,6 +115,15 @@ class TestCodexPlugin(unittest.TestCase):
             "Consume:",
         ]:
             self.assertIn(needle, combined)
+
+    def test_codex_specialist_packets_include_micro_packet_budget(self) -> None:
+        texts = []
+        for path in sorted((self.codex_root / "skills").glob("*/SKILL.md")):
+            texts.append(path.read_text(encoding="utf-8"))
+        combined = "\n".join(texts)
+        self.assertIn("micro-packets", combined)
+        self.assertIn("task-local `DONE_CHECK`", combined)
+        self.assertIn("compact its artifact", combined)
 
     def test_codex_surface_has_explicit_model_policy(self) -> None:
         model_policy = self.codex_root / "references" / "model-policy.md"

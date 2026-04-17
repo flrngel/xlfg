@@ -71,6 +71,8 @@ PRIOR_SIBLINGS:
   - Performance owns runtime and harness cost traps, not broad architecture preference.
   - UX owns user-flow and accessibility critique not already covered by `ui-verification.md` or checker DA results.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Keep each dispatch as a **micro-packet**: lens, changed-file cluster, verification verdict, and unresolved risk anchors only. Do not paste full diffs, full verification logs, or prior review reports into review packets.
+- Compact review artifacts before updating `review-summary.md`, `spec.md`, or `workboard.md`: carry forward disposition, must-fix findings, fixed-in-run notes, residual risk, and next action only; leave full lens detail in `reviews/*.md`.
 - Only the phase conductor may delegate. Never ask a reviewer to spawn nested subagents or split its own review lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.

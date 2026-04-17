@@ -76,6 +76,8 @@ PRIOR_SIBLINGS:
   - `xlfg-env-doctor` owns runnable environment shape; it does not choose scenario proof breadth.
   - `xlfg-researcher` owns only external facts local repo truth cannot provide; it does not research topics already covered by `repo-map.md`, `context.md`, or existing `research.md`.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Keep each dispatch as a **micro-packet**: contract, constraints, and file:line evidence anchors only. Do not paste full source files, full prior artifacts, or a step-by-step investigation script when the specialist can read only the scoped paths it needs.
+- Compact returned artifacts before updating `context.md` or `spec.md`: carry forward relevant facts, constraints, unknowns, evidence paths, and blockers only; leave long notes in the specialist artifact.
 - Only the phase conductor may delegate. Never ask a context specialist to spawn nested subagents or to fan out its own lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.

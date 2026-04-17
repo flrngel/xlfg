@@ -1,3 +1,73 @@
+## 4.6.0
+
+**Micro-packet and proof-budget optimization pass.** Real run logs showed the
+4.4/4.5 dedup fields were working, but the next bottleneck was self-inflicted:
+dispatch packets could balloon into line-by-line coding recipes, task-level
+`DONE_CHECK` commands could repeat full build/full-suite proof for every
+sibling, and canonical run files could grow by reabsorbing full specialist
+artifacts. 4.6.0 keeps the packet fields but makes them leaner.
+
+### Changed
+
+**Canonical packet discipline**
+- `agents/_shared/output-template.md` adds v4.6.0 micro-packet rules: packets are
+  contracts, not implementation recipes; aim for <=900 words; use file:line
+  anchors instead of full code blocks; avoid dictating import placement,
+  variable names, or line-by-line edits when scoped files contain the pattern.
+- `/xlfg`, `/xlfg-debug`, and every delegating phase skill now repeat the
+  micro-packet and artifact-compaction rules inline where conductors draft
+  packets.
+
+**Proof budget**
+- Task packets now treat `DONE_CHECK` as the cheapest honest task-local proof.
+  Broad builds, full suites, live acceptance, and repeated expensive checks
+  belong to verify phase `fast_check` / `smoke_check` / `ship_check` unless the
+  task is the final integration lane or touched shared type/schema/config
+  surfaces that require broad proof immediately.
+- `xlfg-task-divider`, `xlfg-test-strategist`, `xlfg-implement-phase`, and
+  `xlfg-verify-phase` all carry the same split so planners do not accidentally
+  make every implementer pay the ship-proof cost.
+- `xlfg-verify-runner` runs each declared command once per verify invocation and
+  retries only for classified harness/flaky failures.
+
+**Artifact compaction**
+- Conductors now promote only bounded facts from specialist artifacts into
+  `spec.md`, `workboard.md`, `context.md`, `verification.md`, and summaries:
+  status, verdict, changed files, command results, blockers, and next action.
+  Full reports and long logs stay in the specialist artifacts.
+
+**Scope safety**
+- `xlfg-task-implementer` now explicitly forbids patching out-of-scope files
+  just to make `DONE_CHECK` green. If a failure is caused by an out-of-scope
+  file, fixture, test, hook, or dependency, it records the evidence and returns
+  `BLOCKED` or `FAILED` unless the parent packet widens `FILE_SCOPE` and
+  `OWNERSHIP_BOUNDARY`.
+- Over-specified packet recipes are treated as non-normative when they conflict
+  with local code patterns; behavior, constraints, and proof remain normative.
+
+**Codex surface**
+- `$xlfg` and `$xlfg-debug` now carry the same micro-packet, proof-budget, and
+  artifact-compaction guidance.
+
+**Tests**
+- `tests/test_xlfg.py` adds v4.6.0 shape assertions for micro-packet
+  compaction, proof-budget separation, and out-of-scope `DONE_CHECK` repair.
+- `tests/test_codex_plugin.py` pins 4.6.0 and verifies the Codex public skills
+  include micro-packet guidance.
+
+**Manifests**
+- `plugin.json` bumped to **4.6.0** across `.claude-plugin/`,
+  `.cursor-plugin/`, `.codex-plugin/`, and `docs/xlfg/meta.json`.
+
+### Migration
+
+- **For users:** no breaking runtime change. New runs should spend fewer tokens
+  on giant specialist prompts, repeat expensive proof less often, and keep
+  canonical run files smaller.
+- **For packet authors:** keep `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and
+  `PRIOR_SIBLINGS`, but keep the digest factual and short. If the packet starts
+  looking like a patch script, split or compact it before dispatch.
+
 ## 4.5.0
 
 **Ownership-boundary dedup pass.** 4.4.0 stopped specialists from repeating reads and sibling findings with `CONTEXT_DIGEST` and `PRIOR_SIBLINGS`; 4.5.0 closes the next overlap class: adjacent specialists re-adjudicating each other's decisions. Every dispatch packet now carries an explicit `OWNERSHIP_BOUNDARY` that names what the lane owns, what it must not redo, and which artifacts it consumes as input truth.

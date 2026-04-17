@@ -100,6 +100,32 @@ PRIOR_SIBLINGS:
 - Empty values are not allowed. Both blocks are how xlfg minimizes duplicate
   reads, duplicate findings, and duplicate file rewrites across siblings.
 
+## Micro-packet, proof-budget, and compaction rules (v4.6.0+)
+
+Dispatch packets are contracts, not implementation recipes.
+
+- **Micro-packet budget:** aim for <=900 words per specialist packet and exceed
+  ~1,200 words only for genuinely high-risk work. If a packet wants more space,
+  split the lane or put the extra evidence in the preseeded artifact. Do not paste
+  full files, long JSX/code blocks, or exact before/after replacements into
+  `CONTEXT_DIGEST`; use file:line anchors plus the invariant the specialist must
+  preserve.
+- **No code-script packets:** the mission may name the intended behavior,
+  constraints, forbidden shortcuts, and acceptance signal. It should not dictate
+  import placement, local variable names, or line-by-line edits when the
+  specialist can infer the implementation from the scoped files.
+- **Proof budget:** `DONE_CHECK` is the cheapest honest task-local check. Full
+  builds, full suites, live acceptance, and repeated expensive checks belong in
+  verify phase (`fast_check`, `smoke_check`, `ship_check`) unless the task is the
+  final integration lane or the changed surface specifically requires that broad
+  command now. If an expensive command already passed for the current diff and no
+  owned files changed since, cite that artifact instead of rerunning it.
+- **Artifact compaction:** after a specialist returns, promote only bounded facts
+  into `spec.md` / `workboard.md`: terminal status, verdict, changed files,
+  command names/results, first blocker, and next action. Keep full reports and
+  logs in the specialist artifact; do not paste whole reports back into the run
+  card.
+
 ## Stop-guard contract
 
 `plugins/xlfg-engineering/scripts/subagent-stop-guard.mjs` accepts either:

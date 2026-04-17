@@ -162,6 +162,7 @@ Include additional scenario cards only when they are truly necessary.
 - Prefer the cheapest check that proves the requirement.
 - Prefer exact flow/state assertions over generic suite breadth.
 - Reserve e2e for flows that truly need it.
+- Keep task-level `done_check` and scenario-level `fast_check` separate: task packets get the cheapest local confidence check, while verify phase owns broader `ship_check` / acceptance proof. Do not make every implementation task pay the full build plus full suite unless that task is the final integration lane or it changed shared type/schema/config surfaces that require it.
 - Default assumption: the agent will execute repo-local fast/ship checks itself. Do not silently rely on the user to perform the important proof later.
 - Explicitly map **interaction variants** (keyboard vs click, Enter vs button) when the UX flow depends on them.
 - Trace every primary changed scenario back to objective IDs and query / intent IDs from `spec.md`.

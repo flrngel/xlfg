@@ -107,6 +107,8 @@ You run verification commands and capture evidence artifacts.
 ## Execution rules
 
 - Run commands in the received order.
+- Run each declared command at most once per verify invocation. Retry only when the packet or observed output classifies a harness/flaky failure that needs one controlled rerun; do not repeat expensive checks just to increase confidence.
+- Treat task-level `DONE_CHECK` artifacts as prior evidence. Your lane owns scenario `fast_check`, `smoke_check`, `ship_check`, and acceptance command execution, not re-running every implementation task's local check.
 - Preserve the layer in the output names (`fast`, `smoke`, `e2e`, `full`).
 - Capture full output.
 - Prefer non-interactive execution.

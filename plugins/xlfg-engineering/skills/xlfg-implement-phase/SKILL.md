@@ -32,7 +32,7 @@ Implement the planned change with one conductor, specialist task owners, aligned
 5. Keep these specialists foregrounded, short-lived, and leaf-only. Treat a missing report or a prep-only response as incomplete work, not success. Use `SendMessage` with the returned agent ID to resume the same specialist once before falling back to repair or re-splitting the task. If no agent ID is available, re-dispatch the exact same packet once.
 6. The main conductor should coordinate task order, integrate specialist artifacts, and resolve conflicts; it should not bypass the specialist lanes unless the task is truly trivial or the specialist failed twice.
 7. Implement the smallest coherent set of code and test changes that satisfy the run card.
-8. Run targeted task-level checks as you go. Do not close a task until its packet artifact exists and the done check is honestly addressed.
+8. Run targeted task-level checks as you go. Do not close a task until its packet artifact exists and the done check is honestly addressed. A task `DONE_CHECK` should be the cheapest honest proof for that task; do not rerun a generic full build/full suite after every sibling task unless the current task changed shared type/schema/config surfaces that require it.
 9. Update `spec.md` and `workboard.md` when scope, task status, or chosen solution changes.
 10. If the diagnosis or proof contract changes materially, return to planning instead of pushing through a patch.
 
@@ -65,6 +65,10 @@ PRIOR_SIBLINGS:
   - `xlfg-test-implementer` owns test/proof file changes. It consumes `implementer-report.md` and must not make product/source changes except explicit test fixtures or helpers named in FILE_SCOPE.
   - `xlfg-task-checker` owns the task-local ACCEPT/REVISE verdict. It must cite implementer/test reports, inspect only targeted source when needed, and must not rerun full scenario proof or edit product/test files.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Keep each dispatch as a **micro-packet**: contract, constraints, file:line anchors, and acceptance signal only. Do not paste long code blocks or tell the implementer exactly how to code when the scoped files contain the local pattern.
+- If a task brief or packet has grown into an implementation script, compact it before dispatch: preserve behavior, constraints, scope, and proof; remove line-by-line recipes and full before/after snippets.
+- Keep broad proof in its lane. Use `DONE_CHECK` for task-local confidence and leave full build/full-suite/live acceptance to verify phase unless this packet is explicitly the final integration lane.
+- Compact implementer/checker artifacts before updating `spec.md` or `workboard.md`: carry forward status, changed files, commands/results, blockers, and next action only; do not paste full reports into canonical run files.
 - Only the phase conductor may delegate. Never ask an implementation specialist to spawn nested subagents or create its own fan-out.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.

@@ -85,6 +85,8 @@ PRIOR_SIBLINGS:
 - `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. Intent rarely has prior siblings (it is the first delegating phase), so `PRIOR_SIBLINGS: none` is the common case here — but the field must still be present so downstream phases inherit a consistent contract.
 - The intent specialist owns request decomposition only. Later context or planning specialists may propose a gap note if evidence contradicts the contract, but they must not silently rewrite intent while doing repo mapping, design, proof, or implementation work.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Keep the dispatch as a **micro-packet**: contract, constraints, and evidence anchors only. Do not paste long transcripts, whole artifacts, or a step-by-step writing recipe when the intent specialist can use the scoped digest.
+- Compact returned artifacts before updating `spec.md`: carry forward only resolution, objective groups, blockers, and direct/implied ask IDs; do not paste the full specialist report into the run card.
 - Only the phase conductor may delegate. Never ask a specialist to spawn nested subagents or fan out further from inside the lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.

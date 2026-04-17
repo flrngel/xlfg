@@ -130,7 +130,7 @@ class TestPostMortem(unittest.TestCase):
                     "ts": "2026-04-16T10:15:00Z",
                     "run": run_id,
                     "type": "fix",
-                    "version": "4.5.0",
+                    "version": "4.6.0",
                     "summary": "Acme customer dashboard needed billing proof",
                     "symptom": "Project-specific failure text",
                     "root_cause": "src/payments/customer.py mismatch",

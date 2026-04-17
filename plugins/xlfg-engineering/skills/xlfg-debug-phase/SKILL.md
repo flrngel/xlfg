@@ -137,6 +137,8 @@ PRIOR_SIBLINGS:
   - `xlfg-test-strategist` owns reproducer/disproof proof cards only when the proof contract is still vague.
   - `xlfg-researcher` owns external facts only when freshness changes the diagnosis.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Keep each dispatch as a **micro-packet**: diagnosis lane, evidence anchors, scoped files, and disproof/proof signal only. Do not paste long logs, full source files, or a step-by-step debugging script when the specialist can read the cited artifacts.
+- Compact returned artifacts before updating `debug-report.md`, `spec.md`, or `workboard.md`: carry forward causal claim, strongest evidence, disproof status, likely repair surface, blockers, and next proof step only.
 - Only the phase conductor may delegate. Never ask a debug specialist to spawn nested subagents or to hand off the lane to another worker.
 - Default to **sequential** dispatch for artifact-producing diagnosis work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.

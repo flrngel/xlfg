@@ -418,6 +418,65 @@ class TestXLFG(unittest.TestCase):
             for needle in needles:
                 self.assertIn(needle, text, f"Missing phase overlap boundary {needle!r} in {phase_name}")
 
+    def test_delegating_entrypoints_enforce_micro_packet_compaction(self) -> None:
+        """v4.6.0 — specialist packets must stay small contracts, and phase
+        synthesis must compact artifacts instead of growing the run card with
+        copied reports.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        targets = [
+            repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md",
+            repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-debug.md",
+        ]
+        targets.extend(sorted((repo_root / "plugins" / "xlfg-engineering" / "skills").glob("xlfg-*-phase/SKILL.md")))
+        for path in targets:
+            text = path.read_text(encoding="utf-8")
+            if "Agent" not in text and "SendMessage" not in text and path.name not in {"xlfg.md", "xlfg-debug.md"}:
+                continue
+            self.assertIn("micro-packet", text.lower(), f"Missing micro-packet budget in {path}")
+            self.assertIn("compact", text.lower(), f"Missing artifact compaction rule in {path}")
+            self.assertTrue(
+                "do not paste" in text.lower() or "leave full" in text.lower() or "leave long" in text.lower(),
+                f"Compaction rule must forbid full report promotion in {path}",
+            )
+
+    def test_task_packets_use_proof_budget_not_repeated_full_suite(self) -> None:
+        """v4.6.0 — task briefs should not pay full build/full-suite cost for
+        every sibling lane; broad proof belongs to verify unless required.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        task_divider = (
+            repo_root / "plugins" / "xlfg-engineering" / "agents" / "planning" / "xlfg-task-divider.md"
+        ).read_text(encoding="utf-8")
+        test_strategist = (
+            repo_root / "plugins" / "xlfg-engineering" / "agents" / "planning" / "xlfg-test-strategist.md"
+        ).read_text(encoding="utf-8")
+        implement_phase = (
+            repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-implement-phase" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        verify_phase = (
+            repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-verify-phase" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("proof budget", task_divider.lower())
+        self.assertIn("cheapest honest task-local", task_divider)
+        self.assertIn("Do not attach a generic build plus full suite to every task", task_divider)
+        self.assertIn("Keep task-level `done_check` and scenario-level `fast_check` separate", test_strategist)
+        self.assertIn("do not rerun a generic full build/full suite after every sibling task", implement_phase)
+        self.assertIn("run each declared command once per verify invocation", verify_phase)
+
+    def test_task_implementer_does_not_repair_out_of_scope_done_check_failures(self) -> None:
+        """v4.6.0 — a failing DONE_CHECK must not tempt the implementer into
+        editing tests or files outside its packet ownership boundary.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        impl = (
+            repo_root / "plugins" / "xlfg-engineering" / "agents" / "implementation" / "xlfg-task-implementer.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Do not patch out-of-scope files", impl)
+        self.assertIn("BLOCKED` or `FAILED", impl)
+        self.assertIn("over-specified packet recipes", impl)
+
     def test_phase_skills_can_resume_specialists_with_sendmessage(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         phase_names = [

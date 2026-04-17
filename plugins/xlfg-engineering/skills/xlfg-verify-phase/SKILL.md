@@ -74,6 +74,9 @@ PRIOR_SIBLINGS:
   - `xlfg-env-doctor` owns harness health classification only when the harness is unhealthy or running-app proof depends on it.
   - `xlfg-ui-designer` verify mode owns DA conformance only when checker reports did not already pass every DA; it does not duplicate review-phase UX critique.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Keep each dispatch as a **micro-packet**: command order, scenario IDs, prior task evidence anchors, and stop conditions only. Do not paste full task reports or long logs into verify packets; point to the artifacts instead.
+- Treat implementation `DONE_CHECK` results as prior evidence. Verify phase owns broad `fast_check`, `smoke_check`, and `ship_check` proof; run each declared command once per verify invocation unless retrying a classified harness/flaky failure.
+- Compact runner/reducer artifacts before updating `verification.md`, `proof-map.md`, or `workboard.md`: carry forward commands, exit codes, log paths, GREEN/RED/FAILED status, first actionable failure, and next action only.
 - Only the phase conductor may delegate. Never ask a verify specialist to spawn nested subagents or hand off its lane to another worker.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.

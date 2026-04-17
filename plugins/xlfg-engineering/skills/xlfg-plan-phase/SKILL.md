@@ -96,6 +96,9 @@ PRIOR_SIBLINGS:
   - `xlfg-task-divider` owns canonical task IDs, scopes, owners, primary artifacts, and done checks.
   - `xlfg-risk-assessor` owns safety gates, rollback triggers, and residual release pressure; it does not rewrite solution choice or proof cards.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
+- Keep each dispatch as a **micro-packet**: contract, constraints, and evidence anchors only. Do not paste long source excerpts, entire sibling artifacts, or a line-by-line solution recipe into planning packets.
+- Enforce a proof budget while creating task packets: each task `done_check` should be the cheapest honest task-local check, while broad build/full-suite/acceptance `ship_check` proof belongs to verify phase unless the task is the final integration lane or its changed surface requires that broad command immediately.
+- Compact specialist outputs before updating `spec.md`, `test-contract.md`, `test-readiness.md`, or `workboard.md`: carry forward decisions, scenario IDs, commands, task rows, blockers, and next action only; leave full reports in their artifacts.
 - Only the phase conductor may delegate. Never ask a planning specialist to spawn nested subagents or split work by launching its own workers.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.

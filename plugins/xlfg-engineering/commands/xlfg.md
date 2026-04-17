@@ -152,6 +152,9 @@ PRIOR_SIBLINGS:
 - For **source-file / config-file / test-file** artifacts, do not preseed with YAML frontmatter. Either leave the target file as it is on disk (the specialist edits in place) or create it with a valid empty shape in the target language. The specialist reports lifecycle through the `RETURN_CONTRACT` line only.
 - Never wait on a specialist without a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT`; file-backed artifact progress is the only accepted basis for waiting.
 - Pass objective context, not just the literal query. Include the exact ask, why it matters, and any nearby constraints that change correctness.
+- Keep each packet as a **micro-packet**: contract, constraints, and evidence anchors only. Aim for <=900 words, avoid long code excerpts, and never turn the packet into a line-by-line implementation script when the specialist can read the scoped files.
+- Use `DONE_CHECK` as the cheapest honest task-local proof. Do not attach generic full builds or full suites to every task packet; reserve broad `ship_check` / acceptance proof for verify phase unless this is the final integration lane or the touched surface requires the broad check immediately.
+- After a specialist completes, compact its artifact before updating `spec.md` or `workboard.md`: carry forward status, verdict, changed files, command names/results, blockers, and next action only. Do not paste full specialist reports into canonical run files.
 - Default to sequential specialist dispatch for artifact-producing planning/context lanes. Parallelize only when packets are truly independent, small, and read-mostly.
 
 ## Specialist completion barrier

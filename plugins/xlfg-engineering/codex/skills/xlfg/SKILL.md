@@ -96,6 +96,8 @@ PRIOR_SIBLINGS:
 
 `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory for every specialist lane. Use them to prevent duplicate reads, duplicate findings, and adjacent-lane rework. A lane is complete only when the artifact exists, has `status: DONE`, `status: BLOCKED`, or `status: FAILED`, and contains concrete edits, findings, checks, logs, or cited facts. Progress notes are not completion.
 
+Keep specialist packets as **micro-packets**: contract, constraints, file/evidence anchors, and proof signal only. Do not paste long source excerpts or line-by-line implementation recipes when the worker can inspect scoped files. Use task-local `DONE_CHECK` for the cheapest honest confidence check and reserve broad build/full-suite/live acceptance for verify-phase `fast_check`, `smoke_check`, or `ship_check`. After a lane finishes, compact its artifact before updating `spec.md` or `workboard.md`: carry forward status, verdict, changed files, command results, blockers, and next action only.
+
 ## Loop Rules
 
 - If intent is `needs-user-answer`, stop before context gathering and ask only the blocking questions.
