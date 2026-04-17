@@ -48,14 +48,18 @@ PRIMARY_ARTIFACT: <exact path>
 FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+
+CONTEXT_DIGEST:
+- The relevant objective(s) and false-success trap from `spec.md`
+- The verdict and key findings from `verification.md`
+- The changed file list from implementation
+
+PRIOR_SIBLINGS:
+- <path/to/reviews/<other-lens>-review.md>: <one-line summary of what it already flagged, or `none`>
 ```
 
+- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest saves the reviewer 3–5 turns of re-reading files the conductor already loaded. The siblings list is how a second reviewer (e.g., security after architecture) avoids re-flagging findings the first reviewer already raised — net-new findings only.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
-- Include a `CONTEXT_DIGEST` block in each review packet that embeds:
-  - The relevant objective(s) and false-success trap from `spec.md`
-  - The verdict and key findings from `verification.md`
-  - The changed file list from implementation
-  This saves the reviewer 3-5 turns of re-reading files the conductor already loaded.
 - Only the phase conductor may delegate. Never ask a reviewer to spawn nested subagents or split its own review lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.

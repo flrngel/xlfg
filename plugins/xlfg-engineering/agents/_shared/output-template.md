@@ -50,6 +50,45 @@ The specialist updates the same file in place. On completion, the specialist
 flips `status: IN_PROGRESS` → `status: DONE` (or `BLOCKED` / `FAILED`) and
 fills in the agent-specific sections.
 
+## Dispatch packet shape (canonical)
+
+Sub-agents in xlfg communicate **through files only** — never chat. Each
+specialist receives one packet, updates one preseeded artifact, and replies
+with one final-status line. To stop sibling specialists from re-reading the
+same canonical files and re-deriving the same findings, every dispatch packet
+MUST begin with these machine-readable lines:
+
+```text
+PRIMARY_ARTIFACT: <exact path>
+ARTIFACT_KIND: planning-doc | source-file | config-file | test-file   # optional; default planning-doc
+FILE_SCOPE: <bounded files or paths>
+DONE_CHECK: <single honest check or NONE>
+RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+
+CONTEXT_DIGEST:
+- <quoted excerpt or bullet from spec.md / context.md / verification.md / etc.>
+- <only the fields the specialist actually needs to do its job>
+
+PRIOR_SIBLINGS:
+- <path/to/sibling-artifact.md>: <one-line summary of what it already covered>
+```
+
+- `CONTEXT_DIGEST` is **mandatory**. The conductor inlines the excerpts the
+  specialist needs from canonical files (`spec.md`, `context.md`,
+  `verification.md`, prior phase outputs). If the lane truly needs no extra
+  context beyond the artifact preseed, write `CONTEXT_DIGEST: see PRIMARY_ARTIFACT preseed`.
+  Specialists treat the digest as **authoritative** and must not re-read the
+  source files unless the digest is explicitly insufficient.
+- `PRIOR_SIBLINGS` is **mandatory**. The conductor lists every artifact
+  already produced **in the same phase lane** that overlaps the new
+  specialist's surface (e.g., `context/adjacent.md` when dispatching
+  `xlfg-context-constraints-investigator`; `tasks/T1/implementer-report.md`
+  when dispatching `xlfg-task-checker`). If there are no priors, write
+  `PRIOR_SIBLINGS: none`. Specialists must skim listed siblings and
+  explicitly skip ground already covered rather than re-deriving it.
+- Empty values are not allowed. Both blocks are how xlfg minimizes duplicate
+  reads, duplicate findings, and duplicate file rewrites across siblings.
+
 ## Stop-guard contract
 
 `plugins/xlfg-engineering/scripts/subagent-stop-guard.mjs` accepts either:

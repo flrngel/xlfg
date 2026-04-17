@@ -132,9 +132,16 @@ ARTIFACT_KIND: planning-doc | source-file | config-file | test-file   # optional
 FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+
+CONTEXT_DIGEST:
+- <quoted excerpt or bullet from spec.md / context.md / verification.md / prior phase output>
+
+PRIOR_SIBLINGS:
+- <path/to/sibling-artifact.md>: <one-line summary of what it already covered>
 ```
 
 - `ARTIFACT_KIND` is optional. Omit it for markdown planning docs (the default). Set it explicitly when `PRIMARY_ARTIFACT` points at application source, config, or tests — prepending YAML frontmatter to those file types breaks them at parse time.
+- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are **mandatory**. They exist to stop sibling specialists from re-reading the same canonical files and re-deriving the same findings. See `agents/_shared/output-template.md` for the canonical shape and rules. Use `CONTEXT_DIGEST: see PRIMARY_ARTIFACT preseed` and `PRIOR_SIBLINGS: none` only when literally true.
 - Preseed **planning-doc** artifacts at `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the mission, and a short remaining checklist **before** the specialist starts broad reading.
 - For **source-file / config-file / test-file** artifacts, do not preseed with YAML frontmatter. Either leave the target file as it is on disk (the specialist edits in place) or create it with a valid empty shape in the target language. The specialist reports lifecycle through the `RETURN_CONTRACT` line only.
 - Never wait on a specialist without a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT`; file-backed artifact progress is the only accepted basis for waiting.

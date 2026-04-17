@@ -46,8 +46,15 @@ PRIMARY_ARTIFACT: <exact path>
 FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+
+CONTEXT_DIGEST:
+- <quoted excerpt or bullet from spec.md / task-brief.md / test-contract.md the specialist actually needs>
+
+PRIOR_SIBLINGS:
+- <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
 ```
 
+- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest replaces the agent's "you will receive these N files" reads. Siblings is how `xlfg-task-checker` reuses the implementer-report.md instead of re-deriving the diff, and how `xlfg-test-implementer` builds on the implementer's report rather than re-reading raw source.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
 - Only the phase conductor may delegate. Never ask an implementation specialist to spawn nested subagents or create its own fan-out.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.

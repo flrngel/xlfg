@@ -288,6 +288,45 @@ class TestXLFG(unittest.TestCase):
         review_phase = (repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-review-phase" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("CONTEXT_DIGEST", review_phase)
 
+    def test_all_delegating_entrypoints_require_context_digest_and_prior_siblings(self) -> None:
+        """v4.4.0 — every delegating entrypoint (conductor + every phase skill that
+        dispatches specialists) must mandate `CONTEXT_DIGEST` + `PRIOR_SIBLINGS` in
+        its packet contract so siblings stop re-reading the same canonical files
+        and re-deriving the same findings.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        targets = [repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md"]
+        targets.extend(sorted((repo_root / "plugins" / "xlfg-engineering" / "skills").glob("xlfg-*-phase/SKILL.md")))
+        for path in targets:
+            text = path.read_text(encoding="utf-8")
+            if "Agent" not in text and "SendMessage" not in text and path.name != "xlfg.md":
+                continue
+            self.assertIn("CONTEXT_DIGEST", text, f"Missing CONTEXT_DIGEST contract in {path}")
+            self.assertIn("PRIOR_SIBLINGS", text, f"Missing PRIOR_SIBLINGS contract in {path}")
+
+    def test_specialist_agents_honor_context_digest_and_prior_siblings(self) -> None:
+        """v4.4.0 — every specialist agent's Turn budget rule must reference both
+        `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` so the dedup contract is two-sided.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        agent_root = repo_root / "plugins" / "xlfg-engineering" / "agents"
+        for agent_path in sorted(agent_root.rglob("*.md")):
+            if "_shared" in agent_path.parts:
+                continue
+            text = agent_path.read_text(encoding="utf-8")
+            self.assertIn("CONTEXT_DIGEST", text, f"Missing CONTEXT_DIGEST awareness in {agent_path.name}")
+            self.assertIn("PRIOR_SIBLINGS", text, f"Missing PRIOR_SIBLINGS awareness in {agent_path.name}")
+
+    def test_canonical_template_documents_dispatch_packet_shape(self) -> None:
+        """v4.4.0 — the shared output template owns the canonical packet shape so
+        every phase skill and agent file can reference one source of truth.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        template = (repo_root / "plugins" / "xlfg-engineering" / "agents" / "_shared" / "output-template.md").read_text(encoding="utf-8")
+        self.assertIn("Dispatch packet shape", template)
+        self.assertIn("CONTEXT_DIGEST", template)
+        self.assertIn("PRIOR_SIBLINGS", template)
+
     def test_phase_skills_can_resume_specialists_with_sendmessage(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
         phase_names = [

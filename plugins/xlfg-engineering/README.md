@@ -12,6 +12,13 @@ The 2.9.0 design target is simple:
 
 > **One public entrypoint, one run card, one intent contract, hidden phase skills loaded just in time, and specialist subagents that actually own their lanes — under a generous turn-budget ceiling so prompt-side write-first rules carry the forcing-function load.**
 
+## What changed in 4.4.0
+
+- Sub-agent dispatch packets now require two new mandatory fields — `CONTEXT_DIGEST` (canonical excerpts the specialist needs) and `PRIOR_SIBLINGS` (artifacts already produced in the same phase lane that overlap the specialist's surface).
+- Defined once in `agents/_shared/output-template.md`; enforced by the conductor (`commands/xlfg.md`) and every delegating phase skill (`intent`, `context`, `plan`, `implement`, `verify`, `review`, `debug`).
+- All 27 specialist agents updated to honor both fields: trust the digest over re-reading canonical files, skim listed siblings to skip ground already covered.
+- Net effect: specialists stop re-reading the same `spec.md` / `context.md` / `verification.md` for each lane, and sibling specialists in the same phase build on each other instead of re-deriving overlapping findings.
+
 ## What changed in 3.3.0
 
 - `/xlfg-init` and `/xlfg-audit` are back as manual maintenance commands after being swept up in the v3.0.0 CLI removal.

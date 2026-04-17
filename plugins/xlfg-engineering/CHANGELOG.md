@@ -1,3 +1,53 @@
+## 4.4.0
+
+**Sub-agent dedup contract: `CONTEXT_DIGEST` + `PRIOR_SIBLINGS` are now mandatory in every dispatch packet.** Sub-agents in xlfg already communicate exclusively through files (preseeded artifact in, terminal-status reply out — never chat synthesis). The remaining waste was on the read side: each new specialist re-read ~10 canonical files because dispatch packets did not embed excerpts, and sibling specialists in the same phase lane re-derived overlapping findings because the packet did not list prior siblings. Only `xlfg-review-phase` had a `CONTEXT_DIGEST` rule; this release generalizes it across the conductor and all delegating phase skills.
+
+### Why
+
+Three observable redundancies in real `/xlfg` runs:
+
+1. **Canonical re-reads.** Every specialist agent file lists "Input you will receive: spec.md, context.md, current-state.md, …" — and the specialist dutifully re-reads each one even when the conductor just synthesized them. Token cost compounds across 5–8 specialists per phase.
+2. **Sibling overlap.** `xlfg-context-adjacent-investigator`, `xlfg-context-constraints-investigator`, and `xlfg-context-unknowns-investigator` all read the same `context.md` and produce overlapping findings (assumptions vs. unknowns vs. acceptance criteria addenda). Same shape with `xlfg-root-cause-analyst` → `xlfg-solution-architect` and with multi-lens reviewers.
+3. **Implementer→checker re-derivation.** `xlfg-task-checker` re-reads the same source files `xlfg-task-implementer` just touched instead of consuming the implementer's report.
+
+The fix is two new mandatory packet fields, not new agents:
+
+- `CONTEXT_DIGEST` — the conductor inlines the canonical excerpts the specialist actually needs. Specialists treat it as authoritative and only re-read source files when the digest is explicitly insufficient.
+- `PRIOR_SIBLINGS` — the conductor lists every artifact already produced **in the same phase lane** that overlaps the new specialist's surface. The new specialist skims listed siblings and explicitly skips covered ground.
+
+Together they make sibling-to-sibling deduplication mechanical instead of accidental.
+
+### Changed
+
+**Canonical packet shape**
+- `agents/_shared/output-template.md` — new `## Dispatch packet shape (canonical)` section. Defines `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` as mandatory packet fields with explicit `none` / `see PRIMARY_ARTIFACT preseed` escape hatches when truly empty. Single source of truth that every phase skill and agent now references.
+
+**Conductor**
+- `commands/xlfg.md` — `## Atomic packet format` extended with the two new lines and a one-paragraph reference to the canonical template.
+
+**Phase skills** (every delegating phase skill now requires the same packet shape)
+- `skills/xlfg-intent-phase/SKILL.md`
+- `skills/xlfg-context-phase/SKILL.md`
+- `skills/xlfg-plan-phase/SKILL.md`
+- `skills/xlfg-implement-phase/SKILL.md`
+- `skills/xlfg-verify-phase/SKILL.md`
+- `skills/xlfg-review-phase/SKILL.md` — pre-existing `CONTEXT_DIGEST` block converted to canonical shape and joined by `PRIOR_SIBLINGS` (a second reviewer no longer re-flags findings the first reviewer already raised).
+- `skills/xlfg-debug-phase/SKILL.md` — same packet rule applied to `/xlfg-debug`.
+
+**Specialist agents** (all 27 files; one-line Turn budget rule extension)
+- `agents/**/*.md` — Turn budget rule's "if the dispatch packet includes a context digest, use it instead of re-reading those files" expanded into two explicit rules: trust `CONTEXT_DIGEST` over re-reading canonical files, and skim `PRIOR_SIBLINGS` to skip covered ground. The dedup contract is now two-sided: conductor populates, specialist honors.
+
+**Tests**
+- `tests/test_xlfg.py` (+3): `test_all_delegating_entrypoints_require_context_digest_and_prior_siblings` covers the conductor + every phase skill; `test_specialist_agents_honor_context_digest_and_prior_siblings` covers all 27 agent files; `test_canonical_template_documents_dispatch_packet_shape` locks the shared template as the source of truth.
+
+**Manifests**
+- `plugin.json` bumped to **4.4.0** across `.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`.
+
+### Migration
+
+- **For users:** no breaking changes. Runs already in flight under 4.3.0 continue to work — packets that omit the new fields still dispatch successfully (the contract is enforced at the prompt level, not by a runtime gate). New runs under 4.4.0 produce smaller per-specialist context.
+- **For specialist authors:** the agent's "Input you will receive" lists are now treated as a fallback. Prefer the dispatch packet's `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` excerpts. Re-read source files only when the digest is explicitly insufficient.
+
 ## 4.3.0
 
 **Speed-of-run optimization pass based on `/tmp/hey-xlfg-authors.md`.** Seven surgical fixes to specialist narrative, hook noise, and skill contracts. Net effect on a comparable future run: the author estimates ~40% reduction from fixing the top three alone; this release ships all seven.

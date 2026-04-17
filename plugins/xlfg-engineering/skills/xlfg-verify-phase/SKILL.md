@@ -54,8 +54,15 @@ PRIMARY_ARTIFACT: <exact path>
 FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+
+CONTEXT_DIGEST:
+- <quoted excerpt or bullet from spec.md / test-contract.md / proof-map.md the specialist actually needs>
+
+PRIOR_SIBLINGS:
+- <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
 ```
 
+- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest carries scenario IDs and harness facts so the specialist does not re-read upstream phase outputs. Siblings is how `xlfg-verify-reducer` consumes `xlfg-verify-runner`'s `results.json`/`summary.md` instead of re-running the harness or re-summarizing logs from scratch.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
 - Only the phase conductor may delegate. Never ask a verify specialist to spawn nested subagents or hand off its lane to another worker.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.

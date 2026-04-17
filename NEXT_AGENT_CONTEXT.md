@@ -1,6 +1,29 @@
 # Next agent context
 
-## Current state (4.2.0)
+## Current state (4.4.0)
+
+4.4.0 generalizes a sub-agent dedup contract that previously existed only in `xlfg-review-phase`. Sub-agents in xlfg already communicate exclusively through files — the conductor preseeds a `PRIMARY_ARTIFACT` with `status: IN_PROGRESS`, the specialist updates that exact file in place, and the final chat reply is a single `DONE|BLOCKED|FAILED <path>` line enforced by `subagent-stop-guard.mjs`. There is no chat-based synthesis between siblings.
+
+The remaining waste was on the read side. Each specialist's "Input you will receive" list named ~10 canonical files (`spec.md`, `context.md`, `current-state.md`, …) and the specialist re-read each one even when the conductor had just synthesized them. Sibling specialists in the same phase lane (e.g., the three context investigators; the planning specialists; the multi-lens reviewers; implementer→checker) re-derived overlapping findings because the dispatch packet did not list prior siblings.
+
+**The fix is two new mandatory packet fields, not new agents:**
+
+- `CONTEXT_DIGEST` — the conductor inlines the canonical excerpts the specialist actually needs. Specialists treat the digest as authoritative and only re-read source files when it is explicitly insufficient.
+- `PRIOR_SIBLINGS` — the conductor lists every artifact already produced in the same phase lane that overlaps the new specialist's surface. The new specialist skims listed siblings and explicitly skips covered ground.
+
+Single source of truth lives in `agents/_shared/output-template.md` (`## Dispatch packet shape (canonical)`). Every delegating entrypoint references it: `commands/xlfg.md` (conductor) and seven phase skills — `intent`, `context`, `plan`, `implement`, `verify`, `review`, `debug`. All 27 specialist agents had their Turn budget rule expanded to honor both fields, making the contract two-sided.
+
+**If you continue from here:**
+
+- Do **not** treat the agent's "Input you will receive" file lists as the primary contract. They are a fallback. The dispatch packet's `CONTEXT_DIGEST` is the primary input; specialists re-read source files only when the digest is explicitly insufficient.
+- Do **not** add a new delegating phase skill or entrypoint without including `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` in its Delegation packet rules. The two new tests in `tests/test_xlfg.py` (`test_all_delegating_entrypoints_require_context_digest_and_prior_siblings`, `test_specialist_agents_honor_context_digest_and_prior_siblings`) will catch missing coverage.
+- Do **not** centralize the packet rule into a single template-include. Each phase skill keeps its own copy because phase-specific examples (`xlfg-root-cause-analyst → xlfg-solution-architect`, `xlfg-verify-runner → xlfg-verify-reducer`, etc.) belong inline where the conductor reads them. The canonical template owns the *shape*; the phase skills own the *examples*.
+- The two `none` / `see PRIMARY_ARTIFACT preseed` escape hatches exist for the genuinely-empty case (intent phase has no priors; some specialists need only the artifact preseed). Use them honestly — never fabricate `PRIOR_SIBLINGS` content to satisfy the contract.
+- `xlfg-review-phase`'s pre-existing `CONTEXT_DIGEST` rule was rewritten to match the canonical shape rather than left as a one-off. The 4.3.0 review-phase wording is gone.
+
+This supersedes nothing in 4.3.0 — speed-of-run optimizations, `ARTIFACT_KIND`, `in_progress_phase`, smoke-first verify, `APPROVE-WITH-NOTES-FIXED`, and `/xlfg-status` are all unchanged. 4.4.0 is purely a "specialists stop redoing each other's reads and findings" pass.
+
+## Previous state (4.2.0)
 
 4.2.0 splits the audit surface into two commands serving two audiences. The previous `/xlfg-audit` was a category error: every "check" it ran (version sync, SDLC coverage, word counts, frontmatter regex, forbidden-token sweep) was a deterministic file read pretending to need an LLM. It also gave the user running it nothing — the report only existed to be phoned home to upstream maintainers. 4.1.1 fixed a path-anchoring bug inside that wrong shape; 4.2.0 fixes the shape itself.
 

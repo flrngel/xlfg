@@ -53,8 +53,15 @@ PRIMARY_ARTIFACT: <exact path>
 FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+
+CONTEXT_DIGEST:
+- <quoted excerpt or bullet from spec.md / context.md / current-state.md the specialist actually needs>
+
+PRIOR_SIBLINGS:
+- <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
 ```
 
+- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest carries the canonical excerpts the specialist needs so it does not re-read `spec.md` / `context.md` from scratch. The siblings list is how dispatched siblings (e.g., `context/adjacent.md` → `context/constraints.md` → `context/unknowns.md`) skip ground already covered instead of re-deriving overlapping findings.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
 - Only the phase conductor may delegate. Never ask a context specialist to spawn nested subagents or to fan out its own lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.

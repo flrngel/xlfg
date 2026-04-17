@@ -44,7 +44,8 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 ## Turn budget rule
 
 - Your turn budget is limited. Do not read files speculatively.
-- If the dispatch packet includes a context digest, use it instead of re-reading those files.
+- If the dispatch packet includes a `CONTEXT_DIGEST`, treat it as authoritative and use it instead of re-reading the source canonical files (spec.md, context.md, verification.md, etc.).
+- If the dispatch packet includes `PRIOR_SIBLINGS`, skim each listed artifact and explicitly skip ground a sibling already covered. Build on prior siblings rather than re-deriving overlapping findings.
 - Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
 - Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
 
