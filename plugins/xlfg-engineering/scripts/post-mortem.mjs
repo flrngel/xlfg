@@ -13,6 +13,7 @@
 //   node post-mortem.mjs                # latest run under docs/xlfg/runs/
 //   node post-mortem.mjs --run <RUN_ID> # specific run
 //   node post-mortem.mjs --json         # machine-readable instead of markdown
+//   node post-mortem.mjs --public       # privacy-safe report for flrngel/xlfg
 //
 // Exits 0 on success, 2 on bad args, 3 if no run dir exists.
 
@@ -23,11 +24,12 @@ const ALL_PHASES_FULL = ["recall", "intent", "context", "plan", "implement", "ve
 const ALL_PHASES_DEBUG = ["recall", "intent", "context", "debug"];
 
 function parseArgs(argv) {
-  const out = { json: false };
+  const out = { json: false, public: false };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     if (k === "--run") { out.run = argv[++i]; continue; }
     if (k === "--json") { out.json = true; continue; }
+    if (k === "--public") { out.public = true; continue; }
     if (k === "--root") { out.root = argv[++i]; continue; }
     throw new Error(`unexpected arg: ${k}`);
   }
@@ -80,6 +82,15 @@ function fmtBytes(bytes) {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
+
+function runTimestamp(runId) {
+  const m = /^(\d{8})-(\d{6})-/.exec(runId);
+  return m ? `${m[1]}-${m[2]}` : "<unknown-run>";
+}
+
+function runMode(phaseOrder, artifactStats) {
+  return phaseOrder.includes("debug") || artifactStats?.has("debug") ? "/xlfg-debug" : "/xlfg";
 }
 
 function buildPhaseRows(timings, phaseOrder) {
@@ -238,6 +249,151 @@ function buildSuggestions(phaseRows, phaseState, artifactStats, ledgerEntries, h
   return suggestions;
 }
 
+function buildPublicFeedback(phaseRows, phaseState, artifactStats, tableRows, hasTimings) {
+  const feedback = [];
+
+  const ranked = [...phaseRows.entries()]
+    .filter(([, v]) => v.hasTiming)
+    .sort((a, b) => b[1].totalSeconds - a[1].totalSeconds);
+
+  if (hasTimings && ranked.length) {
+    const [slowestPhase, slowestRow] = ranked[0];
+    if (slowestRow.totalSeconds >= 600) {
+      feedback.push(
+        `slow_phase: \`${slowestPhase}\` took ${fmtDuration(slowestRow.totalSeconds)} ` +
+        `across ${slowestRow.invocations} invocation(s); consider splitting the lane or ` +
+        `tightening the specialist packet.`
+      );
+    }
+    if (ranked.length >= 2) {
+      const [secondPhase, secondRow] = ranked[1];
+      if (secondRow.hasTiming && slowestRow.totalSeconds > 0 &&
+          secondRow.totalSeconds / slowestRow.totalSeconds < 0.25) {
+        feedback.push(
+          `dominant_phase: \`${slowestPhase}\` dominated runtime at ` +
+          `${fmtDuration(slowestRow.totalSeconds)}; next phase \`${secondPhase}\` was ` +
+          `${fmtDuration(secondRow.totalSeconds)}.`
+        );
+      }
+    }
+  }
+
+  const loopbacks = typeof phaseState?.loopback_count === "number" ? phaseState.loopback_count : 0;
+  if (loopbacks > 0) {
+    feedback.push(
+      `loopback: ${loopbacks} loopback(s) occurred; xlfg may need stronger upstream ` +
+      `done checks or clearer phase rejection signals.`
+    );
+  }
+
+  for (const [phase, row] of phaseRows) {
+    if (row.invocations > 1) {
+      feedback.push(
+        `phase_rerun: \`${phase}\` ran ${row.invocations} times; a downstream gate likely ` +
+        `rejected earlier output.`
+      );
+    }
+  }
+
+  for (const [phase, stats] of artifactStats) {
+    if (phase === "_meta" || phase === "other") continue;
+    if (stats.bytes > 80 * 1024) {
+      feedback.push(
+        `large_artifacts: \`${phase}\` produced ${fmtBytes(stats.bytes)} across ` +
+        `${stats.count} file(s); later phases may pay unnecessary context cost.`
+      );
+    }
+  }
+
+  const incompletePhases = tableRows.filter((r) => r.status === "INCOMPLETE").map((r) => r.phase);
+  if (incompletePhases.length) {
+    feedback.push(
+      `incomplete_phase_state: ${incompletePhases.length} phase(s) were not marked DONE ` +
+      `when the run state was read.`
+    );
+  }
+
+  if (!hasTimings) {
+    feedback.push(
+      `missing_timings: no \`phase-timings.jsonl\` was recorded, so wall-time analysis ` +
+      `is unavailable.`
+    );
+  }
+
+  if (!feedback.length) {
+    feedback.push("no_cost_driver: no obvious harness cost driver was detected.");
+  }
+  return feedback;
+}
+
+function renderLocalMarkdown({ runId, root, runDir, hasTimings, totalSeconds, totalArtifacts, totalBytes, loopbacks, ledgerCounts, tableRows, suggestions }) {
+  const lines = [];
+  lines.push(`# xlfg post-mortem — \`${runId}\``);
+  lines.push("");
+  lines.push("## Summary");
+  lines.push("");
+  lines.push(`- run dir: \`${path.relative(root, runDir)}\``);
+  lines.push(`- total wall time: ${hasTimings ? fmtDuration(totalSeconds) : "n/a (no phase-timings.jsonl)"}`);
+  lines.push(`- total artifacts: ${totalArtifacts} files, ${fmtBytes(totalBytes)}`);
+  lines.push(`- loopbacks: ${loopbacks}`);
+  if (Object.keys(ledgerCounts).length) {
+    const parts = Object.entries(ledgerCounts).map(([k, v]) => `${k}=${v}`).join(", ");
+    lines.push(`- ledger entries for this run: ${parts}`);
+  } else {
+    lines.push(`- ledger entries for this run: none`);
+  }
+  lines.push("");
+  lines.push("## Phase breakdown");
+  lines.push("");
+  lines.push("| Phase | Status | Wall time | Invocations | Artifacts | Bytes |");
+  lines.push("|---|---|---|---|---|---|");
+  for (const r of tableRows) {
+    lines.push(`| ${r.phase} | ${r.status} | ${r.wall} | ${r.invocations} | ${r.artifacts} | ${r.artifactBytes} |`);
+  }
+  lines.push("");
+  lines.push("## How xlfg can be better (based on this run)");
+  lines.push("");
+  for (const s of suggestions) lines.push(`- ${s}`);
+  lines.push("");
+  return lines.join("\n");
+}
+
+function renderPublicMarkdown({ runId, phaseOrder, artifactStats, hasTimings, totalSeconds, totalArtifacts, totalBytes, loopbacks, ledgerCounts, tableRows, feedback }) {
+  const lines = [];
+  lines.push(`# xlfg efficiency report — \`${runTimestamp(runId)}\``);
+  lines.push("");
+  lines.push("This public report is intentionally limited to xlfg harness behavior. It omits the user request, run slug, repository paths, artifact names, artifact contents, command output, and project-specific text.");
+  lines.push("");
+  lines.push("## Summary");
+  lines.push("");
+  lines.push(`- run timestamp: \`${runTimestamp(runId)}\``);
+  lines.push(`- command mode: \`${runMode(phaseOrder, artifactStats)}\``);
+  lines.push(`- total wall time: ${hasTimings ? fmtDuration(totalSeconds) : "n/a (no phase-timings.jsonl)"}`);
+  lines.push(`- total artifacts: ${totalArtifacts} files, ${fmtBytes(totalBytes)}`);
+  lines.push(`- loopbacks: ${loopbacks}`);
+  lines.push(`- timing data: ${hasTimings ? "present" : "missing"}`);
+  if (Object.keys(ledgerCounts).length) {
+    const parts = Object.entries(ledgerCounts).map(([k, v]) => `${k}=${v}`).join(", ");
+    lines.push(`- ledger event counts: ${parts}`);
+  } else {
+    lines.push(`- ledger event counts: none`);
+  }
+  lines.push("");
+  lines.push("## Phase breakdown");
+  lines.push("");
+  lines.push("| Phase | Status | Wall time | Invocations | Artifacts | Bytes |");
+  lines.push("|---|---|---|---|---|---|");
+  for (const r of tableRows) {
+    lines.push(`| ${r.phase} | ${r.status} | ${r.wall} | ${r.invocations} | ${r.artifacts} | ${r.artifactBytes} |`);
+  }
+  lines.push("");
+  lines.push("## Harness feedback");
+  lines.push("");
+  for (const item of feedback) lines.push(`- ${item}`);
+  lines.push("");
+  return lines.join("\n");
+}
+
 function main() {
   let args;
   try { args = parseArgs(process.argv.slice(2)); }
@@ -312,59 +468,50 @@ function main() {
   const totalBytes = artifacts.reduce((acc, a) => acc + a.bytes, 0);
   const loopbacks = phaseState?.loopback_count ?? 0;
   const ledgerCounts = ledger.reduce((acc, e) => {
+    if (typeof e.type !== "string" || !e.type) return acc;
     acc[e.type] = (acc[e.type] || 0) + 1;
     return acc;
   }, {});
 
   const suggestions = buildSuggestions(phaseRows, phaseState, artStats, ledger, hasTimings);
+  const feedback = buildPublicFeedback(phaseRows, phaseState, artStats, tableRows, hasTimings);
 
   if (args.json) {
-    process.stdout.write(JSON.stringify({
-      run_id: runId,
-      run_dir: runDir,
-      total_seconds: totalSeconds,
-      total_artifacts: totalArtifacts,
-      total_bytes: totalBytes,
-      loopbacks,
-      has_timings: hasTimings,
-      phases: tableRows,
-      ledger_counts: ledgerCounts,
-      suggestions,
-    }, null, 2) + "\n");
+    if (args.public) {
+      process.stdout.write(JSON.stringify({
+        run_timestamp: runTimestamp(runId),
+        command_mode: runMode(phaseOrder, artStats),
+        total_seconds: totalSeconds,
+        total_artifacts: totalArtifacts,
+        total_bytes: totalBytes,
+        loopbacks,
+        has_timings: hasTimings,
+        phases: tableRows,
+        ledger_counts: ledgerCounts,
+        feedback,
+      }, null, 2) + "\n");
+    } else {
+      process.stdout.write(JSON.stringify({
+        run_id: runId,
+        run_dir: runDir,
+        total_seconds: totalSeconds,
+        total_artifacts: totalArtifacts,
+        total_bytes: totalBytes,
+        loopbacks,
+        has_timings: hasTimings,
+        phases: tableRows,
+        ledger_counts: ledgerCounts,
+        suggestions,
+      }, null, 2) + "\n");
+    }
     return;
   }
 
-  // Markdown output.
-  const lines = [];
-  lines.push(`# xlfg post-mortem — \`${runId}\``);
-  lines.push("");
-  lines.push("## Summary");
-  lines.push("");
-  lines.push(`- run dir: \`${path.relative(root, runDir)}\``);
-  lines.push(`- total wall time: ${hasTimings ? fmtDuration(totalSeconds) : "n/a (no phase-timings.jsonl)"}`);
-  lines.push(`- total artifacts: ${totalArtifacts} files, ${fmtBytes(totalBytes)}`);
-  lines.push(`- loopbacks: ${loopbacks}`);
-  if (Object.keys(ledgerCounts).length) {
-    const parts = Object.entries(ledgerCounts).map(([k, v]) => `${k}=${v}`).join(", ");
-    lines.push(`- ledger entries for this run: ${parts}`);
-  } else {
-    lines.push(`- ledger entries for this run: none`);
-  }
-  lines.push("");
-  lines.push("## Phase breakdown");
-  lines.push("");
-  lines.push("| Phase | Status | Wall time | Invocations | Artifacts | Bytes |");
-  lines.push("|---|---|---|---|---|---|");
-  for (const r of tableRows) {
-    lines.push(`| ${r.phase} | ${r.status} | ${r.wall} | ${r.invocations} | ${r.artifacts} | ${r.artifactBytes} |`);
-  }
-  lines.push("");
-  lines.push("## How xlfg can be better (based on this run)");
-  lines.push("");
-  for (const s of suggestions) lines.push(`- ${s}`);
-  lines.push("");
+  const report = args.public
+    ? renderPublicMarkdown({ runId, phaseOrder, artifactStats: artStats, hasTimings, totalSeconds, totalArtifacts, totalBytes, loopbacks, ledgerCounts, tableRows, feedback })
+    : renderLocalMarkdown({ runId, root, runDir, hasTimings, totalSeconds, totalArtifacts, totalBytes, loopbacks, ledgerCounts, tableRows, suggestions });
 
-  process.stdout.write(lines.join("\n"));
+  process.stdout.write(report);
 }
 
 main();

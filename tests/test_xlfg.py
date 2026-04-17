@@ -137,6 +137,10 @@ class TestXLFG(unittest.TestCase):
 
         # delegates to the post-mortem script
         self.assertIn("scripts/post-mortem.mjs", audit_text)
+        # files only the privacy-safe maintainer report, not the local chat report
+        self.assertIn("--public", audit_text)
+        self.assertIn("Do **not** file the local chat report", audit_text)
+        self.assertIn("project-free xlfg efficiency report", audit_text)
         # preserves submission target (hardcoded; no per-user override)
         self.assertIn("--repo flrngel/xlfg", audit_text)
         # preserves redaction contract

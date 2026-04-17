@@ -34,7 +34,9 @@ class TestPostMortem(unittest.TestCase):
                     fh.write(json.dumps(t) + "\n")
         if artifacts:
             for name, content in artifacts.items():
-                (run_dir / name).write_bytes(content)
+                artifact_path = run_dir / name
+                artifact_path.parent.mkdir(parents=True, exist_ok=True)
+                artifact_path.write_bytes(content)
         return run_dir
 
     def test_exits_3_when_no_runs_exist(self) -> None:
@@ -103,3 +105,77 @@ class TestPostMortem(unittest.TestCase):
             self.assertEqual(code, 0, msg=err)
             self.assertIn("20260101-010101-old", out)
             self.assertNotIn("20260202-020202-new", out)
+
+    def test_public_report_omits_run_slug_paths_artifact_names_and_ledger_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_id = "20260416-100000-acme-customer-dashboard"
+            timings = [
+                {"run": run_id, "phase": "plan", "event": "start", "ts": "2026-04-16T10:00:00Z"},
+                {"run": run_id, "phase": "plan", "event": "end", "ts": "2026-04-16T10:12:00Z"},
+            ]
+            self._scaffold_run(
+                root,
+                run_id,
+                timings=timings,
+                artifacts={
+                    "tasks/customer_billing_notes.md": b"x" * (90 * 1024),
+                    "spec.md": b"Acme dashboard request text must not leak",
+                },
+            )
+            ledger_dir = root / "docs/xlfg/knowledge"
+            ledger_dir.mkdir(parents=True, exist_ok=True)
+            (ledger_dir / "ledger.jsonl").write_text(
+                json.dumps({
+                    "ts": "2026-04-16T10:15:00Z",
+                    "run": run_id,
+                    "type": "fix",
+                    "version": "4.5.0",
+                    "summary": "Acme customer dashboard needed billing proof",
+                    "symptom": "Project-specific failure text",
+                    "root_cause": "src/payments/customer.py mismatch",
+                    "evidence": [f"docs/xlfg/runs/{run_id}/verification.md"],
+                }) + "\n",
+                encoding="utf-8",
+            )
+
+            code, out, err = self._run(cwd=tmp, args=["--public", "--run", run_id])
+            self.assertEqual(code, 0, msg=err)
+            self.assertIn("20260416-100000", out)
+            self.assertIn("fix=1", out)
+            self.assertIn("slow_phase", out)
+            self.assertNotIn(run_id, out)
+            for forbidden in [
+                "acme",
+                "customer",
+                "dashboard",
+                "billing",
+                "Project-specific",
+                "src/payments",
+                "docs/xlfg/runs",
+                "customer_billing_notes.md",
+            ]:
+                self.assertNotIn(forbidden, out)
+
+    def test_public_json_omits_raw_run_identity_but_keeps_actionable_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_id = "20260416-210000-internal-prod-checkout"
+            timings = [
+                {"run": run_id, "phase": "verify", "event": "start", "ts": "2026-04-16T21:00:00Z"},
+                {"run": run_id, "phase": "verify", "event": "end", "ts": "2026-04-16T21:00:10Z"},
+                {"run": run_id, "phase": "verify", "event": "start", "ts": "2026-04-16T21:00:20Z"},
+                {"run": run_id, "phase": "verify", "event": "end", "ts": "2026-04-16T21:00:30Z"},
+            ]
+            self._scaffold_run(Path(tmp), run_id, timings=timings)
+
+            code, out, err = self._run(cwd=tmp, args=["--json", "--public"])
+            self.assertEqual(code, 0, msg=err)
+            data = json.loads(out)
+            self.assertNotIn("run_id", data)
+            self.assertNotIn("run_dir", data)
+            self.assertEqual(data["run_timestamp"], "20260416-210000")
+            self.assertEqual(data["command_mode"], "/xlfg")
+            self.assertEqual(data["phases"][0]["phase"], "verify")
+            self.assertEqual(data["phases"][0]["invocations"], 2)
+            self.assertIn("phase_rerun", " ".join(data["feedback"]))
+            self.assertNotIn("internal-prod-checkout", out)
