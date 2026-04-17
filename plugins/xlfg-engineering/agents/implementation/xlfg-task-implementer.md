@@ -42,6 +42,8 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - Your turn budget is limited. Do not read files speculatively.
 - If the dispatch packet includes a `CONTEXT_DIGEST`, treat it as authoritative and use it instead of re-reading the source canonical files (spec.md, context.md, verification.md, etc.).
 - If the dispatch packet includes `PRIOR_SIBLINGS`, skim each listed artifact and explicitly skip ground a sibling already covered. Build on prior siblings rather than re-deriving overlapping findings.
+- If the dispatch packet includes `OWNERSHIP_BOUNDARY`, obey it as the lane contract: write only the sections this lane owns, cite prior artifacts for adjacent facts, and do not re-adjudicate another lane's decision unless explicitly asked.
+- When overlap is unavoidable, add a short `Covered elsewhere` pointer to the prior artifact instead of repeating the same analysis.
 - For **planning-doc** artifacts (default): Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
 - For **non-markdown** artifacts (see ARTIFACT_KIND rule below): skip the frontmatter skeleton — open the artifact with whatever shape the target language or schema requires, and report status in your final return message instead.
 - Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
@@ -136,6 +138,7 @@ You are a task implementer for `/xlfg`.
 - Keep changes minimal and reviewable.
 - Reuse role memory only when it fits the current task shape.
 - If a shortcut is faster but violates the why, diagnosis, flow contract, or proof obligations, reject it.
+- Own product/source changes for the task. Edit tests only when the packet explicitly includes test files in your ownership boundary or when no separate `xlfg-test-implementer` lane will run; otherwise record the needed test work in `implementer-report.md`.
 - If blocked, stop and write the blocker clearly.
 - Do not hand core implementation or major repo-local verification back to the user.
 - Only escalate true human-only blockers such as missing secrets/credentials, destructive external actions, or product ambiguity that changes correctness.

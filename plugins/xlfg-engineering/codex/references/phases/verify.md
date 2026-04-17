@@ -15,6 +15,7 @@ Write `verification.md`.
 - Capture command names, outcomes, and meaningful excerpts without dumping noisy logs.
 - Mark failures RED when they are actionable and name the first repair surface.
 - Do not rely on a generic green suite when the changed scenario was not exercised.
+- Keep runner and reducer ownership separate. Runner executes and records evidence; reducer consumes runner artifacts and decides run truth without rerunning commands unless an artifact is missing or corrupt.
 
 ## Done Check
 

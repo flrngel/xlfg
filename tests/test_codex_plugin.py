@@ -37,7 +37,7 @@ class TestCodexPlugin(unittest.TestCase):
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
         self.assertEqual(manifest["name"], "xlfg-engineering")
-        self.assertEqual(manifest["version"], "4.4.0")
+        self.assertEqual(manifest["version"], "4.5.0")
         self.assertEqual(manifest["skills"], "./codex/skills/")
         self.assertTrue(manifest["skills"].startswith("./"))
         self.assertNotIn("mcpServers", manifest)
@@ -54,7 +54,7 @@ class TestCodexPlugin(unittest.TestCase):
             path.parent.name: json.loads(path.read_text(encoding="utf-8"))["version"]
             for path in manifest_paths
         }
-        self.assertEqual(set(versions.values()), {"4.4.0"})
+        self.assertEqual(set(versions.values()), {"4.5.0"})
 
     def test_repo_codex_marketplace_exposes_local_plugin(self) -> None:
         marketplace_path = self.repo_root / ".agents" / "plugins" / "marketplace.json"
@@ -99,6 +99,20 @@ class TestCodexPlugin(unittest.TestCase):
             "if subagents are unavailable",
             "active Codex session model and reasoning effort",
             "Do not translate Claude specialist `model` or `effort` frontmatter",
+        ]:
+            self.assertIn(needle, combined)
+
+    def test_codex_specialist_packets_include_dedup_fields(self) -> None:
+        texts = []
+        for path in sorted((self.codex_root / "skills").glob("*/SKILL.md")):
+            texts.append(path.read_text(encoding="utf-8"))
+        combined = "\n".join(texts)
+        for needle in [
+            "OWNERSHIP_BOUNDARY",
+            "CONTEXT_DIGEST",
+            "PRIOR_SIBLINGS",
+            "Do not redo:",
+            "Consume:",
         ]:
             self.assertIn(needle, combined)
 

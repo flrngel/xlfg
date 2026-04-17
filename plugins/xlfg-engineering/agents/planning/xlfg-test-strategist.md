@@ -42,6 +42,8 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - Your turn budget is limited. Do not read files speculatively.
 - If the dispatch packet includes a `CONTEXT_DIGEST`, treat it as authoritative and use it instead of re-reading the source canonical files (spec.md, context.md, verification.md, etc.).
 - If the dispatch packet includes `PRIOR_SIBLINGS`, skim each listed artifact and explicitly skip ground a sibling already covered. Build on prior siblings rather than re-deriving overlapping findings.
+- If the dispatch packet includes `OWNERSHIP_BOUNDARY`, obey it as the lane contract: write only the sections this lane owns, cite prior artifacts for adjacent facts, and do not re-adjudicate another lane's decision unless explicitly asked.
+- When overlap is unavoidable, add a short `Covered elsewhere` pointer to the prior artifact instead of repeating the same analysis.
 - Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
 - Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
 
@@ -163,6 +165,8 @@ Include additional scenario cards only when they are truly necessary.
 - Default assumption: the agent will execute repo-local fast/ship checks itself. Do not silently rely on the user to perform the important proof later.
 - Explicitly map **interaction variants** (keyboard vs click, Enter vs button) when the UX flow depends on them.
 - Trace every primary changed scenario back to objective IDs and query / intent IDs from `spec.md`.
+- Treat `flow-spec.md` and `ui-design.md` as owners of behavior steps and design acceptance. Reference scenario IDs and `DA*` IDs instead of restating their full details.
+- Treat `harness-profile.md` as the owner of proof intensity. Escalate only when a scenario genuinely requires a stronger ship phase, and record why.
 - Add at least one probe that would fail if the implementation only patched the most obvious entrypoint.
 - Use `why.md` to decide which paths are truly non-negotiable.
 - Use `solution-decision.md` when present so the test contract proves the chosen root solution rather than a visible symptom only.

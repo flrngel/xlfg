@@ -1,6 +1,35 @@
 # Next agent context
 
-## Current state (4.4.0)
+## Current state (4.5.0)
+
+4.5.0 adds the missing ownership half of the 4.4.0 dedup story. `CONTEXT_DIGEST` stopped specialists from re-reading canonical files; `PRIOR_SIBLINGS` stopped same-phase siblings from re-finding the same facts. The remaining waste was decision overlap: adjacent specialists still had enough freedom to re-adjudicate work another lane owned (e.g. flow spec vs test proof, source implementer vs test implementer, verify runner vs reducer, UI verification vs UX review).
+
+The new mandatory packet field is:
+
+- `OWNERSHIP_BOUNDARY` — the conductor names what the specialist owns, what it must not redo, and which artifacts it consumes as input truth.
+
+Single source of truth lives in `agents/_shared/output-template.md` alongside the packet shape. Every delegating entrypoint repeats it inline: `commands/xlfg.md` and the phase skills `intent`, `context`, `plan`, `implement`, `verify`, `review`, and `debug`. All 27 specialist agents now honor `OWNERSHIP_BOUNDARY` in the Turn budget rule and use a `Covered elsewhere` pointer instead of repeating adjacent-lane analysis.
+
+High-risk boundaries now have explicit prompt text:
+
+- context: repo-map owns command/structure inventory; harness-profiler owns profile/budget; env-doctor owns runnable environment health; researcher owns only external facts repo truth cannot provide.
+- plan: why owns user value; root-cause owns mechanism; solution owns option choice; spec-author owns behavior; UI designer owns `DA*`; test-strategist owns proof commands; readiness owns the gate; task-divider owns task packets; risk owns release/safety pressure.
+- implement: task-implementer owns source changes unless the packet explicitly includes test ownership; test-implementer owns test/proof files; task-checker owns task-local ACCEPT/REVISE and must not rerun full scenario proof.
+- verify: verify-runner executes and records evidence; verify-reducer judges run truth and must not rerun commands unless runner artifacts are missing/corrupt; UI verify only covers unresolved/contradictory DA evidence.
+- review: each reviewer reports net-new lens findings only after filling "Already covered by verification"; UX cites `ui-verification.md` and DA coverage instead of repeating it.
+
+Codex `$xlfg` / `$xlfg-debug` packet examples and phase references now carry the same dedup semantics. Version is bumped to 4.5.0 across all three plugin manifests and `docs/xlfg/meta.json`.
+
+If you continue from here:
+
+- Do **not** add a new delegating phase skill, command, or Codex specialist packet shape without `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS`.
+- Do **not** let an agent solve adjacent lanes just because it has the context. Cite the owning artifact and record `Covered elsewhere` unless the packet explicitly asks for contradiction analysis.
+- Keep the boundaries concrete in packets. Weak ownership text like "do the planning" will recreate the overlap this release removed.
+- When adding a new specialist, decide its lane ownership against the existing phase boundaries before writing its output format.
+
+This supersedes nothing in 4.4.0. The 4.4.0 digest/sibling dedup fields remain mandatory; 4.5.0 adds the ownership decision boundary on top.
+
+## Previous state (4.4.0)
 
 4.4.0 generalizes a sub-agent dedup contract that previously existed only in `xlfg-review-phase`. Sub-agents in xlfg already communicate exclusively through files — the conductor preseeds a `PRIMARY_ARTIFACT` with `status: IN_PROGRESS`, the specialist updates that exact file in place, and the final chat reply is a single `DONE|BLOCKED|FAILED <path>` line enforced by `subagent-stop-guard.mjs`. There is no chat-based synthesis between siblings.
 

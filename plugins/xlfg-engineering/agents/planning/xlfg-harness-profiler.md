@@ -42,6 +42,8 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - Your turn budget is limited. Do not read files speculatively.
 - If the dispatch packet includes a `CONTEXT_DIGEST`, treat it as authoritative and use it instead of re-reading the source canonical files (spec.md, context.md, verification.md, etc.).
 - If the dispatch packet includes `PRIOR_SIBLINGS`, skim each listed artifact and explicitly skip ground a sibling already covered. Build on prior siblings rather than re-deriving overlapping findings.
+- If the dispatch packet includes `OWNERSHIP_BOUNDARY`, obey it as the lane contract: write only the sections this lane owns, cite prior artifacts for adjacent facts, and do not re-adjudicate another lane's decision unless explicitly asked.
+- When overlap is unavoidable, add a short `Covered elsewhere` pointer to the prior artifact instead of repeating the same analysis.
 - Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
 - Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
 
@@ -162,6 +164,8 @@ status: DONE | BLOCKED | FAILED
 
 - Prefer the minimum honest profile.
 - Use `spec.md`, `why.md`, and proof needs as the main anchors, not repo size alone.
+- Treat `repo-map.md` as the owner of command discovery when present. Do not rediscover install/test/build commands unless the dispatch packet says `repo-map.md` is missing or contradictory.
+- Own only the budget/profile choice, execution limits, verify mode recommendation, and review-lens recommendation. Leave scenario proof cards to `xlfg-test-strategist` and environment startup details to `xlfg-env-doctor`.
 - If the profile stays `quick` for a risky problem, justify it explicitly.
 - Reuse role memory only when the problem / repo shape truly matches.
 - Do not choose `deep` by default just because more activity feels safer.

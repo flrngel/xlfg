@@ -42,6 +42,8 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - Your turn budget is limited. Do not read files speculatively.
 - If the dispatch packet includes a `CONTEXT_DIGEST`, treat it as authoritative and use it instead of re-reading the source canonical files (spec.md, context.md, verification.md, etc.).
 - If the dispatch packet includes `PRIOR_SIBLINGS`, skim each listed artifact and explicitly skip ground a sibling already covered. Build on prior siblings rather than re-deriving overlapping findings.
+- If the dispatch packet includes `OWNERSHIP_BOUNDARY`, obey it as the lane contract: write only the sections this lane owns, cite prior artifacts for adjacent facts, and do not re-adjudicate another lane's decision unless explicitly asked.
+- When overlap is unavoidable, add a short `Covered elsewhere` pointer to the prior artifact instead of repeating the same analysis.
 - Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
 - Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
 
@@ -164,3 +166,4 @@ status: DONE | BLOCKED | FAILED
 - If the evidence is weak, say so clearly.
 - Keep the diagnosis aligned to the pain and false-success conditions in `why.md`.
 - Do not propose the solution here beyond what is needed to explain the root cause.
+- Do not rewrite `why.md` or `solution-decision.md`. Cite them when they already cover user value or option choice, then add only causal mechanism, evidence, rejected symptom patches, and disproof probes.

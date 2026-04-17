@@ -47,6 +47,11 @@ FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 
+OWNERSHIP_BOUNDARY:
+- Own: the assigned task's code surface, test surface, or checker verdict exactly as named in the task packet
+- Do not redo: planning decisions, proof strategy, sibling task changes, or verification-phase run truth
+- Consume: `task-brief.md`, `spec.md`, `test-contract.md`, same-task implementer/test reports, and same-phase sibling artifacts listed below
+
 CONTEXT_DIGEST:
 - <quoted excerpt or bullet from spec.md / task-brief.md / test-contract.md the specialist actually needs>
 
@@ -54,7 +59,11 @@ PRIOR_SIBLINGS:
 - <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
 ```
 
-- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest replaces the agent's "you will receive these N files" reads. Siblings is how `xlfg-task-checker` reuses the implementer-report.md instead of re-deriving the diff, and how `xlfg-test-implementer` builds on the implementer's report rather than re-reading raw source.
+- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest replaces the agent's "you will receive these N files" reads. Siblings is how `xlfg-task-checker` reuses the implementer-report.md instead of re-deriving the diff, and how `xlfg-test-implementer` builds on the implementer's report rather than re-reading raw source.
+- Implementation ownership boundaries:
+  - `xlfg-task-implementer` owns product/source changes for the task. It edits tests only when the packet explicitly includes test files in its ownership boundary or no separate `xlfg-test-implementer` lane will run.
+  - `xlfg-test-implementer` owns test/proof file changes. It consumes `implementer-report.md` and must not make product/source changes except explicit test fixtures or helpers named in FILE_SCOPE.
+  - `xlfg-task-checker` owns the task-local ACCEPT/REVISE verdict. It must cite implementer/test reports, inspect only targeted source when needed, and must not rerun full scenario proof or edit product/test files.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
 - Only the phase conductor may delegate. Never ask an implementation specialist to spawn nested subagents or create its own fan-out.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.

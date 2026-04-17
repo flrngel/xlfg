@@ -36,7 +36,7 @@ Produce an evidence-backed root-cause report and likely repair surface without m
    - run `xlfg-test-strategist` when the reproducer or disproof probes are still vague after first-pass diagnosis
    - run `xlfg-researcher` only when freshness or external docs materially change the diagnosis
 5. Keep the default specialist budget lean and sequential. Run one active artifact-producing specialist at a time, then load the next specialist only if the previous artifact leaves a concrete unresolved gap. Do not ask diagnosis specialists to spawn more specialists.
-6. Keep these specialists foregrounded, short-lived, and leaf-only. After each specialist returns, verify its expected artifact exists, begins with `Status:`, and contains real findings instead of preparation notes. If it does not, use `SendMessage` with the returned agent ID to resume the same specialist once before treating the lane as failed. If no agent ID is available, re-dispatch the exact same packet once.
+6. Keep these specialists foregrounded, short-lived, and leaf-only. After each specialist returns, verify its expected artifact exists, begins with YAML frontmatter `status: DONE`, `status: BLOCKED`, or `status: FAILED`, and contains real findings instead of preparation notes. If it does not, use `SendMessage` with the returned agent ID to resume the same specialist once before treating the lane as failed. If no agent ID is available, re-dispatch the exact same packet once.
 7. Follow the debugging method in this order and record it in artifacts:
    - make the expected correct behavior explicit
    - verify the bug or user pain is real
@@ -116,6 +116,11 @@ FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 
+OWNERSHIP_BOUNDARY:
+- Own: the assigned diagnosis evidence lane and only the no-edit debug artifact named in PRIMARY_ARTIFACT
+- Do not redo: prior diagnosis sibling findings, intent decomposition, implementation planning, or source/test edits
+- Consume: `spec.md`, `context.md`, `repo-map.md`, `why.md`, and same-phase sibling artifacts listed below
+
 CONTEXT_DIGEST:
 - <quoted excerpt or bullet from spec.md / context.md / repo-map.md the specialist actually needs>
 
@@ -123,7 +128,14 @@ PRIOR_SIBLINGS:
 - <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
 ```
 
-- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest replaces the agent's "you will receive these N files" reads. Siblings is how `xlfg-root-cause-analyst` builds on `xlfg-why-analyst` instead of re-deriving the same expectation contract — and how each subsequent diagnosis specialist refines rather than restarts.
+- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest replaces the agent's "you will receive these N files" reads. Siblings is how `xlfg-root-cause-analyst` builds on `xlfg-why-analyst` instead of re-deriving the same expectation contract — and how each subsequent diagnosis specialist refines rather than restarts.
+- Debug ownership boundaries:
+  - `xlfg-repo-mapper` owns failing-surface structure and commands.
+  - `xlfg-why-analyst` owns expected behavior and false-success traps.
+  - `xlfg-root-cause-analyst` owns causal mechanism and disproof probes.
+  - `xlfg-harness-profiler` and `xlfg-env-doctor` own proof budget and environment health only when logs or runnable harnesses make them causal.
+  - `xlfg-test-strategist` owns reproducer/disproof proof cards only when the proof contract is still vague.
+  - `xlfg-researcher` owns external facts only when freshness changes the diagnosis.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
 - Only the phase conductor may delegate. Never ask a debug specialist to spawn nested subagents or to hand off the lane to another worker.
 - Default to **sequential** dispatch for artifact-producing diagnosis work. Parallelize only when packets are truly independent, small, and read-mostly.

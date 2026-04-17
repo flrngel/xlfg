@@ -46,6 +46,8 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - Your turn budget is limited. Do not read files speculatively.
 - If the dispatch packet includes a `CONTEXT_DIGEST`, treat it as authoritative and use it instead of re-reading the source canonical files (spec.md, context.md, verification.md, etc.).
 - If the dispatch packet includes `PRIOR_SIBLINGS`, skim each listed artifact and explicitly skip ground a sibling already covered. Build on prior siblings rather than re-deriving overlapping findings.
+- If the dispatch packet includes `OWNERSHIP_BOUNDARY`, obey it as the lane contract: write only the sections this lane owns, cite prior artifacts for adjacent facts, and do not re-adjudicate another lane's decision unless explicitly asked.
+- When overlap is unavoidable, add a short `Covered elsewhere` pointer to the prior artifact instead of repeating the same analysis.
 - Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
 - Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
 
@@ -203,6 +205,8 @@ status: DONE | BLOCKED | FAILED
 
 - Plan-phase mode: produce a contract an implementer can build against without you in the loop. Acceptance criteria must be directly checkable, not vibes.
 - Verify-phase mode: prefer the smallest honest evidence (source diff + dom snapshot beats a vague screenshot narrative). Ground every "pass" in a concrete check.
+- In plan-phase mode, own UI/a11y `DA*` criteria only; cite flow scenario IDs instead of rewriting `flow-spec.md`, and leave proof commands to `xlfg-test-strategist`.
+- In verify-phase mode, own DA conformance only. If checker reports already pass every DA, the phase should skip you; if dispatched anyway, record the prior DA coverage and limit findings to unresolved or contradictory DA evidence.
 - Stay proportional: if the task touches only one small component, do not specify an entire design system.
 - Do not rewrite or duplicate `xlfg-ux-reviewer`’s review-phase scope. Stop at contract specification and verify-time conformance.
 - If the dispatch is ambiguous about which mode to run in, pick the mode implied by the `PRIMARY_ARTIFACT` filename; if still ambiguous, mark `BLOCKED` with the one question that would resolve it.

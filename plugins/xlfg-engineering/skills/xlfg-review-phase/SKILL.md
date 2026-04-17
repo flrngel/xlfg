@@ -49,6 +49,11 @@ FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 
+OWNERSHIP_BOUNDARY:
+- Own: one review lens on one change cluster, limited to net-new findings or residual risk
+- Do not redo: verification failures, task-checker findings, prior review-lens findings, or planning-phase risk notes unless implementation evidence contradicts them
+- Consume: `spec.md`, `verification.md`, changed file list, and prior review artifacts listed below
+
 CONTEXT_DIGEST:
 - The relevant objective(s) and false-success trap from `spec.md`
 - The verdict and key findings from `verification.md`
@@ -58,7 +63,13 @@ PRIOR_SIBLINGS:
 - <path/to/reviews/<other-lens>-review.md>: <one-line summary of what it already flagged, or `none`>
 ```
 
-- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest saves the reviewer 3–5 turns of re-reading files the conductor already loaded. The siblings list is how a second reviewer (e.g., security after architecture) avoids re-flagging findings the first reviewer already raised — net-new findings only.
+- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest saves the reviewer 3–5 turns of re-reading files the conductor already loaded. The siblings list is how a second reviewer (e.g., security after architecture) avoids re-flagging findings the first reviewer already raised — net-new findings only.
+- Review ownership boundaries:
+  - Every reviewer must fill "Already covered by verification" before "Net-new findings".
+  - Architecture owns structural drift and boundaries, not security, performance, or UX unless those are the structural cause.
+  - Security owns auth/data/secret/injection risks, not generic maintainability or harness speed.
+  - Performance owns runtime and harness cost traps, not broad architecture preference.
+  - UX owns user-flow and accessibility critique not already covered by `ui-verification.md` or checker DA results.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
 - Only the phase conductor may delegate. Never ask a reviewer to spawn nested subagents or split its own review lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.

@@ -15,6 +15,7 @@ Update `spec.md`, `test-contract.md`, `test-readiness.md`, and `workboard.md`.
 - Map each task to objectives, files, expected artifacts, and a done check.
 - Mark `test-readiness.md` as `READY` only when proof is practical, targeted, and executable.
 - If proof is not ready, repair context or planning before implementation.
+- Keep lane ownership explicit: diagnosis owns cause, solution owns option choice, flow/UI own behavior/design contracts, test strategy owns proof commands, readiness owns only the gate verdict, and task division owns task packets.
 
 ## Done Check
 

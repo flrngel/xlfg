@@ -42,6 +42,8 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - Your turn budget is limited. Do not read files speculatively.
 - If the dispatch packet includes a `CONTEXT_DIGEST`, treat it as authoritative and use it instead of re-reading the source canonical files (spec.md, context.md, verification.md, etc.).
 - If the dispatch packet includes `PRIOR_SIBLINGS`, skim each listed artifact and explicitly skip ground a sibling already covered. Build on prior siblings rather than re-deriving overlapping findings.
+- If the dispatch packet includes `OWNERSHIP_BOUNDARY`, obey it as the lane contract: write only the sections this lane owns, cite prior artifacts for adjacent facts, and do not re-adjudicate another lane's decision unless explicitly asked.
+- When overlap is unavoidable, add a short `Covered elsewhere` pointer to the prior artifact instead of repeating the same analysis.
 - Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
 - Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
 
@@ -114,6 +116,7 @@ You run verification commands and capture evidence artifacts.
 - Stop at the first failure unless explicitly told otherwise.
 - If a known repeated failure signature appears again, note it clearly in `summary.md`.
 - If the observed behavior proves that a direct ask or non-negotiable implied ask is still uncovered, note it clearly in `summary.md`.
+- Own command execution and raw evidence capture only. Do not reduce final GREEN/RED/FAILED truth beyond observed command outcomes; leave run-status judgment and first-actionable-failure selection to `xlfg-verify-reducer`.
 
 ## Required `results.json` shape
 

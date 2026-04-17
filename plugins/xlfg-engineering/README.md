@@ -12,6 +12,14 @@ The 2.9.0 design target is simple:
 
 > **One public entrypoint, one run card, one intent contract, hidden phase skills loaded just in time, and specialist subagents that actually own their lanes — under a generous turn-budget ceiling so prompt-side write-first rules carry the forcing-function load.**
 
+## What changed in 4.5.0
+
+- Sub-agent dispatch packets now require `OWNERSHIP_BOUNDARY` in addition to `CONTEXT_DIGEST` and `PRIOR_SIBLINGS`.
+- The conductor and every delegating phase skill now state what each lane owns, what it must not redo, and which artifacts it consumes before dispatch.
+- High-overlap lanes are explicitly separated: flow/spec vs test proof, UI design vs UX review, source implementation vs test implementation, task checking vs verification, and verify runner vs reducer.
+- All 27 specialist agents now honor the ownership boundary and use a `Covered elsewhere` pointer rather than repeating adjacent-lane analysis.
+- The Codex `$xlfg` and `$xlfg-debug` skill packet shapes now carry the same dedup fields.
+
 ## What changed in 4.4.0
 
 - Sub-agent dispatch packets now require two new mandatory fields — `CONTEXT_DIGEST` (canonical excerpts the specialist needs) and `PRIOR_SIBLINGS` (artifacts already produced in the same phase lane that overlap the specialist's surface).

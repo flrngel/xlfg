@@ -137,6 +137,10 @@ class TestXLFG(unittest.TestCase):
 
         # delegates to the post-mortem script
         self.assertIn("scripts/post-mortem.mjs", audit_text)
+        # files only the privacy-safe maintainer report, not the local chat report
+        self.assertIn("--public", audit_text)
+        self.assertIn("Do **not** file the local chat report", audit_text)
+        self.assertIn("project-free xlfg efficiency report", audit_text)
         # preserves submission target (hardcoded; no per-user override)
         self.assertIn("--repo flrngel/xlfg", audit_text)
         # preserves redaction contract
@@ -304,6 +308,21 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("CONTEXT_DIGEST", text, f"Missing CONTEXT_DIGEST contract in {path}")
             self.assertIn("PRIOR_SIBLINGS", text, f"Missing PRIOR_SIBLINGS contract in {path}")
 
+    def test_all_delegating_entrypoints_require_ownership_boundary(self) -> None:
+        """v4.5.0 — every delegating entrypoint must define lane ownership before
+        dispatch so specialists cite adjacent work instead of re-adjudicating it.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        targets = [repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md"]
+        targets.extend(sorted((repo_root / "plugins" / "xlfg-engineering" / "skills").glob("xlfg-*-phase/SKILL.md")))
+        for path in targets:
+            text = path.read_text(encoding="utf-8")
+            if "Agent" not in text and "SendMessage" not in text and path.name != "xlfg.md":
+                continue
+            self.assertIn("OWNERSHIP_BOUNDARY", text, f"Missing OWNERSHIP_BOUNDARY contract in {path}")
+            self.assertIn("Do not redo", text, f"Ownership packet must name non-owned work in {path}")
+            self.assertIn("Consume:", text, f"Ownership packet must name consumed artifacts in {path}")
+
     def test_specialist_agents_honor_context_digest_and_prior_siblings(self) -> None:
         """v4.4.0 — every specialist agent's Turn budget rule must reference both
         `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` so the dedup contract is two-sided.
@@ -317,6 +336,19 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("CONTEXT_DIGEST", text, f"Missing CONTEXT_DIGEST awareness in {agent_path.name}")
             self.assertIn("PRIOR_SIBLINGS", text, f"Missing PRIOR_SIBLINGS awareness in {agent_path.name}")
 
+    def test_specialist_agents_honor_ownership_boundary(self) -> None:
+        """v4.5.0 — every specialist must obey the ownership boundary and use a
+        pointer instead of repeating adjacent-lane analysis.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        agent_root = repo_root / "plugins" / "xlfg-engineering" / "agents"
+        for agent_path in sorted(agent_root.rglob("*.md")):
+            if "_shared" in agent_path.parts:
+                continue
+            text = agent_path.read_text(encoding="utf-8")
+            self.assertIn("OWNERSHIP_BOUNDARY", text, f"Missing OWNERSHIP_BOUNDARY awareness in {agent_path.name}")
+            self.assertIn("Covered elsewhere", text, f"Missing overlap pointer rule in {agent_path.name}")
+
     def test_canonical_template_documents_dispatch_packet_shape(self) -> None:
         """v4.4.0 — the shared output template owns the canonical packet shape so
         every phase skill and agent file can reference one source of truth.
@@ -324,8 +356,67 @@ class TestXLFG(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[1]
         template = (repo_root / "plugins" / "xlfg-engineering" / "agents" / "_shared" / "output-template.md").read_text(encoding="utf-8")
         self.assertIn("Dispatch packet shape", template)
+        self.assertIn("OWNERSHIP_BOUNDARY", template)
         self.assertIn("CONTEXT_DIGEST", template)
         self.assertIn("PRIOR_SIBLINGS", template)
+
+    def test_high_overlap_agent_boundaries_are_explicit(self) -> None:
+        """v4.5.0 — the risky overlap pairs must keep explicit ownership text."""
+        repo_root = Path(__file__).resolve().parents[1]
+        agents = repo_root / "plugins" / "xlfg-engineering" / "agents"
+        expected = {
+            agents / "planning" / "xlfg-test-strategist.md": [
+                "Reference scenario IDs and `DA*` IDs",
+                "Treat `harness-profile.md` as the owner of proof intensity",
+            ],
+            agents / "planning" / "xlfg-ui-designer.md": [
+                "own UI/a11y `DA*` criteria only",
+                "record the prior DA coverage",
+            ],
+            agents / "implementation" / "xlfg-task-implementer.md": [
+                "Own product/source changes",
+                "no separate `xlfg-test-implementer` lane will run",
+            ],
+            agents / "implementation" / "xlfg-test-implementer.md": [
+                "Own test and proof-file changes",
+                "avoid editing product/source files",
+            ],
+            agents / "implementation" / "xlfg-task-checker.md": [
+                "Stay read-only with respect to product/test files",
+                "avoid rerunning full scenario proof",
+            ],
+            agents / "verify" / "xlfg-verify-runner.md": [
+                "Own command execution and raw evidence capture only",
+                "leave run-status judgment",
+            ],
+            agents / "verify" / "xlfg-verify-reducer.md": [
+                "Consume `xlfg-verify-runner` artifacts",
+                "Do not rerun commands",
+            ],
+            agents / "review" / "xlfg-ux-reviewer.md": [
+                "cite `ui-verification.md`",
+                "not already covered",
+            ],
+        }
+        for path, needles in expected.items():
+            text = path.read_text(encoding="utf-8")
+            for needle in needles:
+                self.assertIn(needle, text, f"Missing overlap boundary {needle!r} in {path.name}")
+
+    def test_phase_skills_document_known_overlap_boundaries(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        base = repo_root / "plugins" / "xlfg-engineering" / "skills"
+        expected = {
+            "xlfg-context-phase": ["`xlfg-repo-mapper` owns command and structure inventory", "`xlfg-harness-profiler` owns budget/profile selection"],
+            "xlfg-plan-phase": ["`xlfg-test-strategist` owns proof commands", "`xlfg-task-divider` owns canonical task IDs"],
+            "xlfg-implement-phase": ["`xlfg-task-implementer` owns product/source changes", "`xlfg-task-checker` owns the task-local ACCEPT/REVISE verdict"],
+            "xlfg-verify-phase": ["`xlfg-verify-runner` owns command execution", "`xlfg-verify-reducer` owns GREEN/RED/FAILED reduction"],
+            "xlfg-review-phase": ["Every reviewer must fill \"Already covered by verification\"", "UX owns user-flow and accessibility critique"],
+        }
+        for phase_name, needles in expected.items():
+            text = (base / phase_name / "SKILL.md").read_text(encoding="utf-8")
+            for needle in needles:
+                self.assertIn(needle, text, f"Missing phase overlap boundary {needle!r} in {phase_name}")
 
     def test_phase_skills_can_resume_specialists_with_sendmessage(self) -> None:
         repo_root = Path(__file__).resolve().parents[1]
