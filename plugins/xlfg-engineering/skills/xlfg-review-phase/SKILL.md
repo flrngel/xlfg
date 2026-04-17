@@ -60,6 +60,15 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.
 - When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
 
+## Verdicts
+
+- `APPROVE` — ship.
+- `APPROVE-WITH-NOTES` — ship; findings recorded as accepted residual risk.
+- `APPROVE-WITH-NOTES-FIXED` — reviewer flagged a P1 concern with an explicit fix-in-place disposition (e.g. "add a one-line comment", "rename this parameter"), the conductor applied the fix immediately, and the deterministic proof subset was re-run green. Record the fix in `review-summary.md` under "Fixed in-run" with the before/after one-liner. This verdict does **not** consume a loopback — it is cheaper than a full `implement → verify → review` round trip and the review already named the exact change.
+- `MUST-FIX` — do not ship. Send the run back through `implement → verify → review`. This DOES consume a loopback.
+
+Use `APPROVE-WITH-NOTES-FIXED` only when all three are true: (1) reviewer explicitly labeled the finding "fix in place" or equivalent, (2) the fix is a ≤ a few-line local edit, (3) the deterministic proof subset re-ran green after the fix. Anything bigger is `MUST-FIX`.
+
 ## Guardrails
 
 - Review is not the first place to discover that verification never happened.

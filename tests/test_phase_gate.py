@@ -146,3 +146,65 @@ class TestPhaseGate(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0)
         self.assertEqual(proc.stdout.strip(), "")
+
+    def test_phase_gate_in_progress_suppression(self) -> None:
+        """v4.3.0: when in_progress_phase is non-empty, the hook exits 0 without writing.
+
+        Suppresses hook noise during legitimate long foreground phases (verify parked
+        on bg LLM work, implement between sub-packets). The hook must NOT increment
+        block_count while a phase is in progress — that would trip the safety valve
+        spuriously.
+        """
+        state = {
+            "run_id": "test-run",
+            "phases": ["recall", "intent", "context", "plan", "implement", "verify", "review", "compound"],
+            "completed": ["recall", "intent", "context", "plan", "implement"],
+            "loopback_count": 0,
+            "max_loopbacks": 2,
+            "block_count": 0,
+            "in_progress_phase": "verify",
+        }
+        code, out, updated = self._run_gate({"stop_reason": "end_turn"}, state)
+        # Exit 0, no block emitted.
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+        # block_count must NOT have been incremented.
+        self.assertEqual(updated["block_count"], 0)
+        # in_progress_phase must be preserved as-read.
+        self.assertEqual(updated["in_progress_phase"], "verify")
+
+        # With in_progress_phase cleared to empty string, hook resumes normal blocking.
+        state2 = dict(state)
+        state2["in_progress_phase"] = ""
+        code2, out2, updated2 = self._run_gate({"stop_reason": "end_turn"}, state2)
+        self.assertEqual(code2, 0)
+        data = json.loads(out2)
+        self.assertEqual(data["decision"], "block")
+        self.assertEqual(updated2["block_count"], 1)
+
+    def test_phase_gate_monotonic_for_block_count_only(self) -> None:
+        """v4.3.0: the hook must never clobber `completed` or `loopback_count`.
+
+        Regression guard for the memo's concurrent-writer finding. The hook
+        reads, modifies ONLY `block_count`, and writes back — preserving every
+        other field (including `loopback_count`, `completed`, `in_progress_phase`,
+        `run_id`, `phases`, and any extra conductor-written keys) exactly as read.
+        """
+        state = {
+            "run_id": "test-run",
+            "phases": ["recall", "intent", "context", "plan", "implement", "verify", "review", "compound"],
+            "completed": ["recall", "intent", "context"],
+            "loopback_count": 2,  # nonzero — must survive
+            "max_loopbacks": 2,
+            "block_count": 0,
+            "in_progress_phase": "",
+            "extra_conductor_field": "preserve-me",  # sentinel
+        }
+        code, _, updated = self._run_gate({"stop_reason": "end_turn"}, state)
+        self.assertEqual(code, 0)
+        # block_count incremented, everything else preserved.
+        self.assertEqual(updated["block_count"], 1)
+        self.assertEqual(updated["loopback_count"], 2)
+        self.assertEqual(updated["completed"], ["recall", "intent", "context"])
+        self.assertEqual(updated["run_id"], "test-run")
+        self.assertEqual(updated["extra_conductor_field"], "preserve-me")

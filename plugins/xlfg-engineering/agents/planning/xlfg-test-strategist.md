@@ -142,8 +142,9 @@ status: DONE | BLOCKED | FAILED
   2. ...
   3. ...
 - fast_check: <single fastest honest command or NONE>
-- ship_phase: `fast` | `smoke` | `e2e` | `manual`
+- ship_phase: `fast` | `smoke` | `e2e` | `manual` | `acceptance`
 - ship_check: <single command or NONE>
+- smoke_check: <single cheap diagnostic command; REQUIRED when ship_phase is `acceptance`, otherwise NONE>
 - regression_check: <single command or NONE>
 - manual_smoke: <precise manual steps when automation is not practical>
 - anti_monkey_probe: <what would still fail under a shallow patch>
@@ -167,3 +168,11 @@ Include additional scenario cards only when they are truly necessary.
 - If commands are uncertain, mark them `GUESS` and explain how you inferred them.
 - If a test could pass while the real product still fails, call that out explicitly.
 - Avoid over-testing: if one fast proof and one smoke proof honestly cover the changed behavior, say so.
+
+## `ship_phase: acceptance` tier
+
+Use `acceptance` when project convention requires expensive multi-run proof (e.g. "3 independent live runs all green", replay suites, triple-live LLM rounds). Acceptance is almost always stochastic-sensitive and expensive, so a scenario that declares it MUST also declare a cheap `smoke_check` that runs first:
+
+- `smoke_check` is a single-run diagnostic. Its purpose is to separate deterministic failures (fix and retry) from stochastic flakes (escalate to acceptance).
+- `ship_phase: acceptance` without a `smoke_check` is a plan defect — reject it in readiness checking.
+- The verify phase runs `smoke_check` first. On deterministic RED, verify stops, classifies RED, writes `verify-fix-plan.md`, and does NOT run acceptance that round. On GREEN or non-deterministic signal, verify escalates to `ship_check` (the acceptance runner).

@@ -1,3 +1,53 @@
+## 4.3.0
+
+**Speed-of-run optimization pass based on `/tmp/hey-xlfg-authors.md`.** Seven surgical fixes to specialist narrative, hook noise, and skill contracts. Net effect on a comparable future run: the author estimates ~40% reduction from fixing the top three alone; this release ships all seven.
+
+### Why
+
+A contributor's one-page memo after a slow Python run isolated the highest-ROI inefficiencies: the implementer agent prepending YAML frontmatter to `.py` / `.json` files and breaking collection; the Stop hook firing on every parked turn during long-running verify phases; and recall promoting a prior "fix class" without checking whether the diagnosed surface has moved. Each finding had a <10-line fix; shipping them together keeps the scope reviewable.
+
+### Changed
+
+**Specialist narrative**
+- `agents/implementation/xlfg-task-implementer.md` — new `## ARTIFACT_KIND rule` section: when `PRIMARY_ARTIFACT` is non-markdown (or the packet declares `ARTIFACT_KIND: source-file|config-file|test-file`), never prepend YAML frontmatter. Status is reported via the `RETURN_CONTRACT` line only. Turn-budget rule branches on the same kind.
+- `commands/xlfg.md` atomic packet format gains optional `ARTIFACT_KIND: planning-doc|source-file|config-file|test-file` header with explicit default (`planning-doc`) and preseed rule.
+
+**Hook noise + concurrent-writer discipline**
+- `scripts/phase-gate.mjs` — reads `in_progress_phase` from phase-state; exits 0 without writing when a long foreground phase legitimately parks the conversation. Read-modify-write cycle now documented as monotonic-for-`block_count`-only; never resets `completed`, `loopback_count`, or any conductor-written field.
+- `commands/xlfg.md` phase-state contract — initial state adds `in_progress_phase: ""`; new conductor contract requires setting it before every phase Skill call and clearing it after the return.
+
+**Recall staleness guard**
+- `skills/xlfg-recall-phase/SKILL.md` — guardrail upgraded from advisory ("run `git log --since`") to mandatory with a normative `Git-recency guard` section. When promoting a prior fix class, conductors MUST record the git-log output in `memory-recall.md`; any commit in the window marks the carry-forward `HYPOTHESIS-ONLY` with a `Verify-before-use:` line.
+
+**Renderer placeholder match**
+- `scripts/render-workboard.mjs` — BEGIN marker match relaxed from exact-string (required script attribution) to prefix `<!-- BEGIN: rendered-phase-status`. A pre-seeded placeholder block is now replaced in place instead of leaving a duplicate `## Phase status` section on first render.
+
+**Smoke-before-acceptance tier**
+- `agents/planning/xlfg-test-strategist.md` — `ship_phase` enum extended with `acceptance`; new required `smoke_check` field when acceptance is declared; new `## ship_phase: acceptance tier` section describing the smoke-first contract.
+- `skills/xlfg-verify-phase/SKILL.md` — new smoke-first rule: if any scenario declares `ship_phase: acceptance`, verify runs `smoke_check` first and stops on deterministic smoke failure without paying the full acceptance cost.
+
+**Loopback arithmetic + review fast-fix**
+- `commands/xlfg.md` — new `### loopback_count arithmetic` section formalizing which transitions count (`{verify|review} → implement`, verify→plan re-diagnosis) and which do not (plan repairs, `APPROVE-WITH-NOTES-FIXED`, harness FAILED retries).
+- `skills/xlfg-review-phase/SKILL.md` — new `## Verdicts` section adds `APPROVE-WITH-NOTES-FIXED`: a <a few-line fix applied in-run with a re-run of the deterministic proof subset, recorded under "Fixed in-run" in `review-summary.md`. Does not consume a loopback.
+
+**Current-state cap + `/xlfg-status`**
+- `skills/xlfg-compound-phase/SKILL.md` — new `## current-state.md size cap` section enforcing ~200 words per run; overflow moves to `compound-summary.md`.
+- `commands/xlfg-status.md` (new) — read-only slash command emitting `RUN_ID`, current phase, loopback count, latest artifact, verification verdict, and next action from `.xlfg/phase-state.json` plus the latest run dir. Safe mid-run; no file mutations. Useful after a stale `ScheduleWakeup` or context compaction.
+
+**Tests**
+- `tests/test_phase_gate.py` (+2): `test_phase_gate_in_progress_suppression` covers both branches (populated field suppress; empty field resumes normal write). `test_phase_gate_monotonic_for_block_count_only` verifies `loopback_count` and `completed` are preserved verbatim across a hook write.
+- `tests/test_render_workboard.py` (+1): `test_begin_marker_prefix_match` renders over a placeholder BEGIN marker (no attribution) and asserts exactly one `## Phase status` heading and one BEGIN marker in the output.
+- `tests/test_xlfg.py` (+8): shape assertions for each objective — implementer ARTIFACT_KIND branch, recall git-recency MUST, test-strategist smoke tier, verify-phase smoke-first, loopback arithmetic, `APPROVE-WITH-NOTES-FIXED` verdict, compound 200-word cap, `xlfg-status` command existence.
+
+**Manifests**
+- `plugin.json` bumped to **4.3.0** across `.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`.
+
+### Migration
+
+- **For users:** no breaking changes. New `/xlfg-status` slash command is read-only and optional. `ARTIFACT_KIND` is additive — existing packets without it continue to work (default: `planning-doc`, preserving current behavior for markdown artifacts; inferred kind for non-markdown).
+- **For runs in progress:** the `in_progress_phase` field is optional. Runs started under 4.2.0 without the field continue to work; the hook treats missing/empty as "no phase running" and writes as before. New runs under 4.3.0 benefit from the noise suppression immediately.
+- **For the acceptance tier:** adopting `ship_phase: acceptance` is opt-in. Existing `fast | smoke | e2e | manual` scenarios are unaffected.
+
 ## 4.2.0
 
 **`/xlfg-audit` is now the per-run user post-mortem.** The harness self-check (manifests, frontmatter, word counts) moved to `scripts/audit-harness.mjs` and runs in CI on every PR. Phase boundaries are now timed: every `/xlfg` and `/xlfg-debug` run records a `phase-timings.jsonl` in its run dir, and `/xlfg-audit` reads it to produce a per-phase wall-time table plus concrete, data-driven suggestions for how the harness can be faster or leaner. The `flrngel/xlfg` submission flow is preserved — but now what gets submitted is real run data, not static manifest checks.

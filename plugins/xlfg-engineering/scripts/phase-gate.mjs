@@ -1,4 +1,27 @@
 #!/usr/bin/env node
+// xlfg phase-gate — Stop hook that blocks the conductor from ending the
+// /xlfg pipeline before all phases complete.
+//
+// Write discipline: this hook only ever mutates `block_count`. The
+// read-modify-write cycle preserves every other field (`completed`,
+// `loopback_count`, `in_progress_phase`, `run_id`, `phases`, ...) exactly
+// as read. Treat the hook as monotonic-for-block_count; it must never
+// reset lifecycle state written by the conductor.
+//
+// Known limitation (not concurrency-safe): the read-modify-write is not
+// atomic. If the conductor writes the state file between the hook's
+// read and the hook's write, the hook's write clobbers the conductor's
+// update. The suppression branch above narrows the window (hook exits
+// without writing while a phase is in progress), but the race is not
+// eliminated. A real fix would require file-locking or a separate
+// ledger for block_count — intentionally out of scope here.
+//
+// Noise suppression: if the conductor has set `in_progress_phase` to a
+// non-empty string, the hook exits 0 without writing. That covers the
+// case where a long-running foreground phase (e.g. verify with live LLM
+// proof) legitimately parks the conversation awaiting a background task
+// or the next sub-packet. Without this guard, every parked turn would
+// fire the hook, increment block_count, and trip the safety valve.
 import fs from "node:fs";
 import path from "node:path";
 
@@ -67,6 +90,19 @@ const phases = Array.isArray(state.phases) ? state.phases : ALL_PHASES;
 
 // If all phases are done, allow stopping.
 if (phases.every((p) => completed.includes(p))) {
+  process.exit(0);
+}
+
+// Noise suppression: if the conductor has set `in_progress_phase` to a
+// non-empty string, a long phase is legitimately running (verify parked
+// on bg LLM work, implement parked between sub-packets, etc.). Exit 0
+// without writing — do not increment block_count, do not trip the
+// safety valve. The conductor clears the field on phase completion.
+const inProgress =
+  typeof state.in_progress_phase === "string"
+    ? state.in_progress_phase.trim()
+    : "";
+if (inProgress) {
   process.exit(0);
 }
 

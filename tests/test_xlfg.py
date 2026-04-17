@@ -339,5 +339,162 @@ class TestXLFG(unittest.TestCase):
             self.assertIn("DOCS_RUN_DIR/ui-verification.md", text, f"verify-phase must pass artifact path: {path}")
 
 
+    # ------------------------------------------------------------------
+    # v4.3.0 — speed-optimization shape assertions (memo /tmp/hey-xlfg-authors.md)
+    # ------------------------------------------------------------------
+
+    def test_implementer_artifact_kind_branch_rule(self) -> None:
+        """T1 / O1 — xlfg-task-implementer must carry a non-markdown guard and
+        ARTIFACT_KIND packet header so YAML frontmatter never leaks into .py /
+        .json / .yaml / other source artifacts.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        impl = (
+            repo_root / "plugins" / "xlfg-engineering" / "agents" / "implementation" / "xlfg-task-implementer.md"
+        ).read_text(encoding="utf-8")
+        # Must reference ARTIFACT_KIND as a packet header name.
+        self.assertIn("ARTIFACT_KIND", impl)
+        # Must enumerate the four kinds.
+        for kind in ("planning-doc", "source-file", "config-file", "test-file"):
+            self.assertIn(kind, impl, f"implementer prompt missing ARTIFACT_KIND value: {kind!r}")
+        # Must explicitly forbid frontmatter on non-markdown artifacts. The
+        # phrase can vary, but "never write YAML frontmatter" must appear in
+        # the non-markdown branch.
+        self.assertIn("never write yaml frontmatter", impl.lower().replace("**", ""))
+        # HC4 existing substrings must still be intact.
+        self.assertIn("status: IN_PROGRESS", impl)
+
+        # Packet format docs in the conductor command must document ARTIFACT_KIND.
+        cmd = (repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        self.assertIn("ARTIFACT_KIND:", cmd)
+        # Existing atomic-packet substrings must still be intact.
+        self.assertIn("PRIMARY_ARTIFACT:", cmd)
+        self.assertIn("DONE_CHECK:", cmd)
+        self.assertIn("RETURN_CONTRACT:", cmd)
+
+    def test_recall_skill_git_recency_mandatory(self) -> None:
+        """T3 / O3 — recall skill must enforce a git-recency check, not merely
+        recommend it.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        recall = (
+            repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-recall-phase" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("git log --since", recall)
+        self.assertIn("HYPOTHESIS-ONLY", recall)
+        self.assertIn("Verify-before-use:", recall)
+        # The upgrade must be mandatory-voiced; MUST appears in the guardrail.
+        self.assertIn("MUST", recall)
+        # And the MUST must live near the git-log phrase, not in some unrelated
+        # paragraph. Assert both substrings appear in the same ~30-line window.
+        must_line = None
+        git_log_line = None
+        for i, line in enumerate(recall.splitlines()):
+            if "MUST" in line and must_line is None:
+                must_line = i
+            if "git log --since" in line and git_log_line is None:
+                git_log_line = i
+        self.assertIsNotNone(must_line)
+        self.assertIsNotNone(git_log_line)
+        self.assertLessEqual(abs(must_line - git_log_line), 30, "MUST and git-log guidance must be co-located")
+
+    def test_test_strategist_smoke_tier(self) -> None:
+        """T5 / O5 — test-strategist enum must include `acceptance`, and the
+        output format must document `smoke_check` as a required field for that tier.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        strat = (
+            repo_root / "plugins" / "xlfg-engineering" / "agents" / "planning" / "xlfg-test-strategist.md"
+        ).read_text(encoding="utf-8")
+        # ship_phase enum must include `acceptance` as a first-class tier.
+        self.assertIn("`acceptance`", strat)
+        self.assertIn("`smoke`", strat)
+        # `smoke_check` field must be a normative output.
+        self.assertIn("smoke_check:", strat)
+        # Must state the dependency: acceptance requires smoke_check.
+        self.assertIn("acceptance", strat.lower())
+
+    def test_verify_phase_runs_smoke_first(self) -> None:
+        """T5 / O5 — verify-phase skill must execute smoke_check before acceptance
+        and stop on deterministic smoke failure.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        verify = (
+            repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-verify-phase" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("smoke_check", verify)
+        self.assertIn("acceptance", verify.lower())
+        # Must articulate "run smoke first" AND the deterministic-failure stop.
+        lower = verify.lower()
+        self.assertTrue(
+            "smoke" in lower and "first" in lower,
+            "verify-phase must instruct running smoke before acceptance",
+        )
+
+    def test_loopback_arithmetic_documented(self) -> None:
+        """T6 / O6 — conductor command must formalize when loopback_count
+        increments and when it does not.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        cmd = (repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        self.assertIn("loopback_count", cmd)
+        # Arithmetic section header or equivalent normative label.
+        self.assertIn("arithmetic", cmd.lower())
+        # Must explicitly call out the non-counting cases — at minimum, plan
+        # repairs and APPROVE-WITH-NOTES-FIXED.
+        self.assertIn("APPROVE-WITH-NOTES-FIXED", cmd)
+        # REVISE plan repairs must be named as non-counting.
+        self.assertTrue(
+            "REVISE" in cmd or "plan-phase repair" in cmd.lower(),
+            "plan-phase repair exemption must be documented",
+        )
+
+    def test_review_approve_with_notes_fixed(self) -> None:
+        """T6 / O6 — review skill must declare APPROVE-WITH-NOTES-FIXED as a
+        distinct verdict and state it does not consume a loopback.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        review = (
+            repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-review-phase" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("APPROVE-WITH-NOTES-FIXED", review)
+        # Must say this verdict does not consume a loopback.
+        lower = review.lower()
+        self.assertIn("loopback", lower)
+        self.assertTrue(
+            "not consume" in lower or "does **not** consume" in lower or "without consuming" in lower,
+            "review skill must state APPROVE-WITH-NOTES-FIXED does not consume a loopback",
+        )
+
+    def test_compound_phase_word_cap(self) -> None:
+        """T7 / O7 — compound skill must document a ~200-word cap per run on
+        current-state.md entries.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        compound = (
+            repo_root / "plugins" / "xlfg-engineering" / "skills" / "xlfg-compound-phase" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("200", compound)
+        self.assertIn("current-state.md", compound)
+        self.assertIn("compound-summary.md", compound)
+
+    def test_xlfg_status_command_exists(self) -> None:
+        """T7 / O7 — read-only /xlfg-status command must exist and document
+        itself as read-only.
+        """
+        repo_root = Path(__file__).resolve().parents[1]
+        path = repo_root / "plugins" / "xlfg-engineering" / "commands" / "xlfg-status.md"
+        self.assertTrue(path.exists(), f"missing {path}")
+        text = path.read_text(encoding="utf-8")
+        self.assertGreater(len(text), 200, "xlfg-status command body too short")
+        # Must declare itself read-only.
+        lower = text.lower()
+        self.assertIn("read-only", lower)
+        # Must read .xlfg/phase-state.json.
+        self.assertIn(".xlfg/phase-state.json", text)
+        # Frontmatter discipline: command must have allowed-tools and disable model-invocation.
+        self.assertIn("disable-model-invocation: true", text)
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

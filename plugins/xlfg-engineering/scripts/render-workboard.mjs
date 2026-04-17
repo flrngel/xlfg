@@ -21,6 +21,11 @@ import path from "node:path";
 
 const MARK_BEGIN = "<!-- BEGIN: rendered-phase-status (render-workboard.mjs) -->";
 const MARK_END = "<!-- END: rendered-phase-status -->";
+// Match any BEGIN variant, including a placeholder `<!-- BEGIN: rendered-phase-status -->`
+// (no script-attribution suffix) left by a run-skeleton template. Without this, a
+// placeholder would not match the exact MARK_BEGIN, the script would take the
+// "no markers" path, and a second ## Phase status block would be appended.
+const MARK_BEGIN_PREFIX = "<!-- BEGIN: rendered-phase-status";
 
 function parseArgs(argv) {
   const out = { dryRun: false };
@@ -77,7 +82,9 @@ function renderBlock(state) {
 
 function spliceBlock(original, rendered) {
   const body = String(original || "");
-  const beginIdx = body.indexOf(MARK_BEGIN);
+  // Prefix match so placeholders without the script-attribution suffix
+  // are recognized as the existing block and replaced in place.
+  const beginIdx = body.indexOf(MARK_BEGIN_PREFIX);
   const endIdx = body.indexOf(MARK_END);
   if (beginIdx !== -1 && endIdx !== -1 && endIdx > beginIdx) {
     return (

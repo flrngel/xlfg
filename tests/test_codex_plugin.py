@@ -37,7 +37,7 @@ class TestCodexPlugin(unittest.TestCase):
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
         self.assertEqual(manifest["name"], "xlfg-engineering")
-        self.assertEqual(manifest["version"], "4.2.0")
+        self.assertEqual(manifest["version"], "4.3.0")
         self.assertEqual(manifest["skills"], "./codex/skills/")
         self.assertTrue(manifest["skills"].startswith("./"))
         self.assertNotIn("mcpServers", manifest)
@@ -54,7 +54,7 @@ class TestCodexPlugin(unittest.TestCase):
             path.parent.name: json.loads(path.read_text(encoding="utf-8"))["version"]
             for path in manifest_paths
         }
-        self.assertEqual(set(versions.values()), {"4.2.0"})
+        self.assertEqual(set(versions.values()), {"4.3.0"})
 
     def test_repo_codex_marketplace_exposes_local_plugin(self) -> None:
         marketplace_path = self.repo_root / ".agents" / "plugins" / "marketplace.json"

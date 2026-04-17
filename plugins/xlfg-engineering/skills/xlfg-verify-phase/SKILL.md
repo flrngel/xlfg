@@ -27,6 +27,7 @@ Run honest layered proof for the changed behavior and reduce the results into a 
 3. Run the planned test commands directly:
    - Execute the commands defined in `test-contract.md` `fast_check` and `ship_check` fields
    - Default test runner: `python3 -m unittest discover tests/ -v` unless `test-contract.md` specifies otherwise
+   - **Smoke-first rule for `ship_phase: acceptance` scenarios**: if any scenario declares `ship_phase: acceptance`, run its `smoke_check` first. On deterministic smoke failure (identifiable pattern, non-flaky), stop immediately, classify RED, write `verify-fix-plan.md` from the smoke failure, and do NOT run `ship_check` this round. Only escalate to acceptance when the smoke result is green or shows a clearly non-deterministic pattern. This prevents paying 3× (or more) for a deterministic bug that one run already diagnosed.
 4. Use the verify specialists as lane owners with one required artifact each:
    - always run `xlfg-verify-runner`
    - then always run `xlfg-verify-reducer`

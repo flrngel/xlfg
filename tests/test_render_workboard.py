@@ -108,3 +108,65 @@ class TestRenderWorkboard(unittest.TestCase):
             )
             self.assertEqual(code, 2)
             self.assertIn("missing run_id", err)
+
+    def test_begin_marker_prefix_match(self) -> None:
+        """v4.3.0: renderer must match a placeholder BEGIN marker (without the
+        script-attribution suffix) and replace it in place — not append a second
+        rendered block.
+
+        Regression guard for the memo finding "duplicate ## Phase status on
+        first render": a run-skeleton template that preseeds the BEGIN marker
+        as `<!-- BEGIN: rendered-phase-status -->` (no attribution) was not
+        matched by the old exact-match logic, so the renderer took the
+        "no markers" prepend path and left two ## Phase status sections.
+        """
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / ".xlfg").mkdir()
+            state_path = root / ".xlfg" / "phase-state.json"
+            state_path.write_text(json.dumps(self._state(["recall"])), encoding="utf-8")
+
+            out_path = root / "docs" / "xlfg" / "runs" / "20260415-143307-test" / "workboard.md"
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Preseed a PLACEHOLDER — BEGIN without script attribution.
+            preseed = (
+                "# Workboard\n"
+                "\n"
+                "<!-- BEGIN: rendered-phase-status -->\n"
+                "## Phase status\n"
+                "\n"
+                "_placeholder — renderer should replace this block_\n"
+                "\n"
+                "<!-- END: rendered-phase-status -->\n"
+                "\n"
+                "## Task notes\n"
+                "- keep me\n"
+            )
+            out_path.write_text(preseed, encoding="utf-8")
+
+            code, _, err = self._run(cwd=str(root))
+            self.assertEqual(code, 0, err)
+
+            rendered = out_path.read_text(encoding="utf-8")
+
+            # Exactly ONE BEGIN marker in final output — no duplicate block.
+            begin_count = rendered.count("<!-- BEGIN: rendered-phase-status")
+            self.assertEqual(
+                begin_count,
+                1,
+                f"Expected 1 BEGIN marker after render, got {begin_count}. Output:\n{rendered}",
+            )
+            # Exactly ONE ## Phase status heading — the placeholder must have been replaced.
+            phase_status_count = rendered.count("## Phase status")
+            self.assertEqual(
+                phase_status_count,
+                1,
+                f"Expected 1 '## Phase status' heading, got {phase_status_count}. Output:\n{rendered}",
+            )
+            # Placeholder text must be gone.
+            self.assertNotIn("_placeholder — renderer should replace this block_", rendered)
+            # Human-authored surrounding content must be preserved.
+            self.assertIn("## Task notes\n- keep me", rendered)
+            # The rendered block must contain the real phase table.
+            self.assertIn("| recall | DONE |", rendered)

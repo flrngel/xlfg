@@ -41,8 +41,26 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 
 - Your turn budget is limited. Do not read files speculatively.
 - If the dispatch packet includes a context digest, use it instead of re-reading those files.
-- Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
+- For **planning-doc** artifacts (default): Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
+- For **non-markdown** artifacts (see ARTIFACT_KIND rule below): skip the frontmatter skeleton — open the artifact with whatever shape the target language or schema requires, and report status in your final return message instead.
 - Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
+
+## ARTIFACT_KIND rule (non-markdown guard)
+
+`PRIMARY_ARTIFACT` may point at a source file, a config file, or a test file — not only a markdown planning doc. Writing YAML frontmatter into a `.py`, `.json`, `.yaml`, `.sql`, `.ts`, `.mjs`, or other non-markdown file breaks it at the parser level (`SyntaxError`, `JSONDecodeError`).
+
+Apply this guard before any write:
+
+1. If the dispatch packet sets `ARTIFACT_KIND:`, honor it verbatim. Accepted values:
+   - `planning-doc` — markdown lifecycle artifact; YAML frontmatter `status: IN_PROGRESS|DONE|BLOCKED|FAILED` is required.
+   - `source-file` — application source; **never** write YAML frontmatter into it. Report status in your final chat reply only.
+   - `config-file` — JSON/YAML/TOML/etc.; same rule as `source-file`.
+   - `test-file` — test source (e.g. `tests/*.py`); same rule as `source-file`.
+2. If `ARTIFACT_KIND:` is absent, infer from the `PRIMARY_ARTIFACT` extension:
+   - `.md` / `.markdown` → `planning-doc` (frontmatter allowed)
+   - anything else → treat as `source-file` (no frontmatter; status in return message only)
+3. The `RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path>` in the packet already carries the lifecycle signal out-of-band. For non-markdown artifacts, that return line is the only status channel.
+4. If in doubt, do **not** prepend `---\nstatus: ...\n---`. A missing frontmatter on a markdown doc is fixable; a prepended frontmatter on `tests/test_foo.py` or `config.json` is a collection-time failure for the whole file.
 
 ## Tool failure recovery
 

@@ -3,9 +3,10 @@
 Read this file first when entering a repo that uses xlfg. It is the shortest tracked handoff for the next agent.
 
 ## Service / product context
-- xlfg is an autonomous SDLC harness for Claude Code and Codex (v3.2.0)
+- xlfg is an autonomous SDLC harness for Claude Code and Codex (v4.3.0)
 - `/xlfg` batches 8 hidden phase skills: recall → intent → context → plan → implement → verify → review → compound
 - `$xlfg` is the Codex skill surface for the same run shape; `$xlfg-debug` is the Codex diagnosis-only sibling
+- `/xlfg-status` (v4.3.0+) is a read-only mid-run orientation command — safe after stale wakeups or context compactions
 
 ## Current high-signal truths
 - The conductor has a Stop hook (`phase-gate.mjs`) that blocks premature pipeline termination by reading `.xlfg/phase-state.json`
@@ -18,6 +19,8 @@ Read this file first when entering a repo that uses xlfg. It is the shortest tra
 - The phase-state file uses the fixed path `.xlfg/phase-state.json` — the Stop hook reads it from `cwd`
 - Safety valve: 3 consecutive blocks → allow stopping (prevents infinite loop)
 - `max_tokens` stop reason → always allow (model physically can't continue)
+- `in_progress_phase` field (v4.3.0+): conductor sets it before each phase Skill call, clears to `""` after return. While non-empty, the Stop hook exits silently — long foreground phases no longer accumulate spurious blocks. Hook writes are monotonic-for-`block_count` and preserve every other field
+- Packets may carry `ARTIFACT_KIND: planning-doc|source-file|config-file|test-file` (v4.3.0+). Implementer prepends YAML frontmatter only for `planning-doc` (or inferred from `.md`/`.markdown` extension) — never for source / config / test files
 
 ## Current harness / verification rules
 - Tests: `python3 -m unittest discover tests/` — no dev server needed
@@ -32,6 +35,8 @@ Read this file first when entering a repo that uses xlfg. It is the shortest tra
 
 ## Open risks / debts
 - The loopback cap is prompt-instructed, not code-enforced — the Stop hook safety valve is the hard backstop
+- Sticky `in_progress_phase` on abnormal conductor exit (user interrupt, unhandled tool error) will suppress the Stop hook in the same session until cleared by hand. If a run resumes manually, verify `.xlfg/phase-state.json` does not have a stale `in_progress_phase` before continuing
+- `phase-gate.mjs` read-modify-write is NOT concurrency-safe. A conductor write between the hook's read and write can be clobbered. Mitigated but not eliminated by the `in_progress_phase` suppression (v4.3.0). Real fix (file-locking or separate ledger) deferred
 
 ## Best starting recall queries
 - `Grep "phase-gate" docs/xlfg/knowledge/` — conductor stop hook pattern

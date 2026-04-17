@@ -32,6 +32,18 @@ Promote only verified, reusable lessons into durable knowledge and leave the nex
 6. Write `compound-summary.md` and, when helpful, `run-summary.md`.
 7. Update any residual task/blocker notes in `workboard.md`. The `## Phase status` block (including `compound: DONE`) is rendered by the conductor from `.xlfg/phase-state.json`.
 
+## `current-state.md` size cap (v4.3.0+)
+
+`current-state.md` is the shortest tracked handoff for the next agent. Each run may add at most **~200 words** to it. Longer narrative, per-run decision history, and repro steps belong in the run's own `compound-summary.md` (long-form home).
+
+Apply this cap before writing:
+
+1. Draft the durable carry-forward as if it were a one-paragraph entry (≤ ~200 words).
+2. If the draft is longer, split: keep the ≤200-word essence in `current-state.md`; move the rest to `compound-summary.md` and reference it from the ledger.
+3. If two consecutive runs' drafts collide on the same section of `current-state.md`, consolidate — do not append. An ever-growing wall is a smell that the file has stopped being a handoff.
+
+Anything beyond ~200 words of a single run's entry in `current-state.md` should be read as a signal to move text to `compound-summary.md`, not as license to grow the handoff.
+
 ## Guardrails
 
 - Do not copy the whole run into memory.

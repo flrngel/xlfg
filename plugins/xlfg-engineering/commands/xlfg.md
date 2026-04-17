@@ -51,11 +51,18 @@ After startup, write `.xlfg/phase-state.json` with this initial state:
   "completed": [],
   "loopback_count": 0,
   "max_loopbacks": 2,
-  "block_count": 0
+  "block_count": 0,
+  "in_progress_phase": ""
 }
 ```
 
 After each phase skill returns successfully, add that phase name to `completed` and reset `block_count` to `0`. Write the file back immediately. A Stop hook reads this file to prevent the conductor from ending before all phases are done.
+
+### `in_progress_phase` contract (v4.3.0+)
+
+Before calling any phase `Skill`, set `in_progress_phase` to that phase name (`"recall"`, `"intent"`, ..., `"compound"`). After the Skill returns, clear it to `""` (empty string) before moving to the next phase. While `in_progress_phase` is non-empty, the Stop hook exits silently — a long foreground phase that parks the conversation waiting on a background task or a sub-packet notification does not accumulate blocks or trip the safety valve.
+
+The hook never resets `completed`, `loopback_count`, or `in_progress_phase`. It only mutates `block_count` (and only when `in_progress_phase` is empty).
 
 Then run `node ${CLAUDE_PLUGIN_ROOT}/scripts/render-workboard.mjs` to refresh the `## Phase status` block in `docs/xlfg/runs/<RUN_ID>/workboard.md` from the just-updated `phase-state.json`. Phase skills MUST NOT hand-write phase completion rows into `workboard.md` — the renderer owns that section, bounded by `<!-- BEGIN: rendered-phase-status -->` / `<!-- END: rendered-phase-status -->` markers. Phase skills still own the task, objective, and blocker sections of the same file.
 
@@ -121,12 +128,15 @@ Before dispatching any xlfg specialist, preseed the required artifact yourself a
 
 ```text
 PRIMARY_ARTIFACT: <exact path>
+ARTIFACT_KIND: planning-doc | source-file | config-file | test-file   # optional; default planning-doc
 FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 ```
 
-- Preseed the artifact at `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the mission, and a short remaining checklist **before** the specialist starts broad reading.
+- `ARTIFACT_KIND` is optional. Omit it for markdown planning docs (the default). Set it explicitly when `PRIMARY_ARTIFACT` points at application source, config, or tests — prepending YAML frontmatter to those file types breaks them at parse time.
+- Preseed **planning-doc** artifacts at `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the mission, and a short remaining checklist **before** the specialist starts broad reading.
+- For **source-file / config-file / test-file** artifacts, do not preseed with YAML frontmatter. Either leave the target file as it is on disk (the specialist edits in place) or create it with a valid empty shape in the target language. The specialist reports lifecycle through the `RETURN_CONTRACT` line only.
 - Never wait on a specialist without a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT`; file-backed artifact progress is the only accepted basis for waiting.
 - Pass objective context, not just the literal query. Include the exact ask, why it matters, and any nearby constraints that change correctness.
 - Default to sequential specialist dispatch for artifact-producing planning/context lanes. Parallelize only when packets are truly independent, small, and read-mostly.
@@ -145,9 +155,22 @@ RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 - Do **not** broad-scan the repo or spawn wide research until `xlfg-engineering:xlfg-intent-phase` has written the intent contract and objective groups in `spec.md`.
 - If the intent phase marks `resolution: needs-user-answer`, stop and ask at most three concise numbered blocking questions. Do not continue to context, planning, or coding until the answer arrives.
 - If `test-readiness.md` is not `READY` after planning, return to `xlfg-engineering:xlfg-context-phase` and `xlfg-engineering:xlfg-plan-phase` yourself until the plan is repaired or a true human-only blocker is explicit.
-- If verification is RED with an actionable fix, go back to `xlfg-engineering:xlfg-implement-phase`, then rerun `xlfg-engineering:xlfg-verify-phase`. Increment `loopback_count` in `.xlfg/phase-state.json` each time. **Max 2 loopbacks** — after 2 verify-fix cycles, stop and escalate to the user with a summary of what failed and why.
+- If verification is RED with an actionable fix, go back to `xlfg-engineering:xlfg-implement-phase`, then rerun `xlfg-engineering:xlfg-verify-phase`. Increment `loopback_count` in `.xlfg/phase-state.json` each time. **Max 2 loopbacks** — after 2 loopbacks, stop and escalate to the user with a summary of what failed and why.
 - If review finds a must-fix issue, go back to `xlfg-engineering:xlfg-implement-phase`, then rerun verify and review. This also counts toward the loopback limit.
 - Do not hand this loop back to the user unless the loopback cap is reached.
+
+### `loopback_count` arithmetic (v4.3.0+)
+
+`loopback_count` counts `{verify|review} → implement` round trips that require a fresh implement pass. Explicit rules:
+
+- **Counts as +1**: verify RED → implement → verify. A fresh implement pass was required.
+- **Counts as +1**: review MUST-FIX → implement → verify → review. Same shape; the trigger is review, not verify.
+- **Counts as +1 (single)**: verify exposes a fundamentally different diagnosis that requires `verify → plan → implement → verify`. This is one loopback (the replan happens inside the cycle, not a separate one), but it is real — do not free-ride the replan.
+- **Does NOT count**: plan-phase repair after `test-readiness.md` returns `REVISE`. The conductor repairs the plan in place; no implement pass ran yet. Repairs are unlimited within the plan phase.
+- **Does NOT count**: `APPROVE-WITH-NOTES-FIXED` review disposition (see `xlfg-review-phase`). A ~10-second inline fix with a re-run of the deterministic proof subset does not consume a loopback.
+- **Does NOT count**: verify-phase internal retries when a harness failure (e.g. network, tool error) is classified FAILED (not RED). Retry the harness before counting.
+
+When in doubt, count it. Under-counting hides run-away replanning under a polite name; over-counting just escalates earlier, which is the safer failure mode.
 
 ## Completion
 

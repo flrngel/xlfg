@@ -2,6 +2,7 @@
 description: Internal xlfg phase skill. Use only during /xlfg runs to perform deterministic recall and record the smallest relevant carry-forward memory.
 user-invocable: false
 allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write
+status: DONE
 ---
 
 
@@ -42,3 +43,19 @@ Perform deterministic recall before broad repo scanning and record only the smal
 - Do not write vague history dumps.
 - Do not invent semantic recall when lexical evidence is weak.
 - Keep the memory note compact enough to help the next phase immediately.
+
+## Git-recency guard (mandatory when promoting a prior fix class)
+
+When you promote a carry-forward rule from a prior STABLE run, you MUST run a git-recency check against the diagnosed surface before recording the rule. This catches cases where the baseline's fix class is stale — the code that baseline covered has moved under it, so the new regression looks the same from the symptom angle but has a different root cause.
+
+Required steps:
+
+1. Identify the cited prior run's date and the list of files the carry-forward rule names.
+2. Run: `git log --since=<baseline-date> -- <file1> <file2> ...`. Record the exact command and the result inside `memory-recall.md` (even an empty result — record that the window was checked).
+3. If the result is empty, record the rule as normal carry-forward.
+4. If the result contains ANY commit in the window:
+   - Mark the rule as `HYPOTHESIS-ONLY` in `memory-recall.md`.
+   - Add a `Verify-before-use:` line telling the plan phase to re-diagnose from the current code before treating the rule as established.
+   - Do not let intent / context / plan phases silently adopt the hypothesis as an accepted root cause.
+
+The cost is ~1 shell call per promoted rule. The saved cost on a stale promotion is one full verify→implement loopback.
