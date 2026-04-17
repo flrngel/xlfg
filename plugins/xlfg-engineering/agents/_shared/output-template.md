@@ -65,6 +65,11 @@ FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 
+OWNERSHIP_BOUNDARY:
+- Own: <the exact decision, artifact section, code surface, or proof step this lane owns>
+- Do not redo: <adjacent lane decisions or artifacts to cite instead of re-deriving>
+- Consume: <prior artifacts this lane must treat as input truth unless it finds explicit contradiction>
+
 CONTEXT_DIGEST:
 - <quoted excerpt or bullet from spec.md / context.md / verification.md / etc.>
 - <only the fields the specialist actually needs to do its job>
@@ -73,6 +78,12 @@ PRIOR_SIBLINGS:
 - <path/to/sibling-artifact.md>: <one-line summary of what it already covered>
 ```
 
+- `OWNERSHIP_BOUNDARY` is **mandatory**. The conductor names the lane's exact
+  ownership surface before the specialist starts. Specialists must write only
+  the sections this lane owns, cite prior artifacts for adjacent facts, and
+  avoid re-adjudicating another lane's decision unless the packet explicitly
+  asks for a contradiction check. If overlap is unavoidable, add a short
+  "Covered elsewhere" pointer instead of repeating the same analysis.
 - `CONTEXT_DIGEST` is **mandatory**. The conductor inlines the excerpts the
   specialist needs from canonical files (`spec.md`, `context.md`,
   `verification.md`, prior phase outputs). If the lane truly needs no extra

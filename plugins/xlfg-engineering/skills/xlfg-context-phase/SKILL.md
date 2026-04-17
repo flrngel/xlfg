@@ -31,7 +31,7 @@ Gather the repo and product truth needed for an honest plan without exploding co
    - run `xlfg-context-adjacent-investigator`, `xlfg-context-constraints-investigator`, or `xlfg-context-unknowns-investigator` one at a time when the request is bundled, risky, or still assumption-heavy
    - run `xlfg-env-doctor` when local server behavior is relevant
    - run `xlfg-researcher` only when freshness or missing domain knowledge makes repo truth insufficient
-6. Keep these specialists foregrounded, short-lived, and leaf-only. After each specialist returns, verify its expected artifact exists, begins with `Status:`, and contains real findings instead of preparation notes. If it does not, use `SendMessage` with the returned agent ID to resume the same specialist once before treating the lane as failed. If no agent ID is available, re-dispatch the exact same packet once.
+6. Keep these specialists foregrounded, short-lived, and leaf-only. After each specialist returns, verify its expected artifact exists, begins with YAML frontmatter `status: DONE`, `status: BLOCKED`, or `status: FAILED`, and contains real findings instead of preparation notes. If it does not, use `SendMessage` with the returned agent ID to resume the same specialist once before treating the lane as failed. If no agent ID is available, re-dispatch the exact same packet once.
 7. Use the specialist artifacts as the primary lane evidence. The main conductor should synthesize from them rather than silently redoing their work in chat.
 8. Write or update `context.md` with:
    - relevant repo and product context
@@ -54,6 +54,11 @@ FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 
+OWNERSHIP_BOUNDARY:
+- Own: scoped repo/product facts, constraints, unknowns, harness facts, or external facts for the assigned context lane
+- Do not redo: intent decomposition, solution choice, proof command design, task splitting, or findings already covered by prior context artifacts
+- Consume: `spec.md`, `memory-recall.md`, `context.md`, and same-phase sibling artifacts listed below
+
 CONTEXT_DIGEST:
 - <quoted excerpt or bullet from spec.md / context.md / current-state.md the specialist actually needs>
 
@@ -61,7 +66,15 @@ PRIOR_SIBLINGS:
 - <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
 ```
 
-- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest carries the canonical excerpts the specialist needs so it does not re-read `spec.md` / `context.md` from scratch. The siblings list is how dispatched siblings (e.g., `context/adjacent.md` → `context/constraints.md` → `context/unknowns.md`) skip ground already covered instead of re-deriving overlapping findings.
+- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest carries the canonical excerpts the specialist needs so it does not re-read `spec.md` / `context.md` from scratch. The siblings list is how dispatched siblings (e.g., `context/adjacent.md` → `context/constraints.md` → `context/unknowns.md`) skip ground already covered instead of re-deriving overlapping findings.
+- Context ownership boundaries:
+  - `xlfg-repo-mapper` owns command and structure inventory; it does not choose harness intensity or proof strategy.
+  - `xlfg-harness-profiler` owns budget/profile selection; it cites `repo-map.md` for command discovery instead of rediscovering commands.
+  - `xlfg-context-adjacent-investigator` owns implied adjacent behaviors; it does not promote weak ideas into intent IDs.
+  - `xlfg-context-constraints-investigator` owns hard constraints and dependency/security/ops boundaries; it does not restate adjacent feature scope unless the constraint changes acceptance.
+  - `xlfg-context-unknowns-investigator` owns unresolved assumptions and blockers after prior context artifacts; it does not repeat already-classified adjacent or constraint findings.
+  - `xlfg-env-doctor` owns runnable environment shape; it does not choose scenario proof breadth.
+  - `xlfg-researcher` owns only external facts local repo truth cannot provide; it does not research topics already covered by `repo-map.md`, `context.md`, or existing `research.md`.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
 - Only the phase conductor may delegate. Never ask a context specialist to spawn nested subagents or to fan out its own lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.

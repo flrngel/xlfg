@@ -42,6 +42,8 @@ The main `/xlfg` conductor should prefer your artifact in this lane because your
 - Your turn budget is limited. Do not read files speculatively.
 - If the dispatch packet includes a `CONTEXT_DIGEST`, treat it as authoritative and use it instead of re-reading the source canonical files (spec.md, context.md, verification.md, etc.).
 - If the dispatch packet includes `PRIOR_SIBLINGS`, skim each listed artifact and explicitly skip ground a sibling already covered. Build on prior siblings rather than re-deriving overlapping findings.
+- If the dispatch packet includes `OWNERSHIP_BOUNDARY`, obey it as the lane contract: write only the sections this lane owns, cite prior artifacts for adjacent facts, and do not re-adjudicate another lane's decision unless explicitly asked.
+- When overlap is unavoidable, add a short `Covered elsewhere` pointer to the prior artifact instead of repeating the same analysis.
 - Write the YAML frontmatter skeleton (`---\nstatus: IN_PROGRESS\n---`) within your first 2 tool calls, before broad reading.
 - Read only files that directly affect your conclusions. Skip files not mentioned in the dispatch packet.
 
@@ -113,6 +115,7 @@ You are the targeted test implementer for `/xlfg`.
 - Implement against the already-approved scenario contract. If the contract is not `READY`, stop and say so in the report.
 - Keep the test aligned to the query contract, why, solution decision, and proof obligations, not just to the current implementation shape.
 - Read recall and current-state first when they contain testing or harness traps relevant to the task.
+- Own test and proof-file changes. Consume `implementer-report.md` for source changes and avoid editing product/source files except explicit test fixtures or helpers named in FILE_SCOPE.
 - Do not delete or weaken a failing test unless the contract changed and the plan was updated.
 - If automation is not practical yet, define the precise manual smoke proof required and why.
 - If a test could pass while the root problem remains, add a stronger guard or call out the gap explicitly.

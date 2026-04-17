@@ -81,9 +81,20 @@ PRIMARY_ARTIFACT: <exact path>
 FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+
+OWNERSHIP_BOUNDARY:
+- Own: <the exact decision, file surface, artifact section, or proof step this lane owns>
+- Do not redo: <adjacent lane decisions or artifacts to cite instead of re-deriving>
+- Consume: <prior artifacts this lane must treat as input truth unless explicitly contradicted>
+
+CONTEXT_DIGEST:
+- <quoted excerpt or bullet from spec.md / context.md / verification.md / prior phase output>
+
+PRIOR_SIBLINGS:
+- <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
 ```
 
-A lane is complete only when the artifact exists, has `status: DONE`, `status: BLOCKED`, or `status: FAILED`, and contains concrete edits, findings, checks, logs, or cited facts. Progress notes are not completion.
+`OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory for every specialist lane. Use them to prevent duplicate reads, duplicate findings, and adjacent-lane rework. A lane is complete only when the artifact exists, has `status: DONE`, `status: BLOCKED`, or `status: FAILED`, and contains concrete edits, findings, checks, logs, or cited facts. Progress notes are not completion.
 
 ## Loop Rules
 

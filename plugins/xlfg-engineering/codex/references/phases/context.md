@@ -15,6 +15,7 @@ Update `context.md` and any optional decision-changing context artifact.
 - Use current external research only when freshness matters or local truth is insufficient.
 - Keep facts cited with paths, commands, or source links.
 - Record constraints that affect the plan, especially install surfaces, generated artifacts, and verification harnesses.
+- Keep ownership narrow: command/structure inventory, constraints, unknowns, environment facts, and external research are separate lanes. Cite prior artifacts instead of re-reading or re-deriving adjacent findings.
 
 ## Done Check
 

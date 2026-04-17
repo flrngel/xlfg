@@ -16,6 +16,7 @@ Write `debug-report.md`.
 - Keep falsifiable hypotheses and retire them with evidence.
 - Reject fake fixes such as muting errors, widening timeouts, changing tests to green, or calling an unexplained failure an environment issue.
 - Record verification evidence for the diagnosis, not just command output.
+- Keep diagnosis lanes separate: repo mapping owns structure, why owns expected behavior, root-cause owns mechanism, harness/env lanes own proof health, and research owns only external facts.
 
 ## Done Check
 

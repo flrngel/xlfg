@@ -1,3 +1,40 @@
+## 4.5.0
+
+**Ownership-boundary dedup pass.** 4.4.0 stopped specialists from repeating reads and sibling findings with `CONTEXT_DIGEST` and `PRIOR_SIBLINGS`; 4.5.0 closes the next overlap class: adjacent specialists re-adjudicating each other's decisions. Every dispatch packet now carries an explicit `OWNERSHIP_BOUNDARY` that names what the lane owns, what it must not redo, and which artifacts it consumes as input truth.
+
+### Changed
+
+**Canonical packet shape**
+- `agents/_shared/output-template.md` adds mandatory `OWNERSHIP_BOUNDARY` with `Own`, `Do not redo`, and `Consume` fields.
+- `commands/xlfg.md` and every delegating phase skill (`intent`, `context`, `plan`, `implement`, `verify`, `review`, `debug`) now repeat the field in their packet examples and explain how it prevents adjacent-lane rework.
+
+**Phase ownership rules**
+- `context` separates repo mapping, harness profile, adjacent requirements, constraints, unknowns, env health, and external research.
+- `plan` separates why, diagnosis, solution choice, flow spec, UI design, proof commands, readiness gate, task packets, and risk.
+- `implement` separates source ownership, test ownership, and task-local checker verdicts.
+- `verify` separates runner execution, reducer judgment, env classification, and UI DA conformance.
+- `review` keeps each lens to net-new findings and requires "Already covered by verification" before findings.
+
+**Specialist agents**
+- All 27 specialist agents now honor `OWNERSHIP_BOUNDARY` in the Turn budget rule and use a `Covered elsewhere` pointer instead of repeating adjacent analysis.
+- High-overlap agents gained explicit boundaries: `xlfg-task-implementer` vs `xlfg-test-implementer`, `xlfg-task-checker` vs verify, `xlfg-verify-runner` vs `xlfg-verify-reducer`, `xlfg-ui-designer` vs `xlfg-ux-reviewer`, and flow/spec/test/UI planning lanes.
+
+**Codex surface**
+- `$xlfg` and `$xlfg-debug` packet shapes now include `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS`.
+- Codex phase references now describe the same lane-ownership splits so Codex runs do not regress to duplicate specialist work.
+
+**Tests**
+- `tests/test_xlfg.py` adds ownership-boundary coverage for delegating entrypoints, specialist agents, the canonical packet template, phase overlap rules, and high-risk agent-pair boundaries.
+- `tests/test_codex_plugin.py` pins 4.5.0 and verifies the Codex skill packet shape includes the dedup fields.
+
+**Manifests**
+- `plugin.json` bumped to **4.5.0** across `.claude-plugin/`, `.cursor-plugin/`, `.codex-plugin/`.
+
+### Migration
+
+- **For users:** no breaking runtime change. New runs get clearer specialist lane ownership and should spend fewer turns on duplicate reads, duplicate findings, and unnecessary cross-lane rework.
+- **For specialist authors:** when adding or editing a delegating phase, write the ownership boundary before dispatching. If a lane needs to mention adjacent work, cite the owning artifact instead of copying its reasoning.
+
 ## 4.4.0
 
 **Sub-agent dedup contract: `CONTEXT_DIGEST` + `PRIOR_SIBLINGS` are now mandatory in every dispatch packet.** Sub-agents in xlfg already communicate exclusively through files (preseeded artifact in, terminal-status reply out — never chat synthesis). The remaining waste was on the read side: each new specialist re-read ~10 canonical files because dispatch packets did not embed excerpts, and sibling specialists in the same phase lane re-derived overlapping findings because the packet did not list prior siblings. Only `xlfg-review-phase` had a `CONTEXT_DIGEST` rule; this release generalizes it across the conductor and all delegating phase skills.

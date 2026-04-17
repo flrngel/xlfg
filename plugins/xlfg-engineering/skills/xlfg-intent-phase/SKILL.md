@@ -70,6 +70,11 @@ FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 
+OWNERSHIP_BOUNDARY:
+- Own: the `Intent contract` and `Objective groups` sections in `spec.md`
+- Do not redo: repo mapping, solution selection, proof command design, or implementation task splitting
+- Consume: `memory-recall.md`, `context.md`, and `current-state.md` excerpts passed in the digest
+
 CONTEXT_DIGEST:
 - <quoted excerpt or bullet from the user's literal request, prior recall, and current-state.md the specialist actually needs>
 
@@ -77,7 +82,8 @@ PRIOR_SIBLINGS:
 - <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
 ```
 
-- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. Intent rarely has prior siblings (it is the first delegating phase), so `PRIOR_SIBLINGS: none` is the common case here — but the field must still be present so downstream phases inherit a consistent contract.
+- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. Intent rarely has prior siblings (it is the first delegating phase), so `PRIOR_SIBLINGS: none` is the common case here — but the field must still be present so downstream phases inherit a consistent contract.
+- The intent specialist owns request decomposition only. Later context or planning specialists may propose a gap note if evidence contradicts the contract, but they must not silently rewrite intent while doing repo mapping, design, proof, or implementation work.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
 - Only the phase conductor may delegate. Never ask a specialist to spawn nested subagents or fan out further from inside the lane.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.

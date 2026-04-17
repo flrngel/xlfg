@@ -55,6 +55,11 @@ FILE_SCOPE: <bounded files or paths>
 DONE_CHECK: <single honest check or NONE>
 RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
 
+OWNERSHIP_BOUNDARY:
+- Own: the assigned verification execution, evidence reduction, environment classification, or UI conformance lane
+- Do not redo: planning proof design, implementation task review, sibling verify command execution, or review-phase critique
+- Consume: `test-contract.md`, `verification.md` when present, runner artifacts, UI design/checker artifacts, and same-phase sibling artifacts listed below
+
 CONTEXT_DIGEST:
 - <quoted excerpt or bullet from spec.md / test-contract.md / proof-map.md the specialist actually needs>
 
@@ -62,7 +67,12 @@ PRIOR_SIBLINGS:
 - <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
 ```
 
-- `CONTEXT_DIGEST` and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest carries scenario IDs and harness facts so the specialist does not re-read upstream phase outputs. Siblings is how `xlfg-verify-reducer` consumes `xlfg-verify-runner`'s `results.json`/`summary.md` instead of re-running the harness or re-summarizing logs from scratch.
+- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest carries scenario IDs and harness facts so the specialist does not re-read upstream phase outputs. Siblings is how `xlfg-verify-reducer` consumes `xlfg-verify-runner`'s `results.json`/`summary.md` instead of re-running the harness or re-summarizing logs from scratch.
+- Verification ownership boundaries:
+  - `xlfg-verify-runner` owns command execution and raw evidence capture only; it does not judge final run truth beyond noting observed failures.
+  - `xlfg-verify-reducer` owns GREEN/RED/FAILED reduction and first actionable failure; it consumes runner artifacts and must not rerun commands unless the packet explicitly asks for a missing-artifact recovery.
+  - `xlfg-env-doctor` owns harness health classification only when the harness is unhealthy or running-app proof depends on it.
+  - `xlfg-ui-designer` verify mode owns DA conformance only when checker reports did not already pass every DA; it does not duplicate review-phase UX critique.
 - Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
 - Only the phase conductor may delegate. Never ask a verify specialist to spawn nested subagents or hand off its lane to another worker.
 - Default to **sequential** dispatch for artifact-producing planning/context work. Parallelize only when packets are truly independent, small, and read-mostly.

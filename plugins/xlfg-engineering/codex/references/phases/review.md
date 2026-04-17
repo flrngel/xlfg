@@ -15,6 +15,7 @@ Write `review-summary.md` when review changes a decision, records residual risk,
 - Lead with concrete findings tied to files and behavior.
 - If a must-fix issue exists, return to implementation, then rerun verification and review.
 - If no must-fix issue exists, record residual risk honestly.
+- Review only net-new findings. Fill "already covered by verification" first, cite task-checker or sibling review artifacts, and keep each lens to its own surface.
 
 ## Done Check
 
