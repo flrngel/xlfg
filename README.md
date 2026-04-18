@@ -4,16 +4,17 @@ An autonomous proof-first SDLC guide for Claude Code, designed for Opus-class mo
 
 ## Status
 
-**v6.3.2** is the conductor+skills architecture with on-demand specialist lenses: two slash commands acting as conductors, each dispatching a pipeline of hidden phase skills, and 27 specialist lens skills that phase skills load on-demand for focused expertise (security, root-cause, test-strategist, etc.). Phase and specialist bodies load just-in-time via the `Skill` tool, not all at once. The `/xlfg` conductor now commits tracked product changes at end-of-run, closing a regression where v6 runs often finished with edits unstaged once `docs/xlfg/runs/` became gitignored. No sub-agents, no nested delegation, no v5 coordination files, no Codex surface. The durable archive under `docs/xlfg/` (current-state + per-run summaries/diagnoses) stays.
+**v6.4.1** is the conductor+skills architecture with on-demand specialist lenses, plus a minimal per-project scaffold command. Two conductor commands (`/xlfg`, `/xlfg-debug`) each dispatch a pipeline of hidden phase skills. 27 specialist lens skills load on-demand for focused expertise (security, root-cause, test-strategist, etc.). A third command (`/xlfg-init`) restores the v3.3-era scaffold role in a v6-shaped form — it patches a project's `.gitignore` and seeds `docs/xlfg/runs/` once, then stays out of the way. No sub-agents, no nested delegation, no v5 coordination files, no Codex surface. The durable archive under `docs/xlfg/` (current-state + per-run summaries/diagnoses) stays.
 
-See `plugins/xlfg-engineering/CHANGELOG.md` for the full evolution from v5 to v6.3.
+See `plugins/xlfg-engineering/CHANGELOG.md` for the full evolution from v5 to v6.4.
 
 ## What you get
 
+- `/xlfg-init` — one-shot idempotent project scaffold. Patches the CWD's `.gitignore` with the canonical v6 runs block and creates `docs/xlfg/runs/.gitkeep` + `README.md`. Not a conductor. Run once after installing the plugin in a new project; safe to re-run.
 - `/xlfg "<request>"` — dispatches 8 phase skills in order: recall → intent → context → plan → implement → verify → review → compound. Each skill loads when invoked, runs in the main model's context, and returns. Ends by writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` (Ask / What changed / Proof / Residual risk / Durable lesson) and optionally updating `docs/xlfg/current-state.md`.
 - `/xlfg-debug "<request>"` — dispatches 4 phase skills: recall → intent → context → debug. Diagnosis-only: `allowed-tools` includes `Write` (for the diagnosis file) but excludes `Edit` and `MultiEdit` (product source stays untouched). Ends by writing `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
 
-The conductor carries the pipeline order, loopback rules, and operating contract; the phase bodies live in `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md` (9 files total, three shared between the conductors). Alongside them, `plugins/xlfg-engineering/skills/xlfg-<name>/SKILL.md` (no `-phase` suffix) holds 27 hidden specialist lens skills that phase skills load on-demand. The tracked `docs/xlfg/` archive is how cross-session memory survives — there is no `.xlfg/` coordination state.
+The conductors carry the pipeline order, loopback rules, and operating contract; the phase bodies live in `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md` (9 files total, three shared between the conductors). Alongside them, `plugins/xlfg-engineering/skills/xlfg-<name>/SKILL.md` (no `-phase` suffix) holds 27 hidden specialist lens skills that phase skills load on-demand. The tracked `docs/xlfg/` archive is how cross-session memory survives — there is no `.xlfg/` coordination state.
 
 ## Install
 
@@ -22,7 +23,13 @@ The conductor carries the pipeline order, loopback rules, and operating contract
 /plugin install xlfg-engineering@flrngel
 ```
 
-Then:
+Then, once per project, from the project root:
+
+```
+/xlfg-init
+```
+
+After that:
 
 ```
 /xlfg add a retry policy to the webhook consumer with exponential backoff

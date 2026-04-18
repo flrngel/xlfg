@@ -1,13 +1,14 @@
-# xlfg-engineering (v6.3)
+# xlfg-engineering (v6.4)
 
 An autonomous proof-first SDLC guide for Claude Code, designed for Opus-class models.
 
 ## What you get
 
-Two slash commands that act as **conductors**, each dispatching a pipeline of hidden phase skills just-in-time.
+Two conductor commands that dispatch pipelines of hidden phase skills just-in-time, plus one small scaffold command that bootstraps a project to use them.
 
 - `/xlfg "<request>"` — dispatches 8 phase skills in order: recall → intent → context → plan → implement → verify → review → compound. Each skill loads when invoked, does its phase work in the main model's context, and returns. After compound, the conductor commits tracked product changes as one Conventional Commits-style commit (skipped cleanly on investigation-only runs; `docs/xlfg/runs/**` and `.xlfg/**` never staged). Ends by writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` and optionally updating `docs/xlfg/current-state.md`.
 - `/xlfg-debug "<request>"` — dispatches 4 phase skills: recall → intent → context → debug. Diagnosis-only: `allowed-tools` excludes `Edit` and `MultiEdit`, so product source cannot be modified. Ends by writing `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+- `/xlfg-init` — one-shot, idempotent project scaffold. Patches the CWD's `.gitignore` with the canonical v6 runs block and creates `docs/xlfg/runs/.gitkeep` + `README.md`. Not a conductor. Run once after installing the plugin in a new project; safe to re-run.
 
 The phases are `plugins/xlfg-engineering/skills/xlfg-<name>-phase/SKILL.md` — 9 files total. Three of them (recall, intent, context) are shared by both conductors.
 
@@ -19,6 +20,7 @@ Alongside the phase skills, v6.3 ships **27 specialist lens skills** under `plug
 commands/
   xlfg.md          ← conductor (~600 words): frontmatter + pipeline + loopback rules
   xlfg-debug.md    ← conductor (~500 words): frontmatter + pipeline + no-source-edits contract
+  xlfg-init.md     ← scaffold (~120 words): idempotent .gitignore + runs-dir bootstrap for user's project
 skills/
   xlfg-recall-phase/SKILL.md      ← shared (used by /xlfg and /xlfg-debug)
   xlfg-intent-phase/SKILL.md      ← shared
@@ -57,7 +59,8 @@ If you're migrating from v5 or earlier:
 - **v5 coordination layer** — no `spec.md`, no `workboard.md`, no `phase-state.json`, no `verification.md`, no `test-contract.md`, no ledger schema. The run lives in context; durable memory is the tracked `docs/xlfg/` archive.
 - **Stop and SubagentStop hooks** — gone. Only `PermissionRequest` `ExitPlanMode` auto-allow remains.
 - **Codex surface** — `.codex-plugin/`, `codex/`, and Codex marketplace wiring are removed. v6 ships on Claude Code (and, via `.cursor-plugin/`, Cursor).
-- **`/xlfg-audit`, `/xlfg-status`, `/xlfg-init`** — all were tied to the v5 file-state surface.
+- **`/xlfg-audit`, `/xlfg-status`** — both were tied to the v5 file-state surface and stay gone.
+- **`/xlfg-init`** — the v3.3 form (which scaffolded `.xlfg/`, `docs/xlfg/knowledge/`, `docs/xlfg/migrations/`, etc.) is gone. v6.4 restores `/xlfg-init` in a far smaller shape: just the `.gitignore` patch and the runs-dir `.gitkeep`/`README.md` pair. No v5 directories, no knowledge files.
 - **`.xlfg/`** — v5 used it for the Stop hook's phase-state file. v6 has no phase-state.
 
 ## Installation
@@ -67,7 +70,13 @@ If you're migrating from v5 or earlier:
 /plugin install xlfg-engineering@flrngel
 ```
 
-Then:
+Then, once per project, from the project root:
+
+```
+/xlfg-init
+```
+
+That patches your `.gitignore` and seeds `docs/xlfg/runs/` with a `.gitkeep` and `README.md` so run summaries stay local but the archive directory is committable. After that:
 
 ```
 /xlfg add a retry policy to the webhook consumer with exponential backoff

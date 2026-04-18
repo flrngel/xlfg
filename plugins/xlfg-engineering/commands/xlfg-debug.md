@@ -24,9 +24,18 @@ Treat this invocation as **one autonomous diagnosis run** split across 4 phases.
 
 Allowed-tools **intentionally excludes `Edit` and `MultiEdit`**. You cannot modify product source, tests, fixtures, migrations, or configs. `Write` is granted, but its **only sanctioned use** is the debug skill creating `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Writing to any other path is a contract violation.
 
-## What `/xlfg-debug` is
+## What `/xlfg-debug` is (and isn't) in this version
 
 This is `/xlfg` with the implement / verify / review / compound phases replaced by a single debug phase, and the product frozen. You are not shipping. You are explaining — and writing that explanation to disk so it survives the session.
+
+xlfg v6.4 is a **conductor-plus-phase-skills architecture**. The 4 phases below are discrete skills under `plugins/xlfg-engineering/skills/xlfg-*-phase/`. This conductor dispatches them in order. There are **no sub-agents** — skills run in your main context, not in delegated sub-contexts. There is **no v5 coordination layer** — no `spec.md`, `workboard.md`, `phase-state.json`, or `verification.md` files. The run lives in your context and in the real repo.
+
+The durable archive is minimal and debug-specific:
+
+- `docs/xlfg/current-state.md` — optional, tracked, one-page living summary of the project's load-bearing truths. Read in the recall phase. Never written by a debug run.
+- `docs/xlfg/runs/<RUN_ID>/diagnosis.md` — written by the debug skill at the end of every run. One file per run. Grep-able months later and surfaced by future recall passes.
+
+`.xlfg/` does not exist in v6. Nothing in a debug run is written outside the sanctioned `diagnosis.md` path.
 
 A good diagnosis gives the user:
 1. The mechanism of the failure, in one or two sentences.
@@ -35,7 +44,7 @@ A good diagnosis gives the user:
 4. The fake fixes you considered and rejected.
 5. The residual unknowns, named specifically.
 
-The diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` — that's the durable artifact of the run. Future `/xlfg` and `/xlfg-debug` runs will surface this file in their recall phase.
+Future `/xlfg` and `/xlfg-debug` runs will surface `diagnosis.md` in their recall phase.
 
 ## Startup
 
@@ -78,17 +87,22 @@ If the debug skill lands on a promising hypothesis but evidence is too thin (you
 
 **Cap: 1 loopback.** After the second context→debug cycle, stop and surface the exact missing evidence to the user.
 
-## End-of-run summary
+## Artifact policy (no commit, ever)
 
-The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written by the debug skill). Your chat response should be a short pointer — 4–6 sentences — not a paste of the whole file.
+A debug run produces exactly one artifact: `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. That path is gitignored by the canonical v6 runs block (seeded by `/xlfg-init`), so there is nothing to stage. Do not `git add`, do not stage anything, do not create a commit. If tracked product changes appear in `git status` at the end of a debug run, a phase skill has violated the no-source-edits contract — report the mismatch to the user and stop; do not paper over it with a commit.
 
-Say, in order:
+This is the intended symmetry with `/xlfg`'s commit step: `/xlfg` owns committing product changes, `/xlfg-debug` owns writing a diagnosis and nothing else.
 
-1. **The mechanism**, in one sentence.
-2. **The strongest evidence**, in one sentence.
-3. **The likely repair surface**, in one sentence.
-4. **Residual unknowns**, in one sentence (or "none worth naming").
-5. **The path to the full diagnosis:** `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
-6. **Suggested next step**, in one sentence — usually "open `/xlfg` to ship the fix" or "run `<experiment>` to confirm before fixing".
+## Completion summary (end-of-run template)
 
-Do not append post-hoc rationalization or reassurance. Hand the pointer to the user; they decide whether to open `/xlfg` to ship the fix.
+The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written by the debug skill). Your chat response is a short pointer — 4–6 sentences, not a paste of the whole file. Prose the user can skim in under 30 seconds:
+
+1. **Mechanism.** What is actually breaking, in one sentence. Not the symptom.
+2. **Strongest evidence.** The concrete artifact (log line, test output, captured stdout) that makes the mechanism load-bearing, in one sentence.
+3. **Likely repair surface.** File / function / boundary the fix will touch, in one sentence. Do not open it in this run.
+4. **Residual unknowns.** What you did not resolve and what you'd check next if you had another hour — or "none worth naming".
+5. **No commit.** State explicitly: "investigation-only run — no product changes, nothing to stage." If that line is wrong, something upstream violated the no-source-edits contract and you should say so instead.
+6. **Run archive.** The path `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+7. **Suggested next step.** Usually "open `/xlfg` to ship the fix" or "run `<experiment>` to confirm before fixing".
+
+Do not append post-hoc rationalization, meta-commentary about the xlfg process, or reassurance about your own work. Hand the pointer to the user; they decide whether to open `/xlfg` to ship the fix.

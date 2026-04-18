@@ -19,7 +19,7 @@ import re
 import sys
 from pathlib import Path
 
-PUBLIC_COMMANDS = ("xlfg.md", "xlfg-debug.md")
+PUBLIC_COMMANDS = ("xlfg.md", "xlfg-debug.md", "xlfg-init.md")
 
 # The 9 phase skills the conductors dispatch. Shared ones (recall/intent/context)
 # are consumed by both `/xlfg` and `/xlfg-debug`.

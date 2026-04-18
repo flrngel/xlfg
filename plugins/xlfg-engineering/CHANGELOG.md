@@ -1,3 +1,56 @@
+## 6.4.1 — sync `/xlfg-debug` prose with v6 rules and philosophy
+
+Prose-only refresh of `commands/xlfg-debug.md`. The conductor's frontmatter (pipeline grants, hooks, allowed-tools) was already v6.3-correct; the body lagged on three axes relative to `/xlfg`:
+
+- **Architectural self-framing.** The "What /xlfg-debug is" section said only "this is /xlfg with four phases instead of eight, product frozen." A reader who hadn't read `/xlfg` first got the conductor shape but none of the "what this is not." The section now mirrors `/xlfg`'s disclaimer block: no sub-agents, no v5 coordination files (`spec.md`, `workboard.md`, `phase-state.json`, `verification.md`), `.xlfg/` does not exist, durable archive is `docs/xlfg/current-state.md` + `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+- **No-commit policy made explicit.** v6.3.2 added an End-of-run commit step to `/xlfg` and a test (`test_xlfg_debug_conductor_does_not_prescribe_commit`) asserting the commit language did *not* bleed into `/xlfg-debug`. The negative invariant held but the conductor body never said "debug runs don't commit" in prose. New `Artifact policy (no commit, ever)` section states it explicitly and names the failure mode: if tracked product changes appear after a debug run, a phase skill violated the no-source-edits contract and the conductor should surface that, not paper over it.
+- **Completion summary template realigned.** The end-of-run summary is now a 7-item numbered template matching `/xlfg`'s v6.3+ Completion summary shape, with debug-specific slots (mechanism / evidence / repair surface / residual unknowns / **no-commit line** / archive path / next step). The numbered shape is easier to scan and keeps the "no commit" affirmation structural rather than a postscript.
+
+### Constraints respected
+
+- `test_xlfg_debug_conductor_does_not_prescribe_commit` forbids the substrings `end-of-run commit`, `git status --porcelain`, and `conventional commits` in `xlfg-debug.md`. The new prose dodges all three: the heading is `Artifact policy (no commit, ever)` and the summary heading is `Completion summary (end-of-run template)` (substring `end-of-run commit` does not appear).
+- No frontmatter changes. No pipeline changes. No hook changes. No test surface changes — the suite's existing guards were sufficient and adding prose-presence assertions would fight natural evolution.
+
+### Changed
+
+- `plugins/xlfg-engineering/commands/xlfg-debug.md`: three prose sections rewritten / inserted (framing, artifact policy, completion summary).
+- `plugins/xlfg-engineering/.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`: version 6.4.0 → 6.4.1.
+- `plugins/xlfg-engineering/CHANGELOG.md`: this entry.
+- `NEXT_AGENT_CONTEXT.md`: new `Current state (6.4.1)` section; 6.4.0 demoted to previous-state.
+- `README.md` (repo-level) and `plugins/xlfg-engineering/README.md`: version references bumped where they name a patch.
+
+### Unchanged
+
+- `/xlfg`, `/xlfg-init`, and all 36 skills. Not touched.
+- `allowed-tools`, hook registrations, pipeline order, loopback cap, ExitPlanMode permission, RUN_ID prescription.
+- Test suite: 41/41. No new tests, no modified assertions.
+
+## 6.4.0 — restore `/xlfg-init` as a v6-shaped project scaffold
+
+v3.3 shipped `/xlfg-init` as an idempotent scaffold-repair command. v6.0 deleted it alongside the v5 file-state surface it lived on top of — `.xlfg/`, `docs/xlfg/knowledge/`, `docs/xlfg/migrations/`, the ledger, etc. What v6 missed in that sweep was that the `.gitignore` hygiene `/xlfg-init` used to enforce is still load-bearing: once `docs/xlfg/runs/` became gitignored with negated `.gitkeep`/`README.md` exceptions (`cb0a7b7`, 2026-04-13), a project adopting the plugin had no automated way to set up those ignore rules, and `git add .` on a fresh adopter would sweep up per-run summaries that are meant to be per-machine scratch.
+
+### Added
+
+- New command `plugins/xlfg-engineering/commands/xlfg-init.md`. A small, idempotent project scaffold — not a conductor, not an SDLC run. When invoked in a user's project, it:
+  - Verifies the CWD is a git repository (refuses to run otherwise).
+  - Patches `.gitignore` with the canonical three-line v6 xlfg runs block (`docs/xlfg/runs/*` plus `!.gitkeep` and `!README.md` negations). Idempotent: no-op if the block is already present; warns-and-asks on partial drift; never deletes user content.
+  - Creates `docs/xlfg/runs/.gitkeep` and `docs/xlfg/runs/README.md` if missing. Never overwrites an existing README.
+  - Reports created / already-correct / warnings. Does not commit.
+- `PUBLIC_COMMANDS` in `scripts/audit_harness.py` expanded to `("xlfg.md", "xlfg-debug.md", "xlfg-init.md")`; command-frontmatter check now runs 18 assertions (was 12).
+- New tests `test_exactly_three_commands`, `test_xlfg_init_frontmatter`, and `test_xlfg_init_is_project_scaffolding` in `tests/test_xlfg_v6.py`. The third asserts the command operates on the user's CWD, patches `.gitignore`, creates the `.gitkeep` + `README.md` pair, explicitly refuses to author `current-state.md`, and does not recreate the v5 `.xlfg/` directory. Suite: 38 → 41 tests.
+
+### Explicitly not done
+
+- `/xlfg-init` does not create `docs/xlfg/current-state.md`. That file is authored by the compound phase when a `/xlfg` run earns a promotion — scaffolding it empty would invite noise.
+- `/xlfg-init` does not add `.xlfg/` to `.gitignore` or create any v5-era directories. Per `docs/xlfg/current-state.md` in this repo, writing to `.xlfg/` is explicitly a regression.
+- `/xlfg` and `/xlfg-debug` are unchanged. Neither conductor touches `.gitignore`; neither was modified by this release.
+
+### Unchanged
+
+- No phase skills added, renamed, or modified.
+- No changes to conductor allowed-tools, hook registrations, or specialist skill surface.
+- `EXPECTED_PHASE_SKILLS` and `EXPECTED_SPECIALIST_SKILLS` untouched.
+
 ## 6.3.2 — conductor commits tracked changes at end of run
 
 Fixes a regression that landed when v6 gitignored `docs/xlfg/runs/` (April 2026, commit `cb0a7b7`). Pre-gitignore, every `/xlfg` run produced tracked artifacts (`spec.md`, `workboard.md`, `ledger.jsonl`, etc.), so the big staged diff after `compound` was a natural cue for Claude to honor the user's global "Always git commit when work is done" rule. Once runs were gitignored and v6.1+ leaned on the ignore, `git status` after a run showed only the product edits — and the conductor's Completion summary template read as terminal ("run archive path → stop"), with no step that asked for a commit. Net effect: v4 mostly committed, v6 often didn't.
