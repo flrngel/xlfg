@@ -4,7 +4,7 @@ An autonomous proof-first SDLC guide for Claude Code, designed for Opus-class mo
 
 ## Status
 
-**v6.4.0** is the conductor+skills architecture with on-demand specialist lenses, plus a minimal per-project scaffold command. Two conductor commands (`/xlfg`, `/xlfg-debug`) each dispatch a pipeline of hidden phase skills. 27 specialist lens skills load on-demand for focused expertise (security, root-cause, test-strategist, etc.). A third command (`/xlfg-init`) restores the v3.3-era scaffold role in a v6-shaped form — it patches a project's `.gitignore` and seeds `docs/xlfg/runs/` once, then stays out of the way. No sub-agents, no nested delegation, no v5 coordination files, no Codex surface. The durable archive under `docs/xlfg/` (current-state + per-run summaries/diagnoses) stays.
+**v6.4.1** is the conductor+skills architecture with on-demand specialist lenses, plus a minimal per-project scaffold command. Two conductor commands (`/xlfg`, `/xlfg-debug`) each dispatch a pipeline of hidden phase skills. 27 specialist lens skills load on-demand for focused expertise (security, root-cause, test-strategist, etc.). A third command (`/xlfg-init`) restores the v3.3-era scaffold role in a v6-shaped form — it patches a project's `.gitignore` and seeds `docs/xlfg/runs/` once, then stays out of the way. No sub-agents, no nested delegation, no v5 coordination files, no Codex surface. The durable archive under `docs/xlfg/` (current-state + per-run summaries/diagnoses) stays.
 
 See `plugins/xlfg-engineering/CHANGELOG.md` for the full evolution from v5 to v6.4.
 

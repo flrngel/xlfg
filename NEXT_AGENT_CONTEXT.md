@@ -1,8 +1,18 @@
 # Next agent context
 
-## Current state (6.4.0)
+## Current state (6.4.1)
 
-v6.4.0 restores `/xlfg-init` in a v6-shaped form. v3.3 shipped a large `/xlfg-init` that scaffolded `.xlfg/`, `docs/xlfg/knowledge/`, `docs/xlfg/migrations/`, and an agent-memory tree. v6.0 deleted that command when the v5 file-state surface underneath it was cut. What that sweep missed: once `docs/xlfg/runs/` became gitignored with negated `.gitkeep`/`README.md` exceptions (`cb0a7b7`, April 13, 2026), a fresh adopter of the plugin had no automated way to get those ignore rules in place, and `git add .` would sweep up per-run summaries that are meant to be per-machine scratch.
+v6.4.1 is a prose-only refresh of `commands/xlfg-debug.md` to bring the conductor body in line with v6's self-framing and the v6.3.2 commit-policy split. The conductor's frontmatter was already v6.3-correct (pipeline grants, ExitPlanMode hook, specialist skill grants, `date`-based RUN_ID prescription); the body lagged in three places relative to `commands/xlfg.md`: architectural self-description, an explicit no-commit policy, and the shape of the end-of-run summary.
+
+The fix touches only prose. `xlfg-debug.md` now (a) mirrors `/xlfg`'s "What /xlfg-debug is (and isn't) in this version" disclaimer block, naming the v5 coordination files that do not exist (`spec.md`, `workboard.md`, `phase-state.json`, `verification.md`) and asserting `.xlfg/` absence; (b) carries a new `Artifact policy (no commit, ever)` section that states the run's only artifact is `docs/xlfg/runs/<RUN_ID>/diagnosis.md` and names the correct response if product changes unexpectedly appear ("a phase skill violated the no-source-edits contract — report the mismatch, don't paper over it"); (c) replaces the ad-hoc end-of-run summary with a 7-item `Completion summary (end-of-run template)` matching `/xlfg`'s v6.3+ shape, with a structural "no commit" bullet in slot 5.
+
+The sharp constraint was `test_xlfg_debug_conductor_does_not_prescribe_commit` (introduced in v6.3.2 alongside `/xlfg`'s commit step). That test asserts `xlfg-debug.md` contains none of the substrings `end-of-run commit`, `git status --porcelain`, or `conventional commits`. The new prose dodges all three — the heading is `Artifact policy (no commit, ever)`, and `Completion summary (end-of-run template)` does not contain `end-of-run commit` as a substring.
+
+No pipeline, hook, or tool-grant changes. No skill changes. No test surface changes — the 41 existing invariants were sufficient; adding prose-presence assertions would fight natural evolution. Version bumped 6.4.0 → 6.4.1 in both manifests.
+
+## Previous state (6.4.0)
+
+v6.4.0 restored `/xlfg-init` in a v6-shaped form. v3.3 shipped a large `/xlfg-init` that scaffolded `.xlfg/`, `docs/xlfg/knowledge/`, `docs/xlfg/migrations/`, and an agent-memory tree. v6.0 deleted that command when the v5 file-state surface underneath it was cut. What that sweep missed: once `docs/xlfg/runs/` became gitignored with negated `.gitkeep`/`README.md` exceptions (`cb0a7b7`, April 13, 2026), a fresh adopter of the plugin had no automated way to get those ignore rules in place, and `git add .` would sweep up per-run summaries that are meant to be per-machine scratch.
 
 The fix adds `commands/xlfg-init.md` — a small, idempotent scaffold, **not a conductor, not an SDLC run**. When invoked in a user's project it (a) refuses to run outside a git repo, (b) idempotently patches `.gitignore` with the canonical three-line v6 runs block, (c) creates `docs/xlfg/runs/.gitkeep` and a short `docs/xlfg/runs/README.md` if missing, and (d) reports created/already-correct/warnings. It does not author `docs/xlfg/current-state.md` (that is content, written by compound when earned) and does not recreate any v5-era directory — `.xlfg/`, `knowledge/`, `migrations/`, ledger, etc., all stay gone.
 

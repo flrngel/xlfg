@@ -1,3 +1,30 @@
+## 6.4.1 — sync `/xlfg-debug` prose with v6 rules and philosophy
+
+Prose-only refresh of `commands/xlfg-debug.md`. The conductor's frontmatter (pipeline grants, hooks, allowed-tools) was already v6.3-correct; the body lagged on three axes relative to `/xlfg`:
+
+- **Architectural self-framing.** The "What /xlfg-debug is" section said only "this is /xlfg with four phases instead of eight, product frozen." A reader who hadn't read `/xlfg` first got the conductor shape but none of the "what this is not." The section now mirrors `/xlfg`'s disclaimer block: no sub-agents, no v5 coordination files (`spec.md`, `workboard.md`, `phase-state.json`, `verification.md`), `.xlfg/` does not exist, durable archive is `docs/xlfg/current-state.md` + `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+- **No-commit policy made explicit.** v6.3.2 added an End-of-run commit step to `/xlfg` and a test (`test_xlfg_debug_conductor_does_not_prescribe_commit`) asserting the commit language did *not* bleed into `/xlfg-debug`. The negative invariant held but the conductor body never said "debug runs don't commit" in prose. New `Artifact policy (no commit, ever)` section states it explicitly and names the failure mode: if tracked product changes appear after a debug run, a phase skill violated the no-source-edits contract and the conductor should surface that, not paper over it.
+- **Completion summary template realigned.** The end-of-run summary is now a 7-item numbered template matching `/xlfg`'s v6.3+ Completion summary shape, with debug-specific slots (mechanism / evidence / repair surface / residual unknowns / **no-commit line** / archive path / next step). The numbered shape is easier to scan and keeps the "no commit" affirmation structural rather than a postscript.
+
+### Constraints respected
+
+- `test_xlfg_debug_conductor_does_not_prescribe_commit` forbids the substrings `end-of-run commit`, `git status --porcelain`, and `conventional commits` in `xlfg-debug.md`. The new prose dodges all three: the heading is `Artifact policy (no commit, ever)` and the summary heading is `Completion summary (end-of-run template)` (substring `end-of-run commit` does not appear).
+- No frontmatter changes. No pipeline changes. No hook changes. No test surface changes — the suite's existing guards were sufficient and adding prose-presence assertions would fight natural evolution.
+
+### Changed
+
+- `plugins/xlfg-engineering/commands/xlfg-debug.md`: three prose sections rewritten / inserted (framing, artifact policy, completion summary).
+- `plugins/xlfg-engineering/.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`: version 6.4.0 → 6.4.1.
+- `plugins/xlfg-engineering/CHANGELOG.md`: this entry.
+- `NEXT_AGENT_CONTEXT.md`: new `Current state (6.4.1)` section; 6.4.0 demoted to previous-state.
+- `README.md` (repo-level) and `plugins/xlfg-engineering/README.md`: version references bumped where they name a patch.
+
+### Unchanged
+
+- `/xlfg`, `/xlfg-init`, and all 36 skills. Not touched.
+- `allowed-tools`, hook registrations, pipeline order, loopback cap, ExitPlanMode permission, RUN_ID prescription.
+- Test suite: 41/41. No new tests, no modified assertions.
+
 ## 6.4.0 — restore `/xlfg-init` as a v6-shaped project scaffold
 
 v3.3 shipped `/xlfg-init` as an idempotent scaffold-repair command. v6.0 deleted it alongside the v5 file-state surface it lived on top of — `.xlfg/`, `docs/xlfg/knowledge/`, `docs/xlfg/migrations/`, the ledger, etc. What v6 missed in that sweep was that the `.gitignore` hygiene `/xlfg-init` used to enforce is still load-bearing: once `docs/xlfg/runs/` became gitignored with negated `.gitkeep`/`README.md` exceptions (`cb0a7b7`, 2026-04-13), a project adopting the plugin had no automated way to set up those ignore rules, and `git add .` on a fresh adopter would sweep up per-run summaries that are meant to be per-machine scratch.
