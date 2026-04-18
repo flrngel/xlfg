@@ -15,6 +15,5 @@
     "workflow",
     "verification",
     "claude-code"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }
