@@ -19,7 +19,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 PLUGIN = REPO / "plugins" / "xlfg-engineering"
 
-EXPECTED_SKILLS = (
+EXPECTED_PHASE_SKILLS = (
     "xlfg-recall-phase",
     "xlfg-intent-phase",
     "xlfg-context-phase",
@@ -30,6 +30,42 @@ EXPECTED_SKILLS = (
     "xlfg-compound-phase",
     "xlfg-debug-phase",
 )
+
+# v6.3 restored the v5 specialists as hidden on-demand lens skills. Phase
+# skills list these and load them via the `Skill` tool only when the task
+# calls for that specific expertise. They share the hidden-skill discipline
+# of phase skills but do not appear in conductor pipelines.
+EXPECTED_SPECIALIST_SKILLS = (
+    "xlfg-brainstorm",
+    "xlfg-context-adjacent-investigator",
+    "xlfg-context-constraints-investigator",
+    "xlfg-context-unknowns-investigator",
+    "xlfg-env-doctor",
+    "xlfg-harness-profiler",
+    "xlfg-query-refiner",
+    "xlfg-repo-mapper",
+    "xlfg-researcher",
+    "xlfg-risk-assessor",
+    "xlfg-root-cause-analyst",
+    "xlfg-solution-architect",
+    "xlfg-spec-author",
+    "xlfg-task-divider",
+    "xlfg-test-readiness-checker",
+    "xlfg-test-strategist",
+    "xlfg-ui-designer",
+    "xlfg-why-analyst",
+    "xlfg-task-implementer",
+    "xlfg-test-implementer",
+    "xlfg-task-checker",
+    "xlfg-verify-runner",
+    "xlfg-verify-reducer",
+    "xlfg-architecture-reviewer",
+    "xlfg-security-reviewer",
+    "xlfg-performance-reviewer",
+    "xlfg-ux-reviewer",
+)
+
+EXPECTED_SKILLS = EXPECTED_PHASE_SKILLS + EXPECTED_SPECIALIST_SKILLS
 
 XLFG_PIPELINE = (
     "xlfg-recall-phase",
@@ -367,11 +403,12 @@ class TestSkills(unittest.TestCase):
         self.assertIn("docs/xlfg/runs/", text)
 
     def test_skill_bodies_cover_their_load_bearing_philosophy(self) -> None:
-        """Each skill must carry its own core concept(s).
+        """Each phase skill must carry its own core concept(s).
 
         These substrings are what make a skill a *skill* rather than a pasted
         outline — drift detection against someone stripping bodies down to
-        one-liners.
+        one-liners. Scoped to phase skills; specialist skills have their own
+        shape test below.
         """
         expectations = {
             "xlfg-recall-phase": ("librarian", "prior", "git log"),
@@ -392,6 +429,113 @@ class TestSkills(unittest.TestCase):
                     text,
                     f"skills/{skill}: missing load-bearing concept {needle!r}",
                 )
+
+    def test_specialist_skills_carry_five_section_shape(self) -> None:
+        """v6.3 specialist skills follow the same 5-section template as phase
+        skills (Purpose, Lens, How to work it, Done signal, Stop-traps).
+
+        This catches drift toward one-liner stubs or v5 packet-contract
+        scaffolding creeping back in.
+        """
+        required_sections = ("## Purpose", "## Lens", "## How to work it", "## Done signal", "## Stop-traps")
+        for name in EXPECTED_SPECIALIST_SKILLS:
+            text = (PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+            for section in required_sections:
+                self.assertIn(
+                    section,
+                    text,
+                    f"skills/{name}: missing section {section!r}",
+                )
+
+    def test_phase_skills_advertise_specialists(self) -> None:
+        """The 7 non-trivial phase skills must name which specialist skills are
+        loadable from them. Recall and compound are deterministic/terminal and
+        don't need specialist injection.
+        """
+        phase_to_specialists = {
+            "xlfg-intent-phase": ("xlfg-why-analyst",),
+            "xlfg-context-phase": ("xlfg-repo-mapper",),
+            "xlfg-plan-phase": ("xlfg-solution-architect",),
+            "xlfg-implement-phase": ("xlfg-task-implementer",),
+            "xlfg-verify-phase": ("xlfg-verify-runner",),
+            "xlfg-review-phase": ("xlfg-security-reviewer",),
+            "xlfg-debug-phase": ("xlfg-root-cause-analyst",),
+        }
+        for phase, expected_mentions in phase_to_specialists.items():
+            text = (PLUGIN / "skills" / phase / "SKILL.md").read_text(encoding="utf-8")
+            for mention in expected_mentions:
+                self.assertIn(
+                    mention,
+                    text,
+                    f"skills/{phase}: must advertise specialist {mention!r}",
+                )
+
+    def test_phase_skills_body_and_allowed_tools_stay_in_sync(self) -> None:
+        """Drift lint: the specialists named in a phase skill's "Optional
+        specialist skills" body section must match the specialists granted in
+        its `allowed-tools` frontmatter exactly.
+
+        This catches the failure mode where a future edit adds a specialist
+        bullet to the body but forgets the matching Skill grant (or vice versa).
+        """
+        phases_with_specialists = (
+            "xlfg-intent-phase",
+            "xlfg-context-phase",
+            "xlfg-plan-phase",
+            "xlfg-implement-phase",
+            "xlfg-verify-phase",
+            "xlfg-review-phase",
+            "xlfg-debug-phase",
+        )
+        specialist_name_re = re.compile(r"xlfg-engineering:(xlfg-[\w-]+)")
+        for phase in phases_with_specialists:
+            text = (PLUGIN / "skills" / phase / "SKILL.md").read_text(encoding="utf-8")
+            fm = _frontmatter(text)
+            tools = fm.get("allowed-tools", "")
+            granted = {
+                name for name in specialist_name_re.findall(tools)
+                if name in EXPECTED_SPECIALIST_SKILLS
+            }
+            body_start = text.find("## Optional specialist skills")
+            self.assertGreater(
+                body_start, -1,
+                f"skills/{phase}: missing '## Optional specialist skills' section",
+            )
+            next_section = text.find("\n## ", body_start + 1)
+            body_section = text[body_start:next_section] if next_section != -1 else text[body_start:]
+            advertised = {
+                name for name in specialist_name_re.findall(body_section)
+                if name in EXPECTED_SPECIALIST_SKILLS
+            }
+            self.assertEqual(
+                granted, advertised,
+                f"skills/{phase}: drift between allowed-tools Skill grants and "
+                f"'Optional specialist skills' body.\n"
+                f"  in allowed-tools only: {sorted(granted - advertised)}\n"
+                f"  in body only: {sorted(advertised - granted)}",
+            )
+
+    def test_specialist_skill_bodies_stay_concise(self) -> None:
+        """Specialist bodies follow the lean 5-section template — under 400
+        words, excluding frontmatter. Ceiling is ~33% above the current max
+        (~302 words) so no existing specialist needs a rewrite; bloat gets
+        caught early.
+        """
+        word_ceiling = 400
+        for name in EXPECTED_SPECIALIST_SKILLS:
+            text = (PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+            lines = text.split("\n")
+            if lines and lines[0].strip() == "---":
+                end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), -1)
+                body = "\n".join(lines[end + 1:]) if end > 0 else text
+            else:
+                body = text
+            words = len(re.findall(r"\S+", body))
+            self.assertLessEqual(
+                words, word_ceiling,
+                f"skills/{name}: body is {words} words, ceiling is {word_ceiling}. "
+                "Tighten the 5 sections before adding more prose.",
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -471,6 +615,86 @@ class TestConductorDiscipline(unittest.TestCase):
         text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
         self.assertIn("docs/xlfg/runs/<RUN_ID>/diagnosis.md", text)
         self.assertIn("RUN_ID", text)
+
+    def test_xlfg_conductor_prescribes_end_of_run_commit(self) -> None:
+        """`/xlfg` runs must commit tracked product changes at end-of-run.
+
+        v6 runs often finished with edits unstaged because the Completion summary
+        template read as terminal ("write run-archive path → stop") and no phase
+        owned committing. Pre-April-2026 runs got away with it because the run
+        dir was tracked and Claude committed everything; once `docs/xlfg/runs/`
+        was gitignored (commit cb0a7b7, 2026-04-13) the cue disappeared.
+
+        The fix: a mandatory commit step in the conductor body, between
+        `xlfg-compound-phase` returning and the user-facing summary.
+        """
+        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        lower = text.lower()
+
+        # The commit step must actually exist under a recognizable heading.
+        self.assertIn(
+            "end-of-run commit",
+            lower,
+            "xlfg.md: missing `End-of-run commit` section — v6.3.2 regression fix",
+        )
+
+        # It must prescribe inspecting git state before deciding.
+        self.assertIn(
+            "git status --porcelain",
+            text,
+            "xlfg.md: commit step must read `git status --porcelain`, "
+            "not assume what has changed",
+        )
+
+        # It must forbid the dangerous shortcut.
+        self.assertIn(
+            "`git add -A`",
+            text,
+            "xlfg.md: commit step must explicitly forbid `git add -A` — "
+            "staging must be per-path to honor the run-artifact exclusion",
+        )
+
+        # It must keep the user's feedback memory as a written-down rule in the
+        # command body (the memory file alone is not enough; the command must
+        # carry the invariant so new contexts honor it without the memory).
+        self.assertIn(
+            "docs/xlfg/runs/",
+            text,
+        )
+        self.assertIn(
+            ".xlfg/",
+            text,
+        )
+
+        # It must name Conventional Commits so the style isn't left to guesswork.
+        self.assertIn(
+            "conventional commits",
+            lower,
+            "xlfg.md: commit step must prescribe Conventional Commits style",
+        )
+
+        # And it must flow the commit SHA into the Completion summary so the
+        # user can find the commit without chasing `git log`.
+        self.assertIn(
+            "**Commit.**",
+            text,
+            "xlfg.md: Completion summary template must surface the commit "
+            "(SHA + subject) as its own item",
+        )
+
+    def test_xlfg_debug_conductor_does_not_prescribe_commit(self) -> None:
+        """`/xlfg-debug` is product-frozen (no Edit/MultiEdit in allowed-tools).
+
+        It writes only `diagnosis.md` under the gitignored run dir, so a commit
+        step would at best be a no-op and at worst stage something it shouldn't.
+        Asserts the commit language from v6.3.2 did not bleed into the debug
+        conductor.
+        """
+        text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
+        lower = text.lower()
+        self.assertNotIn("end-of-run commit", lower)
+        self.assertNotIn("git status --porcelain", text)
+        self.assertNotIn("conventional commits", lower)
 
     def test_conductors_prescribe_real_clock_for_run_id(self) -> None:
         """RUN_ID must come from the system clock via `date`, not model guesswork.

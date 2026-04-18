@@ -1,7 +1,7 @@
 ---
 description: Internal xlfg phase skill. Resolve ambiguity in the request before broad repo fan-out; name true blockers and split bundled asks.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash
+allowed-tools: Read, Grep, Glob, LS, Bash, Skill(xlfg-engineering:xlfg-why-analyst *), Skill(xlfg-engineering:xlfg-query-refiner *), Skill(xlfg-engineering:xlfg-spec-author *), Skill(xlfg-engineering:xlfg-brainstorm *)
 ---
 
 # xlfg-intent-phase
@@ -35,3 +35,12 @@ You are a product manager and a why-analyst. Separate what the user typed from w
 - Treating a correctness ambiguity as not-a-blocker because the repo has a convention you can follow (do stall — convention is not contract).
 - "I'll figure it out while coding." Your plan is already wrong. Slow down here; you'll spend 10× that time later.
 - Accepting the user's diagnosis as the bug. "It's a caching problem" from the user is a hypothesis, not the intent.
+
+## Optional specialist skills
+
+These hidden lens skills are loadable on-demand via the `Skill` tool when the intent pass needs one specifically. Load none for simple asks; load one or two when the ambiguity warrants it. Do not batch-load all four.
+
+- `xlfg-engineering:xlfg-why-analyst` — when the ask feels surface-level and the *outcome* behind it is still unclear.
+- `xlfg-engineering:xlfg-query-refiner` — when the operator/surface/success condition is ambiguous or the ask bundles multiple objectives.
+- `xlfg-engineering:xlfg-spec-author` — when the change is non-trivial and the behavioral contract is worth writing out before planning.
+- `xlfg-engineering:xlfg-brainstorm` — when one approach has come to mind and you want to pressure-test it against alternatives first.

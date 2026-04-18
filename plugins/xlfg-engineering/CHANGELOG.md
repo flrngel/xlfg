@@ -1,3 +1,77 @@
+## 6.3.2 — conductor commits tracked changes at end of run
+
+Fixes a regression that landed when v6 gitignored `docs/xlfg/runs/` (April 2026, commit `cb0a7b7`). Pre-gitignore, every `/xlfg` run produced tracked artifacts (`spec.md`, `workboard.md`, `ledger.jsonl`, etc.), so the big staged diff after `compound` was a natural cue for Claude to honor the user's global "Always git commit when work is done" rule. Once runs were gitignored and v6.1+ leaned on the ignore, `git status` after a run showed only the product edits — and the conductor's Completion summary template read as terminal ("run archive path → stop"), with no step that asked for a commit. Net effect: v4 mostly committed, v6 often didn't.
+
+### Added
+
+- New section in `commands/xlfg.md`: **"End-of-run commit (mandatory when tracked files changed)"**, dispatched after `xlfg-compound-phase` returns and before the user-facing summary. The step:
+  - Inspects `git status --porcelain` and skips cleanly on investigation-only runs.
+  - Stages product paths explicitly (never `-A`/`.`), always excluding `docs/xlfg/runs/**` and `.xlfg/**`.
+  - Creates one Conventional Commits-style commit; never pushes, never amends, never skips hooks.
+  - Captures the short SHA for the completion summary.
+- New entry in the Completion summary template: **Commit** (SHA + subject, or an explicit "no product changes to commit" note).
+- New test `test_xlfg_conductor_prescribes_end_of_run_commit` asserting the conductor body names `git status --porcelain`, forbids `git add -A`, keeps `docs/xlfg/runs/` excluded from staging, and references Conventional Commits. Guards against future edits silently dropping this step. Suite: 37 → 38 tests.
+
+### Unchanged
+
+- `/xlfg-debug` does not get a commit step — it's product-frozen by contract (`Edit` and `MultiEdit` absent from `allowed-tools`), and the `diagnosis.md` it writes lives under the gitignored `docs/xlfg/runs/` prefix.
+- `xlfg-compound-phase` is untouched. Archive authoring and release discipline stay separate concerns: compound writes the archive, the conductor owns the commit.
+- No new skills, no new `allowed-tools` entries, no hook changes, no manifest surface changes beyond the version bump.
+
+## 6.3.1 — drift lint + specialist body ceiling
+
+Test-only patch closing the two residual risks flagged in the v6.3.0 run summary. No behavior change.
+
+### Added
+
+- `test_phase_skills_body_and_allowed_tools_stay_in_sync` — for each of the 7 non-trivial phase skills, the set of specialists mentioned in the "Optional specialist skills" body section must equal the set granted via `Skill(xlfg-engineering:xlfg-<name> *)` in `allowed-tools`. Catches the failure mode where a future edit updates one side and not the other.
+- `test_specialist_skill_bodies_stay_concise` — each specialist `SKILL.md` body (excluding frontmatter) must be ≤400 words. Ceiling is ~33% above the current maximum (302 words, `xlfg-test-readiness-checker`) so no existing specialist needs a rewrite; bloat gets caught early. Phase skills are not covered — they legitimately run longer (up to ~840 words for `xlfg-debug-phase`).
+
+### Changed
+
+- Test suite grew 35 → 37.
+
+## 6.3.0 — restore v5 specialists as on-demand hidden skills
+
+v6.0 nuked the 27 specialist sub-agents. v6.2 restored the phase skills for context-budget discipline. v6.3 restores the specialist expertise too — but as **hidden skills that phase skills load on-demand**, not as sub-agents with dispatch packets. Opus-class models can reach for a focused lens (security reviewer, root-cause analyst, test strategist, etc.) when the work calls for it, without paying the context cost of all 27 lenses being loaded up front.
+
+### Added
+
+- **27 specialist lens skills** under `plugins/xlfg-engineering/skills/xlfg-<name>/SKILL.md`, all `user-invocable: false`:
+  - intent lens: `xlfg-why-analyst`, `xlfg-query-refiner`, `xlfg-spec-author`, `xlfg-brainstorm`
+  - context lens: `xlfg-repo-mapper`, `xlfg-harness-profiler`, `xlfg-env-doctor`, `xlfg-researcher`, `xlfg-context-adjacent-investigator`, `xlfg-context-constraints-investigator`, `xlfg-context-unknowns-investigator`
+  - plan lens: `xlfg-solution-architect`, `xlfg-test-strategist`, `xlfg-task-divider`, `xlfg-risk-assessor`, `xlfg-root-cause-analyst`, `xlfg-ui-designer`, `xlfg-test-readiness-checker`
+  - implement lens: `xlfg-task-implementer`, `xlfg-test-implementer`, `xlfg-task-checker`
+  - verify lens: `xlfg-verify-runner`, `xlfg-verify-reducer`
+  - review lens: `xlfg-architecture-reviewer`, `xlfg-security-reviewer`, `xlfg-performance-reviewer`, `xlfg-ux-reviewer`
+- Each specialist follows the same 5-section template as phase skills (Purpose / Lens / How to work it / Done signal / Stop-traps), ~30–50 lines each. No dispatch packets, no `allowed-tools` beyond `Read, Grep, Glob, LS, Bash` (with `Edit, MultiEdit, Write` for implementer specialists and `WebSearch, WebFetch` for the researcher).
+- 7 phase skills (intent, context, plan, implement, verify, review, debug) gained an "Optional specialist skills" section listing the specialists loadable at that phase and when to reach for each.
+- Both conductors' `allowed-tools` grant `Skill(xlfg-engineering:xlfg-<specialist> *)` for each applicable specialist, so invocation paths work either from the conductor context or from within a phase skill.
+- Two new tests in `TestSkills`:
+  - `test_specialist_skills_carry_five_section_shape` — enforces the 5-section template on specialist skills.
+  - `test_phase_skills_advertise_specialists` — enforces that each of the 7 non-trivial phase skills names at least one specialist.
+
+### Changed
+
+- `EXPECTED_SKILLS` in both `scripts/audit_harness.py` and `tests/test_xlfg_v6.py` is now split into `EXPECTED_PHASE_SKILLS` (9) + `EXPECTED_SPECIALIST_SKILLS` (27). The union (36) replaces the old 9-element tuple.
+- `_check_skill_surface` now covers all 36 skills; test suite grew from 33 to 35.
+
+### Unchanged
+
+- No sub-agents. `test_no_agents_or_codex` still enforces no `agents/` directory exists. The specialists are *skills*, not agents — they run in the conductor's own context, not in delegated sub-contexts.
+- No dispatch-packet contracts. Specialists have no `PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, or `DONE_CHECK:` anywhere. Forbidden-token sweep extended naturally to cover them.
+- No `Agent` or `SendMessage` in any skill's allowed-tools.
+- Durable archive unchanged: `docs/xlfg/current-state.md`, `docs/xlfg/runs/<RUN_ID>/run-summary.md`, `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+
+### Migration from 6.2.x
+
+- No user-facing change. `/xlfg` and `/xlfg-debug` still take `$ARGUMENTS`. Specialist skills are hidden; users never invoke them directly.
+- For plugin developers: the rule against adding skill directories beyond `xlfg-<phase>-phase/` is retired for specialists specifically. Adding a new specialist means expanding `EXPECTED_SPECIALIST_SKILLS` in both `audit_harness.py` and `tests/test_xlfg_v6.py`, then creating a `skills/xlfg-<name>/SKILL.md` that follows the 5-section template. Don't add random skill directories; the test suite still guards the surface.
+
+### Why the split makes sense
+
+Hidden specialists give Opus a library of focused lenses it can reach for when the task warrants. A security-heavy review loads `xlfg-security-reviewer`; a routine test-only review loads nothing extra. Context cost scales with the work, not with the ambient palette of options. The v5 architecture did this via sub-agents (dispatched, sandboxed contexts); v6.3 does it via skills (loaded into the same context on demand). The expertise survives; the serialization cost doesn't.
+
 ## 6.2.1 — fix RUN_ID generation to use the real system clock
 
 `/xlfg` and `/xlfg-debug` told the model to "compute" `RUN_ID` as `<YYYYMMDD>-<HHMMSS>-<kebab-slug>` without prescribing how to get the timestamp. The model guessed a plausible-looking datetime from context, which meant run directories could be labeled with times that never happened. Pre-v3.0.0 xlfg had a Python `datetime.now()` call for this; when the CLI was removed, the deterministic clock call went with it and v3–v6.2.0 all quietly inherited the bug.

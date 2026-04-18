@@ -1,7 +1,7 @@
 ---
 description: Internal xlfg phase skill. Second pair of eyes on the change — architecture, security, performance, or UX. One lens by default.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash
+allowed-tools: Read, Grep, Glob, LS, Bash, Skill(xlfg-engineering:xlfg-architecture-reviewer *), Skill(xlfg-engineering:xlfg-security-reviewer *), Skill(xlfg-engineering:xlfg-performance-reviewer *), Skill(xlfg-engineering:xlfg-ux-reviewer *)
 ---
 
 # xlfg-review-phase
@@ -37,3 +37,12 @@ One lens at minimum has said APPROVE or APPROVE-WITH-NOTES, and any inline notes
 - Running every lens on every change. You are trading wall time for near-zero findings. Pick the lens that fits.
 - Review as cleanup crew. Review confirms quality; it does not create quality. If you're rewriting in review, planning was wrong.
 - Finding nothing and shipping. If you couldn't think of a single thing to check, you didn't review.
+
+## Optional specialist skills
+
+Load **one** of these (or at most two when the change is genuinely cross-cutting) via the `Skill` tool when you want a dedicated lens.
+
+- `xlfg-engineering:xlfg-architecture-reviewer` — when the change moves an architectural seam, widens a public surface, or creates new module coupling.
+- `xlfg-engineering:xlfg-security-reviewer` — when the change touches auth, input validation, secret handling, crypto, or any trust boundary.
+- `xlfg-engineering:xlfg-performance-reviewer` — when the change lives on a hot path (per-request, per-row, per-frame) or touches user-scaled data structures.
+- `xlfg-engineering:xlfg-ux-reviewer` — when the change produces pixels or changes interactive behavior.

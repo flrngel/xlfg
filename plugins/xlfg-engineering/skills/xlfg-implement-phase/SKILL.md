@@ -1,7 +1,7 @@
 ---
 description: Internal xlfg phase skill. Make the change honestly — edit don't rewrite, tests alongside source, failure-mode check each edit, no out-of-scope patches.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write
+allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, Skill(xlfg-engineering:xlfg-task-implementer *), Skill(xlfg-engineering:xlfg-test-implementer *), Skill(xlfg-engineering:xlfg-task-checker *)
 ---
 
 # xlfg-implement-phase
@@ -35,3 +35,11 @@ All planned edits exist, all planned tests exist, and nothing outside the planne
 - Adding error handling for cases that cannot happen. Trust internal code and framework guarantees; validate only at system boundaries (user input, external APIs).
 - Leaving partial implementations. If you can't finish a function in this run, don't start it.
 - Over-generous error messages with stack traces in user-facing surfaces. Log the detail server-side; show the user what they can act on.
+
+## Optional specialist skills
+
+Load these hidden lens skills via the `Skill` tool when the implementation is non-trivial enough to benefit from a focused pass. For a one-line edit, load none.
+
+- `xlfg-engineering:xlfg-task-implementer` — source-edit discipline when the change spans several files or touches stylistically tricky code.
+- `xlfg-engineering:xlfg-test-implementer` — test authoring when the proof surface is new and you want to stay behavior-focused.
+- `xlfg-engineering:xlfg-task-checker` — local acceptance check between slices, before verify runs the declared contract.

@@ -1,7 +1,7 @@
 ---
 description: Internal xlfg phase skill. Scientific debugging — reproduce, separate symptom from mechanism, hypothesis log, likely repair surface, no source edits.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash, Write
+allowed-tools: Read, Grep, Glob, LS, Bash, Write, Skill(xlfg-engineering:xlfg-root-cause-analyst *), Skill(xlfg-engineering:xlfg-why-analyst *), Skill(xlfg-engineering:xlfg-verify-runner *)
 ---
 
 # xlfg-debug-phase
@@ -102,3 +102,11 @@ You are a root-cause analyst. Your deliverable is a causal chain with evidence a
 - "It's flaky" — flakiness is a symptom, not a diagnosis. Flaky means there is a race, a resource leak, a clock dependence, or a seed dependence you haven't named yet.
 - Sliding into a fix. If you catch yourself wanting to `Edit`, stop — this phase doesn't ship patches. The tool isn't granted for a reason.
 - Over-scoping. "While diagnosing this I also noticed…" — note it in residual unknowns, don't chase it. One run, one diagnosis.
+
+## Optional specialist skills
+
+Load these lens skills when a particular pass of the diagnosis would benefit from sharper focus. Debug runs that land the mechanism quickly rarely need any of these.
+
+- `xlfg-engineering:xlfg-root-cause-analyst` — mechanism hunt when the hypothesis is shaky and the wrong guess would invite a bad fix.
+- `xlfg-engineering:xlfg-why-analyst` — when the reported bug is a symptom of a deeper objective and the diagnosis should name the true concern.
+- `xlfg-engineering:xlfg-verify-runner` — capture the reproduction as evidence cleanly, so `diagnosis.md` cites real output rather than a paraphrase.

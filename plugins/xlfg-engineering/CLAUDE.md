@@ -1,24 +1,26 @@
 # xlfg-engineering plugin development
 
-## What this plugin is (v6.2+)
+## What this plugin is (v6.3+)
 
-Two slash commands (`/xlfg`, `/xlfg-debug`) acting as conductors, 9 hidden phase skills under `skills/xlfg-*-phase/`, one audit script, one hooks file, two manifests, plus a minimal durable archive convention under `docs/xlfg/`. No sub-agents, no nested delegation, no v5 file-based *coordination* state, no Codex surface, no ledger.
+Two slash commands (`/xlfg`, `/xlfg-debug`) acting as conductors, 9 hidden phase skills under `skills/xlfg-*-phase/`, 27 on-demand specialist lens skills under `skills/xlfg-*/` (directories without the `-phase` suffix), one audit script, one hooks file, two manifests, plus a minimal durable archive convention under `docs/xlfg/`. No sub-agents, no nested delegation, no v5 file-based *coordination* state, no Codex surface, no ledger.
 
-The conductors carry the pipeline order, loopback rules, and operating contract. The phase bodies live in the skills and load just-in-time via the `Skill` tool. That context-budget discipline is the whole reason the split exists.
+The conductors carry the pipeline order, loopback rules, and operating contract. The phase bodies live in the skills and load just-in-time via the `Skill` tool. Specialist bodies likewise load on-demand from within phase skills when a focused lens is worth the context cost. That context-budget discipline is the whole reason the split exists.
 
-### Three things that look similar but aren't
+### Four things that look similar but aren't
 
 - **Phase skills** (v6.2+, kept): `skills/xlfg-<phase>-phase/SKILL.md`. Nine files, each carrying one phase's philosophy. The `/xlfg` and `/xlfg-debug` conductors dispatch these via the `Skill` tool — they load just-in-time, run in the main model's context, and return. This is the architectural decision v6.2 restored from v5.
+- **Specialist lens skills** (v6.3+, kept): `skills/xlfg-<name>/SKILL.md` (no `-phase` suffix). 27 files, each carrying one specialist's lens (security, root-cause, test-strategist, UX, etc.). Phase skills advertise them in an "Optional specialist skills" section and load them via `Skill` when a focused lens is worth the context cost. They are *skills* running in the conductor's own context, not sub-agents with dispatch packets.
 - **Coordination files** (v5, dead): `spec.md`, `workboard.md`, `phase-state.json`, `task-division.md`, `verification.md`, etc. Written *during* a run by one phase so a *later phase* (or a sub-agent) can read them. These were the sub-agent orchestration substrate. v6 skills do not need them — each skill runs in the conductor's own context with access to the same working memory.
 - **Durable archive** (v6.1+, kept): `docs/xlfg/current-state.md`, `docs/xlfg/runs/<RUN_ID>/run-summary.md`, `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Written *at the end* of a run so a *future session* (new context window) can recall what happened. Cross-session memory, not intra-run coordination.
 
 If you're tempted to:
-- **Re-add a specialist sub-agent** (under `agents/`): stop. v6 has no sub-agents. `test_no_agents_or_codex` will catch it.
-- **Add `Agent` or `SendMessage` to any skill's allowed-tools**: stop. `test_no_skill_grants_nested_delegation` catches it.
+- **Re-add a specialist sub-agent** (under `agents/`): stop. The specialists exist as *skills* now, not agents. `test_no_agents_or_codex` will catch the directory.
+- **Add `Agent` or `SendMessage` to any skill's allowed-tools**: stop. `test_no_skill_grants_nested_delegation` catches it. `Skill(...)` grants are fine and expected — that's how the conductor dispatches phases and how phase skills optionally load specialists.
 - **Re-add a dispatch header** (`PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:`) anywhere: stop. `test_commands_do_not_reintroduce_dispatch_contract` and `test_no_skill_references_deleted_v5_dispatch` both catch it.
 - **Re-add a per-phase coordination file** (`spec.md`, `workboard.md`, etc.): stop. The audit harness does not catch this directly, but any skill that writes one is a regression — open a discussion first.
 - **Collapse skills back into the monolithic command body**: also a regression. The context-budget win is the whole point. `test_xlfg_dispatches_eight_phase_skills` and `test_all_expected_skills_exist` catch it.
 - **Remove the durable archive writes**: stop. Those are load-bearing for cross-session recall.
+- **Add a new skill directory outside the 9 phase + 27 specialist set**: stop unless it's a deliberate architectural change. If it is, expand `EXPECTED_SPECIALIST_SKILLS` in `scripts/audit_harness.py` and `tests/test_xlfg_v6.py` first, then add the SKILL.md using the 5-section template.
 
 ## Versioning (required)
 
@@ -34,12 +36,13 @@ Normal evolution should bump **patch** unless the public entry surface (`/xlfg`,
 
 ## Read order for future agents
 
-1. `NEXT_AGENT_CONTEXT.md` — why v6.2 looks like this
+1. `NEXT_AGENT_CONTEXT.md` — why v6.3 looks like this
 2. `plugins/xlfg-engineering/commands/xlfg.md` — the conductor body
 3. `plugins/xlfg-engineering/commands/xlfg-debug.md` — the diagnosis conductor
-4. `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md` — the 9 phase skills (where the real work lives)
-5. `tests/test_xlfg_v6.py` — the invariants
-6. `plugins/xlfg-engineering/CHANGELOG.md` — history
+4. `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md` — the 9 phase skills (where the real phase work lives)
+5. `plugins/xlfg-engineering/skills/xlfg-*/SKILL.md` (no `-phase` suffix) — the 27 on-demand specialist lens skills
+6. `tests/test_xlfg_v6.py` — the invariants
+7. `plugins/xlfg-engineering/CHANGELOG.md` — history
 
 ## Entry model
 
@@ -47,6 +50,8 @@ Normal evolution should bump **patch** unless the public entry surface (`/xlfg`,
 - Secondary entrypoint: `/xlfg-engineering:xlfg-debug` (aliased as `/xlfg-debug`).
 - Both aliases are load-bearing; do not remove the `name:` frontmatter.
 - Each conductor dispatches its pipeline via the `Skill` tool, granted in `allowed-tools` as `Skill(xlfg-engineering:xlfg-<phase>-phase *)`. Nine phase skills exist under `skills/xlfg-*-phase/SKILL.md`.
+- Conductors also grant `Skill(xlfg-engineering:xlfg-<specialist> *)` for each of the 27 on-demand specialist lens skills, so phase skills can load them when the work calls for focused expertise.
+- Phase skills grant `Skill(xlfg-engineering:xlfg-<specialist> *)` only for the specialists they advertise; this is intentional narrowing.
 - Do not reference repo-relative plugin file paths from a command. Installed plugins are not laid out like the source repo.
 - v6 has no sub-commands, no sub-agents, no Codex surface. The bounded tree is enforced by the test suite.
 
@@ -67,12 +72,12 @@ Claude Code loads `description:` fields at session start. Keep commands **≤ 22
 
 The v6 test suite guards against drift back toward the v5 architecture. These things will trip it:
 
-- Files under `plugins/xlfg-engineering/agents/**` (specialists — gone for good)
-- Skill directories under `skills/` beyond the nine `xlfg-<phase>-phase/` (adding a new one is a deliberate architectural change; expand `EXPECTED_SKILLS` in both the audit and test suite first)
+- Files under `plugins/xlfg-engineering/agents/**` (sub-agents — gone for good; specialist expertise lives as skills now)
+- Skill directories under `skills/` beyond the 9 `xlfg-<phase>-phase/` + 27 named specialist lens skills (adding a new one is a deliberate architectural change; expand `EXPECTED_SPECIALIST_SKILLS` in both the audit and test suite first)
 - A `plugins/xlfg-engineering/codex/` directory or `.codex-plugin/` manifest
-- More than `audit_harness.py` under `scripts/`
-- Dispatch-contract tokens in command bodies: `PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:`
+- More than `audit_harness.py` (plus the two `.mjs` no-op shims) under `scripts/`
+- Dispatch-contract tokens anywhere: `PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:`, `SubagentStop`
 - Stop or SubagentStop hook registrations in `hooks.json`
-- `Skill(...)`, `Agent`, or `SendMessage` tokens in the `allowed-tools` frontmatter of either command
+- `Agent` or `SendMessage` tokens in the `allowed-tools` frontmatter of any command or skill (`Skill(...)` grants are expected and required — they are how the conductor dispatches phases and how phase skills optionally load specialists)
 
 If you have a genuine case for re-adding any of these, open a discussion first. The removal was a decision, not an oversight.
