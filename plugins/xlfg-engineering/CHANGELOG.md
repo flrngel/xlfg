@@ -1,3 +1,29 @@
+## 6.4.0 — restore `/xlfg-init` as a v6-shaped project scaffold
+
+v3.3 shipped `/xlfg-init` as an idempotent scaffold-repair command. v6.0 deleted it alongside the v5 file-state surface it lived on top of — `.xlfg/`, `docs/xlfg/knowledge/`, `docs/xlfg/migrations/`, the ledger, etc. What v6 missed in that sweep was that the `.gitignore` hygiene `/xlfg-init` used to enforce is still load-bearing: once `docs/xlfg/runs/` became gitignored with negated `.gitkeep`/`README.md` exceptions (`cb0a7b7`, 2026-04-13), a project adopting the plugin had no automated way to set up those ignore rules, and `git add .` on a fresh adopter would sweep up per-run summaries that are meant to be per-machine scratch.
+
+### Added
+
+- New command `plugins/xlfg-engineering/commands/xlfg-init.md`. A small, idempotent project scaffold — not a conductor, not an SDLC run. When invoked in a user's project, it:
+  - Verifies the CWD is a git repository (refuses to run otherwise).
+  - Patches `.gitignore` with the canonical three-line v6 xlfg runs block (`docs/xlfg/runs/*` plus `!.gitkeep` and `!README.md` negations). Idempotent: no-op if the block is already present; warns-and-asks on partial drift; never deletes user content.
+  - Creates `docs/xlfg/runs/.gitkeep` and `docs/xlfg/runs/README.md` if missing. Never overwrites an existing README.
+  - Reports created / already-correct / warnings. Does not commit.
+- `PUBLIC_COMMANDS` in `scripts/audit_harness.py` expanded to `("xlfg.md", "xlfg-debug.md", "xlfg-init.md")`; command-frontmatter check now runs 18 assertions (was 12).
+- New tests `test_exactly_three_commands`, `test_xlfg_init_frontmatter`, and `test_xlfg_init_is_project_scaffolding` in `tests/test_xlfg_v6.py`. The third asserts the command operates on the user's CWD, patches `.gitignore`, creates the `.gitkeep` + `README.md` pair, explicitly refuses to author `current-state.md`, and does not recreate the v5 `.xlfg/` directory. Suite: 38 → 41 tests.
+
+### Explicitly not done
+
+- `/xlfg-init` does not create `docs/xlfg/current-state.md`. That file is authored by the compound phase when a `/xlfg` run earns a promotion — scaffolding it empty would invite noise.
+- `/xlfg-init` does not add `.xlfg/` to `.gitignore` or create any v5-era directories. Per `docs/xlfg/current-state.md` in this repo, writing to `.xlfg/` is explicitly a regression.
+- `/xlfg` and `/xlfg-debug` are unchanged. Neither conductor touches `.gitignore`; neither was modified by this release.
+
+### Unchanged
+
+- No phase skills added, renamed, or modified.
+- No changes to conductor allowed-tools, hook registrations, or specialist skill surface.
+- `EXPECTED_PHASE_SKILLS` and `EXPECTED_SPECIALIST_SKILLS` untouched.
+
 ## 6.3.2 — conductor commits tracked changes at end of run
 
 Fixes a regression that landed when v6 gitignored `docs/xlfg/runs/` (April 2026, commit `cb0a7b7`). Pre-gitignore, every `/xlfg` run produced tracked artifacts (`spec.md`, `workboard.md`, `ledger.jsonl`, etc.), so the big staged diff after `compound` was a natural cue for Claude to honor the user's global "Always git commit when work is done" rule. Once runs were gitignored and v6.1+ leaned on the ignore, `git status` after a run showed only the product edits — and the conductor's Completion summary template read as terminal ("run archive path → stop"), with no step that asked for a commit. Net effect: v4 mostly committed, v6 often didn't.

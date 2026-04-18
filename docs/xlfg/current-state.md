@@ -4,7 +4,7 @@ Read this first when entering this repo with xlfg.
 
 ## What this project is
 
-xlfg is an autonomous proof-first SDLC plugin for Claude Code, designed for Opus-class models. Shape at v6.3: two conductor slash commands (`/xlfg`, `/xlfg-debug`) dispatching 9 hidden phase skills, with 27 hidden specialist lens skills that phase skills load on-demand. All skills run in the main model's own context — no sub-agents, no nested delegation.
+xlfg is an autonomous proof-first SDLC plugin for Claude Code, designed for Opus-class models. Shape at v6.4: two conductor slash commands (`/xlfg`, `/xlfg-debug`) dispatching 9 hidden phase skills, 27 hidden specialist lens skills that phase skills load on-demand, plus one scaffold command (`/xlfg-init`) that bootstraps a user's project with the right `.gitignore` entries and a committable `docs/xlfg/runs/` directory. All skills run in the main model's own context — no sub-agents, no nested delegation.
 
 ## Load-bearing truths
 

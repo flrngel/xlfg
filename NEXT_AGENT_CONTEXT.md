@@ -1,8 +1,18 @@
 # Next agent context
 
-## Current state (6.3.2)
+## Current state (6.4.0)
 
-v6.3.2 closes a long-standing regression: `/xlfg` runs often finished with tracked product edits unstaged. The conductor's Completion summary template read as terminal (write run-archive path → stop) and no phase owned committing. Pre-April-2026 runs mostly committed by accident, because every phase wrote tracked files under `docs/xlfg/runs/` and Claude saw a big staged diff; once that prefix was gitignored in `cb0a7b7` (April 13, 2026) the cue disappeared and the commit step disappeared with it.
+v6.4.0 restores `/xlfg-init` in a v6-shaped form. v3.3 shipped a large `/xlfg-init` that scaffolded `.xlfg/`, `docs/xlfg/knowledge/`, `docs/xlfg/migrations/`, and an agent-memory tree. v6.0 deleted that command when the v5 file-state surface underneath it was cut. What that sweep missed: once `docs/xlfg/runs/` became gitignored with negated `.gitkeep`/`README.md` exceptions (`cb0a7b7`, April 13, 2026), a fresh adopter of the plugin had no automated way to get those ignore rules in place, and `git add .` would sweep up per-run summaries that are meant to be per-machine scratch.
+
+The fix adds `commands/xlfg-init.md` — a small, idempotent scaffold, **not a conductor, not an SDLC run**. When invoked in a user's project it (a) refuses to run outside a git repo, (b) idempotently patches `.gitignore` with the canonical three-line v6 runs block, (c) creates `docs/xlfg/runs/.gitkeep` and a short `docs/xlfg/runs/README.md` if missing, and (d) reports created/already-correct/warnings. It does not author `docs/xlfg/current-state.md` (that is content, written by compound when earned) and does not recreate any v5-era directory — `.xlfg/`, `knowledge/`, `migrations/`, ledger, etc., all stay gone.
+
+Test surface expanded: `PUBLIC_COMMANDS` in `scripts/audit_harness.py` is now `("xlfg.md", "xlfg-debug.md", "xlfg-init.md")` (18 command-frontmatter assertions vs 12), and `tests/test_xlfg_v6.py` gained `test_exactly_three_commands`, `test_xlfg_init_frontmatter`, and `test_xlfg_init_is_project_scaffolding`. The scaffolding test asserts the body targets the user's CWD, patches `.gitignore`, creates the `.gitkeep`/`README.md` pair, refuses to scaffold `current-state.md`, and does not reintroduce `.xlfg/`. The no-dispatch-token sweep and no-Agent/SendMessage sweep also now cover `xlfg-init.md`. Suite: 38 → 41 tests.
+
+No changes to `/xlfg` or `/xlfg-debug`, no changes to any phase skill or specialist skill, no new skill directories, no manifest surface churn beyond the version bump (6.3.2 → 6.4.0).
+
+## Previous state (6.3.2)
+
+v6.3.2 closed a long-standing regression: `/xlfg` runs often finished with tracked product edits unstaged. The conductor's Completion summary template read as terminal (write run-archive path → stop) and no phase owned committing. Pre-April-2026 runs mostly committed by accident, because every phase wrote tracked files under `docs/xlfg/runs/` and Claude saw a big staged diff; once that prefix was gitignored in `cb0a7b7` (April 13, 2026) the cue disappeared and the commit step disappeared with it.
 
 The fix adds one section to `commands/xlfg.md`: **"End-of-run commit (mandatory when tracked files changed)"**, dispatched after `xlfg-compound-phase` returns and before the user-facing summary. It runs `git status --porcelain`, skips cleanly on investigation-only runs, stages product paths explicitly (never `-A`/`.`, always excluding `docs/xlfg/runs/**` and `.xlfg/**`), creates one Conventional Commits-style commit, and captures the short SHA for the summary. No push, no amend, no hook-skipping. `/xlfg-debug` is untouched — it's product-frozen by contract and has nothing commit-worthy to produce.
 

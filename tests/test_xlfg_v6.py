@@ -111,7 +111,7 @@ def _frontmatter(text: str) -> dict[str, str]:
 
 
 class TestPluginShape(unittest.TestCase):
-    """The v6.2 plugin tree has 2 commands, 9 skills, 1 audit script, plus meta."""
+    """The v6.4 plugin tree has 3 commands, 9 + 27 skills, 1 audit script, plus meta."""
 
     def test_plugin_tree_is_bounded(self) -> None:
         files = sorted(
@@ -189,9 +189,9 @@ class TestManifests(unittest.TestCase):
 
 
 class TestCommands(unittest.TestCase):
-    def test_exactly_two_commands(self) -> None:
+    def test_exactly_three_commands(self) -> None:
         cmds = sorted(p.name for p in (PLUGIN / "commands").glob("*.md"))
-        self.assertEqual(cmds, ["xlfg-debug.md", "xlfg.md"])
+        self.assertEqual(cmds, ["xlfg-debug.md", "xlfg-init.md", "xlfg.md"])
 
     def test_xlfg_frontmatter(self) -> None:
         fm = _frontmatter((PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8"))
@@ -208,6 +208,60 @@ class TestCommands(unittest.TestCase):
         self.assertEqual(fm.get("disable-model-invocation"), "true")
         self.assertLessEqual(len(fm.get("description", "")), 220)
         self.assertIn("allowed-tools", fm)
+
+    def test_xlfg_init_frontmatter(self) -> None:
+        fm = _frontmatter((PLUGIN / "commands" / "xlfg-init.md").read_text(encoding="utf-8"))
+        self.assertEqual(fm.get("name"), "xlfg-init")
+        self.assertEqual(fm.get("effort"), "high")
+        self.assertEqual(fm.get("disable-model-invocation"), "true")
+        self.assertLessEqual(len(fm.get("description", "")), 220)
+        self.assertIn("allowed-tools", fm)
+
+    def test_xlfg_init_is_project_scaffolding(self) -> None:
+        """`/xlfg-init` is a small, idempotent project scaffold, not a conductor.
+
+        It must (a) target the user's CWD rather than the xlfg plugin repo,
+        (b) patch `.gitignore` with the canonical v6 runs block, (c) create
+        `docs/xlfg/runs/.gitkeep` and `docs/xlfg/runs/README.md`, and
+        (d) not dispatch any phase skills or attempt to author `current-state.md`.
+        """
+        text = (PLUGIN / "commands" / "xlfg-init.md").read_text(encoding="utf-8")
+        fm = _frontmatter(text)
+        tools = fm.get("allowed-tools", "")
+
+        # Not a conductor: must not grant any Skill(xlfg-engineering:...) pipeline entries.
+        self.assertNotIn(
+            "Skill(xlfg-engineering:",
+            tools,
+            "xlfg-init must not grant phase or specialist Skill entries — it is not a conductor",
+        )
+
+        # Targets the user's project, not this plugin.
+        self.assertIn("current working directory", text.lower())
+
+        # Patches .gitignore with the canonical v6 runs block.
+        self.assertIn(".gitignore", text)
+        self.assertIn("docs/xlfg/runs/*", text)
+        self.assertIn("!docs/xlfg/runs/.gitkeep", text)
+        self.assertIn("!docs/xlfg/runs/README.md", text)
+
+        # Creates the tracked pieces (.gitkeep + README.md).
+        self.assertIn("docs/xlfg/runs/.gitkeep", text)
+        self.assertIn("docs/xlfg/runs/README.md", text)
+
+        # Does NOT author current-state.md — that is content, not scaffold.
+        self.assertIn(
+            "Does not create `docs/xlfg/current-state.md`",
+            text,
+            "xlfg-init must explicitly refuse to scaffold current-state.md",
+        )
+
+        # Must not reintroduce the v5 `.xlfg/` directory.
+        self.assertNotIn(
+            "mkdir -p .xlfg",
+            text,
+            "xlfg-init must not recreate the v5 `.xlfg/` directory",
+        )
 
     def test_xlfg_dispatches_eight_phase_skills(self) -> None:
         """The /xlfg command must grant exactly the 8 SDLC phase skills and
@@ -289,14 +343,14 @@ class TestCommands(unittest.TestCase):
             "RETURN_CONTRACT:",
             "DONE_CHECK:",
         )
-        for cmd in ("xlfg.md", "xlfg-debug.md"):
+        for cmd in ("xlfg.md", "xlfg-debug.md", "xlfg-init.md"):
             text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
             for tok in forbidden:
                 self.assertNotIn(tok, text, f"{cmd}: reintroduced dispatch token {tok!r}")
 
     def test_commands_do_not_spawn_nested_agents(self) -> None:
         """The conductor invokes skills, never sub-agents."""
-        for cmd in ("xlfg.md", "xlfg-debug.md"):
+        for cmd in ("xlfg.md", "xlfg-debug.md", "xlfg-init.md"):
             text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
             fm = _frontmatter(text)
             tools = fm.get("allowed-tools", "")

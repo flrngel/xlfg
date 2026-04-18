@@ -1,8 +1,11 @@
 # xlfg-engineering plugin development
 
-## What this plugin is (v6.3+)
+## What this plugin is (v6.4+)
 
-Two slash commands (`/xlfg`, `/xlfg-debug`) acting as conductors, 9 hidden phase skills under `skills/xlfg-*-phase/`, 27 on-demand specialist lens skills under `skills/xlfg-*/` (directories without the `-phase` suffix), one audit script, one hooks file, two manifests, plus a minimal durable archive convention under `docs/xlfg/`. No sub-agents, no nested delegation, no v5 file-based *coordination* state, no Codex surface, no ledger.
+Three slash commands, 9 hidden phase skills under `skills/xlfg-*-phase/`, 27 on-demand specialist lens skills under `skills/xlfg-*/` (directories without the `-phase` suffix), one audit script, one hooks file, two manifests, plus a minimal durable archive convention under `docs/xlfg/`. No sub-agents, no nested delegation, no v5 file-based *coordination* state, no Codex surface, no ledger.
+
+- `/xlfg` and `/xlfg-debug` are **conductors** — each dispatches a pipeline of hidden phase skills. These are where autonomous work lives.
+- `/xlfg-init` is a **scaffold** — one-shot, idempotent, runs in the user's project CWD. Patches `.gitignore` and seeds `docs/xlfg/runs/` with a `.gitkeep` and a short README. Not a conductor, not a pipeline, no phase skills loaded.
 
 The conductors carry the pipeline order, loopback rules, and operating contract. The phase bodies live in the skills and load just-in-time via the `Skill` tool. Specialist bodies likewise load on-demand from within phase skills when a focused lens is worth the context cost. That context-budget discipline is the whole reason the split exists.
 
@@ -46,12 +49,11 @@ Normal evolution should bump **patch** unless the public entry surface (`/xlfg`,
 
 ## Entry model
 
-- Public plugin entrypoint: `/xlfg-engineering:xlfg` (aliased as `/xlfg` via `name: xlfg` in command frontmatter).
-- Secondary entrypoint: `/xlfg-engineering:xlfg-debug` (aliased as `/xlfg-debug`).
-- Both aliases are load-bearing; do not remove the `name:` frontmatter.
-- Each conductor dispatches its pipeline via the `Skill` tool, granted in `allowed-tools` as `Skill(xlfg-engineering:xlfg-<phase>-phase *)`. Nine phase skills exist under `skills/xlfg-*-phase/SKILL.md`.
+- Public plugin entrypoints: `/xlfg-engineering:xlfg`, `/xlfg-engineering:xlfg-debug`, `/xlfg-engineering:xlfg-init` — aliased as `/xlfg`, `/xlfg-debug`, `/xlfg-init` via `name:` frontmatter. All three aliases are load-bearing; do not remove the `name:` line.
+- Each **conductor** (`/xlfg`, `/xlfg-debug`) dispatches its pipeline via the `Skill` tool, granted in `allowed-tools` as `Skill(xlfg-engineering:xlfg-<phase>-phase *)`. Nine phase skills exist under `skills/xlfg-*-phase/SKILL.md`.
 - Conductors also grant `Skill(xlfg-engineering:xlfg-<specialist> *)` for each of the 27 on-demand specialist lens skills, so phase skills can load them when the work calls for focused expertise.
 - Phase skills grant `Skill(xlfg-engineering:xlfg-<specialist> *)` only for the specialists they advertise; this is intentional narrowing.
+- The **scaffold** (`/xlfg-init`) grants **no** `Skill(xlfg-engineering:...)` entries — it is not a conductor and must not dispatch phase skills. `allowed-tools` is minimal: `Read, Edit, Write, Bash, Glob, LS`. `test_xlfg_init_is_project_scaffolding` guards this.
 - Do not reference repo-relative plugin file paths from a command. Installed plugins are not laid out like the source repo.
 - v6 has no sub-commands, no sub-agents, no Codex surface. The bounded tree is enforced by the test suite.
 
