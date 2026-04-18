@@ -472,6 +472,30 @@ class TestConductorDiscipline(unittest.TestCase):
         self.assertIn("docs/xlfg/runs/<RUN_ID>/diagnosis.md", text)
         self.assertIn("RUN_ID", text)
 
+    def test_conductors_prescribe_real_clock_for_run_id(self) -> None:
+        """RUN_ID must come from the system clock via `date`, not model guesswork.
+
+        Pre-v3.0.0 xlfg had a Python `datetime.now()` call for this. When the CLI
+        was removed, the deterministic clock call went with it and v3–v6.2 all
+        just told the model to "compute" the timestamp, which is model guesswork.
+        The conductor MUST prescribe the shell call so RUN_ID reflects real time.
+        """
+        for cmd in ("xlfg.md", "xlfg-debug.md"):
+            text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
+            self.assertIn(
+                "date +%Y%m%d-%H%M%S",
+                text,
+                f"{cmd}: must prescribe `date +%Y%m%d-%H%M%S` for RUN_ID — "
+                "the model cannot invent real timestamps reliably",
+            )
+            # And the body must name the source of truth explicitly — "do not invent".
+            lower = text.lower()
+            self.assertIn(
+                "do not invent",
+                lower,
+                f"{cmd}: startup body must explicitly forbid inventing the timestamp",
+            )
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

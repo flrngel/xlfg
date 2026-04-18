@@ -37,7 +37,13 @@ There is, however, a **minimal durable archive** so a future session can recall 
 
 Before dispatching phase 1, establish the run identity and wire the task-pane bridge:
 
-1. **`RUN_ID`** = `<YYYYMMDD>-<HHMMSS>-<kebab-slug>` where `<slug>` is a short (<=40 char) kebab-case summary of `$ARGUMENTS`. Compute once, reuse throughout the run. Example: `20260417-163000-webhook-retry`.
+1. **`RUN_ID`** = `<YYYYMMDD>-<HHMMSS>-<kebab-slug>`. Get the real timestamp from the system clock — **do not invent it from memory or infer it from context.** Run this once via `Bash`:
+
+   ```bash
+   date +%Y%m%d-%H%M%S
+   ```
+
+   Take the exact output (e.g. `20260417-163000`), append `-` and a short (<=40 char) kebab-case summary of `$ARGUMENTS`, and that's your `RUN_ID`. Example: if `date` returns `20260417-163000` and the ask is "add a retry policy to the webhook consumer", `RUN_ID = 20260417-163000-webhook-retry`. Compute once, reuse throughout the run — do not re-invoke `date` mid-run (the timestamp should represent when the run started, not when each phase began).
 2. **Harness task bridge (optional but recommended).** Emit one `TaskCreate` per phase so the Claude Code task pane mirrors the pipeline. Use these exact subjects: `xlfg: recall`, `xlfg: intent`, `xlfg: context`, `xlfg: plan`, `xlfg: implement`, `xlfg: verify`, `xlfg: review`, `xlfg: compound`. As each phase returns successfully, call `TaskUpdate` to mark the matching task completed.
 3. **The run directory is created lazily.** The compound skill will `mkdir -p docs/xlfg/runs/<RUN_ID>/` before writing `run-summary.md`. Do not preseed it.
 

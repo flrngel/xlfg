@@ -41,7 +41,13 @@ The diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` — that's the dur
 
 Before dispatching phase 1:
 
-1. **`RUN_ID`** = `<YYYYMMDD>-<HHMMSS>-<kebab-slug>` where `<slug>` is a short (<=40 char) kebab-case summary of `$ARGUMENTS`. Compute once, reuse throughout the run. Example: `20260417-163000-session-cookie-drop`.
+1. **`RUN_ID`** = `<YYYYMMDD>-<HHMMSS>-<kebab-slug>`. Get the real timestamp from the system clock — **do not invent it from memory or infer it from context.** Run this once via `Bash`:
+
+   ```bash
+   date +%Y%m%d-%H%M%S
+   ```
+
+   Take the exact output (e.g. `20260417-163000`), append `-` and a short (<=40 char) kebab-case summary of `$ARGUMENTS`, and that's your `RUN_ID`. Example: if `date` returns `20260417-163000` and the ask is "auth middleware drops session cookie on subdomain", `RUN_ID = 20260417-163000-session-cookie-drop`. Compute once, reuse throughout the run.
 2. **Harness task bridge (optional).** Emit one `TaskCreate` per phase: `xlfg-debug: recall`, `xlfg-debug: intent`, `xlfg-debug: context`, `xlfg-debug: debug`. Update as each phase returns.
 3. The run directory is created lazily by the debug skill when it writes `diagnosis.md`.
 

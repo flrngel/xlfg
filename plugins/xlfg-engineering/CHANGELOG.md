@@ -1,3 +1,19 @@
+## 6.2.1 — fix RUN_ID generation to use the real system clock
+
+`/xlfg` and `/xlfg-debug` told the model to "compute" `RUN_ID` as `<YYYYMMDD>-<HHMMSS>-<kebab-slug>` without prescribing how to get the timestamp. The model guessed a plausible-looking datetime from context, which meant run directories could be labeled with times that never happened. Pre-v3.0.0 xlfg had a Python `datetime.now()` call for this; when the CLI was removed, the deterministic clock call went with it and v3–v6.2.0 all quietly inherited the bug.
+
+Fix: both conductors now prescribe the real shell call in the startup section:
+
+```bash
+date +%Y%m%d-%H%M%S
+```
+
+The model invokes this once via `Bash`, takes the exact output, appends `-<kebab-slug>`, and reuses the result throughout the run. Body language is explicit: "do not invent [the timestamp] from memory or infer it from context."
+
+Test added (`test_conductors_prescribe_real_clock_for_run_id`) asserting both command bodies name the shell call and the no-invent discipline. Suite: 32 → 33 tests.
+
+No other behavior changes. Public entry surface, skill pipeline, and durable archive layout are identical to v6.2.0.
+
 ## 6.2.0 — conductor + phase skills
 
 v6.0.0 made the command bodies monolithic (~3000 words each), loaded in full at every invocation. v5 had split phases into hidden skills that loaded just-in-time; the context-budget win of that architecture is real, and v6.2.0 brings it back — without the v5 sub-agent baggage.
