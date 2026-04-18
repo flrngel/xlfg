@@ -140,15 +140,30 @@ class TestCommands(unittest.TestCase):
         self.assertLessEqual(len(fm.get("description", "")), 220)
         self.assertIn("allowed-tools", fm)
 
-    def test_xlfg_debug_has_no_edit_tools(self) -> None:
-        """Diagnosis-only means the debug command cannot ship source edits."""
+    def test_xlfg_debug_cannot_modify_existing_files(self) -> None:
+        """Diagnosis-only means the debug command cannot modify product source.
+
+        `Edit` / `MultiEdit` must be absent (modifying existing files is the
+        blast radius we're protecting). `Write` is granted so the command can
+        create `docs/xlfg/runs/<RUN_ID>/diagnosis.md`, but the body must make
+        that the only sanctioned Write target.
+        """
         text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
         fm = _frontmatter(text)
         tools = fm.get("allowed-tools", "")
-        for banned in ("Edit", "MultiEdit", "Write"):
+        for banned in ("Edit", "MultiEdit"):
             self.assertNotIn(
-                banned, tools, f"xlfg-debug must not grant {banned}: diagnosis-only contract"
+                banned,
+                tools,
+                f"xlfg-debug must not grant {banned}: diagnosis-only contract",
             )
+        self.assertIn("Write", tools, "xlfg-debug needs Write for diagnosis.md")
+        # The body must constrain Write to the diagnosis path.
+        self.assertIn(
+            "docs/xlfg/runs/<RUN_ID>/diagnosis.md",
+            text,
+            "xlfg-debug body must name the sanctioned Write path",
+        )
 
     def test_both_commands_cover_their_phases(self) -> None:
         xlfg = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8").lower()
@@ -270,6 +285,39 @@ class TestPhilosophyStaysIntact(unittest.TestCase):
         text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
         self.assertIn("2", text)
         self.assertIn("loopback", text.lower())
+
+    def test_xlfg_wires_durable_archive(self) -> None:
+        """Every /xlfg run must produce a durable archive future runs can recall.
+
+        The command body must name the read paths (current-state.md, runs/)
+        in recall and the write path (run-summary.md) in compound.
+        """
+        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        self.assertIn("docs/xlfg/current-state.md", text)
+        self.assertIn("docs/xlfg/runs/<RUN_ID>/run-summary.md", text)
+        self.assertIn("RUN_ID", text)
+        # The template keywords the compound phase writes.
+        lower = text.lower()
+        self.assertIn("what changed", lower)
+        self.assertIn("proof", lower)
+        self.assertIn("residual risk", lower)
+        self.assertIn("durable lesson", lower)
+
+    def test_xlfg_debug_wires_durable_diagnosis(self) -> None:
+        """Every /xlfg-debug run must write its diagnosis to disk."""
+        text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
+        self.assertIn("docs/xlfg/current-state.md", text)
+        self.assertIn("docs/xlfg/runs/<RUN_ID>/diagnosis.md", text)
+        self.assertIn("RUN_ID", text)
+
+    def test_xlfg_body_disclaims_dotxlfg_directory(self) -> None:
+        """The /xlfg body must explicitly tell the model not to use `.xlfg/`.
+
+        A substring ban would catch that disclaimer too, so instead assert the
+        disclaimer is present — drift back to `.xlfg/` will be obvious in review.
+        """
+        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        self.assertIn("`.xlfg/` does not exist in v6", text)
 
 
 if __name__ == "__main__":  # pragma: no cover

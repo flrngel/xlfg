@@ -24,11 +24,23 @@ Treat this invocation as **one autonomous run**. You are a senior staff engineer
 
 ## What xlfg is (and isn't) in this version
 
-xlfg v6 is a **philosophy guide, not an orchestration graph.** There are no sub-agents to dispatch. There is no `docs/xlfg/runs/<RUN_ID>/` tree. There is no `spec.md`, no `workboard.md`, no `phase-state.json`, no `verification.md`. The whole run lives in your context and the real repo.
+xlfg v6 is a **philosophy guide, not an orchestration graph.** The 8 phases are a discipline you walk in your own context. There are no sub-agents to dispatch, no hidden phase skills, no `spec.md` / `workboard.md` / `phase-state.json` coordination layer. The whole run lives in your context and in the real repo.
 
-The 8 phases are a discipline, not a file layout. They exist to make you slow down in exactly the places where strong reasoners cut corners: listening before coding, proving before claiming, and distilling the durable lesson at the end.
+There is, however, a **minimal durable archive** so a future session can recall what past runs did:
 
-You MAY use the Claude Code task tool (`TaskCreate` / `TaskUpdate`) to track the 8 phases for the user's benefit — one task per phase, mark each completed as you go. That's the only state surface. Do not create a parallel file-based tracker.
+- `docs/xlfg/current-state.md` — optional, tracked, one-page living summary of the project's load-bearing truths. Read this in recall. Updated sparingly in compound when a run earns promotion.
+- `docs/xlfg/runs/<RUN_ID>/run-summary.md` — written by every `/xlfg` run in the compound phase. One file per run. Grep-able months later.
+
+`.xlfg/` does not exist in v6. Everything durable lives under `docs/xlfg/` and is committed.
+
+You MAY use the Claude Code task tool (`TaskCreate` / `TaskUpdate`) to track the 8 phases for the user's benefit — one task per phase, mark each completed as you go.
+
+## Startup
+
+Before phase 1, establish the run identity:
+
+- **`RUN_ID`** = `<YYYYMMDD>-<HHMMSS>-<kebab-slug>` where `<slug>` is a short (<=40 char) kebab-case summary of `$ARGUMENTS`. Compute this once at the start and reuse it throughout the run. Example: `20260417-163000-webhook-retry`.
+- The directory `docs/xlfg/runs/<RUN_ID>/` will receive `run-summary.md` at the end of the compound phase. Create the directory lazily at that point — don't preseed anything.
 
 ## Operating contract
 
@@ -42,16 +54,18 @@ You MAY use the Claude Code task tool (`TaskCreate` / `TaskUpdate`) to track the
 
 ## Phase 1 — Recall
 
-**Purpose.** Before you scan the repo broadly, ask: *has this problem, or something adjacent, been solved before in this repo's history?*
+**Purpose.** Before you scan the repo broadly, ask: *has this problem, or something adjacent, been solved before — in this repo's history, in prior xlfg runs, or in the project's distilled memory?*
 
-**Lens.** You are a librarian. Git history and existing code are your index.
+**Lens.** You are a librarian. Git history, existing code, and the project's tracked `docs/xlfg/` layer are your index.
 
 **How to work it.**
-- If the user's request names a specific surface, `git log -- <path>` and `git log --grep=<term>` for recent related commits. Read their messages, not their diffs yet.
-- `Grep` the codebase for the domain terms in the request — not code, but concepts ("rate limit", "webhook retry", "migration rollback"). Existing patterns are better than new inventions.
-- If there is a CLAUDE.md, AGENTS.md, or README at the repo root, read it. Those exist for you.
+- **xlfg durable memory first.** If `docs/xlfg/current-state.md` exists, read it first. It's the prior authors' distilled load-bearing truths about this project — what it is, active constraints, known traps. This is short by design; read it in full.
+- **Prior runs.** List `docs/xlfg/runs/` (if present) and read the 2–3 most recent run-summary or diagnosis files that touch the surface you're about to work on. A run summary from last week that names your exact surface is gold; ignore unrelated ones.
+- **Git history.** If the user's request names a specific surface, `git log -- <path>` and `git log --grep=<term>` for recent related commits. Read their messages, not their diffs yet.
+- **Lexical repo recall.** `Grep` the codebase for the domain terms in the request — not code, but concepts ("rate limit", "webhook retry", "migration rollback"). Existing patterns are better than new inventions.
+- **Root-level orientation.** If there is a CLAUDE.md, AGENTS.md, or README at the repo root, read it. Those exist for you.
 
-**Done signal.** You can name, in one sentence, the closest prior work to what's being asked and whether it's a pattern to extend or a trap to avoid.
+**Done signal.** You can name, in one sentence, the closest prior work to what's being asked and whether it's a pattern to extend or a trap to avoid. You also know whether `current-state.md` exists; if it does, every assumption you make in later phases should be consistent with it (or consciously supersede it).
 
 **Stop-traps.**
 - Skipping to code because "I already know how this works." You don't. The repo has opinions you haven't loaded yet.
@@ -197,21 +211,71 @@ A review finding is either **APPROVE**, **APPROVE-WITH-NOTES** (tiny fixes you m
 
 ## Phase 8 — Compound
 
-**Purpose.** Distill the one durable lesson from this run that the next run will wish it had known.
+**Purpose.** Produce the durable artifacts of this run — the per-run archive future sessions can recall, and (rarely) a promotion to the project's living summary.
 
 **Lens.** You are a post-mortem author, talking to the next engineer who will touch this surface.
 
 **How to work it.**
-- Write 1–3 sentences, max ~50 words, that capture the **non-obvious thing you learned**. Not the obvious ("added a feature"), not the process ("ran tests, all green"), but the load-bearing insight ("the webhook retry store was using a primary key that collided with the idempotency key; they look alike but are not the same").
-- If the lesson is repo-general, say so. If it's specific to one surface, say which surface.
-- If the lesson is "I found and avoided a trap," name the trap by its symptom so a future search surfaces it.
-- If the run produced nothing durable, say so. Do not fabricate a lesson.
 
-**Done signal.** You can hand the lesson to a teammate who wasn't on this run, and they would act differently next time because of it.
+1. **Write `docs/xlfg/runs/<RUN_ID>/run-summary.md`.** This is mandatory for every `/xlfg` run. Create the directory if needed. Use this template exactly:
+
+   ```markdown
+   # Run summary — <RUN_ID>
+
+   ## Ask
+   <1–2 sentences restating what the user asked. Not a paste of $ARGUMENTS.>
+
+   ## What changed
+   - `<path/to/file>`: <one line, why the change>
+   - `<path/to/file>`: <one line, why the change>
+
+   ## Proof
+   - fast_check: `<exact command>` — <result: PASSED / FAILED / NOT RUN with justification>
+   - smoke_check: `<exact command>` — <result>
+   - ship_check: `<exact command>` — <result>
+
+   ## Residual risk
+   <What you did not test, what might still be wrong, what you'd check next with another hour. 1–3 bullets.>
+
+   ## Durable lesson
+   <1–3 sentences, ~50 words, capturing the non-obvious thing learned. Omit the section entirely if the run produced nothing durable — do not fabricate.>
+   ```
+
+   Aim ~200 words total. It's an archive, not a narrative.
+
+2. **Consider promoting to `docs/xlfg/current-state.md`.** This is the project's one-page "read this first" handoff. Promote only when the run learned something **a future run would regret not knowing** — a load-bearing invariant, an active constraint, a trap that already bit someone.
+   - If `current-state.md` doesn't exist and this run earned one, create it with the template below.
+   - If it exists, edit it in place. Keep the whole file under ~300 words.
+   - Promote sparingly: most runs should NOT update `current-state.md`. The signal is diluted if every run adds a line.
+
+   Template for `current-state.md`:
+
+   ```markdown
+   # <project name> — current state
+
+   Read this first when entering this repo with xlfg.
+
+   ## What this project is
+   <1–2 sentences>
+
+   ## Load-bearing truths
+   - <fact a future run must know>
+   - <fact a future run must know>
+
+   ## Known traps
+   - <failure mode that bit us before>
+
+   ## Active constraints
+   - <deadline, compliance requirement, migration in flight>
+   ```
+
+**Done signal.** `docs/xlfg/runs/<RUN_ID>/run-summary.md` exists and is complete. If you updated `current-state.md`, you can hand it to a teammate who wasn't on this run and they would act differently next time because of it.
 
 **Stop-traps.**
-- Writing a run summary instead of a lesson. The diff is the summary.
-- Over-generalizing. A lesson that applies to "all code" applies to nothing.
+- Skipping the run-summary write because "the chat already has it." Chat evaporates; disk doesn't.
+- Promoting every run to `current-state.md`. Most runs don't earn it.
+- Pasting the entire chat log into `run-summary.md`. The template is terse on purpose.
+- Over-generalizing the durable lesson. A lesson that applies to "all code" applies to nothing.
 
 ## Cross-cutting guardrails
 
@@ -236,5 +300,6 @@ Finish the run with a concise summary. No tables. No headers. Just prose the use
 3. **Residual risk.** What you did not test, what might still be wrong, and what you'd check next if you had another hour.
 4. **Follow-ups (optional).** Broken windows you spotted but did not fix, or objective groups deferred.
 5. **The one durable lesson** from the compound phase, if there is one.
+6. **Run archive.** The path `docs/xlfg/runs/<RUN_ID>/run-summary.md`, and whether `docs/xlfg/current-state.md` was updated.
 
 That's the run. Do not append post-hoc rationalizations, meta-commentary about the xlfg process itself, or reassurances about your own work. The summary is for the user; keep it for them.

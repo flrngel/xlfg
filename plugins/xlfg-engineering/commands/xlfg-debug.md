@@ -3,7 +3,7 @@ name: xlfg-debug
 description: Autonomous diagnosis run. Walks recall, intent, context, and debug inline — find the deep root problem without changing source code.
 argument-hint: "[bug report, prompt failure, misleading behavior, or diagnosis request]"
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, LS, Bash, WebSearch, WebFetch, TaskCreate, TaskUpdate, TaskList
+allowed-tools: Read, Grep, Glob, LS, Bash, Write, WebSearch, WebFetch, TaskCreate, TaskUpdate, TaskList
 effort: high
 hooks:
   PermissionRequest:
@@ -22,11 +22,11 @@ INPUT: `$ARGUMENTS`
 
 Treat this invocation as **one autonomous diagnosis run**. You are a senior staff engineer doing scientific debugging. You walk the 4 phases below inline, holding the full investigation in your own context.
 
-Allowed-tools intentionally **does not include** `Edit`, `MultiEdit`, or `Write`. You may write run-local scratch notes only if you genuinely need them (and only outside the product surface). The output of this run is a diagnosis, not a patch.
+Allowed-tools **intentionally excludes `Edit` and `MultiEdit`**. You cannot modify existing product source, tests, fixtures, migrations, or configs — the tool will refuse. `Write` is granted, but its **only sanctioned use** is creating `docs/xlfg/runs/<RUN_ID>/diagnosis.md` at the end of the debug phase. Writing to any other path (especially any product file) is a contract violation. The output of this run is a diagnosis archive, not a patch.
 
 ## What `/xlfg-debug` is
 
-This is `/xlfg` with the implement / verify / review / compound phases deleted and the product frozen. You are not shipping. You are explaining.
+This is `/xlfg` with the implement / verify / review / compound phases deleted and the product frozen. You are not shipping. You are explaining — and you are writing that explanation to disk so it survives the session.
 
 A good diagnosis gives the user:
 1. The mechanism of the failure, in one or two sentences.
@@ -35,7 +35,16 @@ A good diagnosis gives the user:
 4. The fake fixes you considered and rejected.
 5. The residual unknowns, named specifically.
 
-You MAY use `TaskCreate` / `TaskUpdate` to track the 4 phases. That's the only state surface. No file-based tracker.
+The diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` — that's the durable artifact of the run and the only thing `/xlfg-debug` is allowed to write. Future `/xlfg` and `/xlfg-debug` runs will surface this file in their recall phase.
+
+You MAY use `TaskCreate` / `TaskUpdate` to track the 4 phases.
+
+## Startup
+
+Before phase 1, establish the run identity:
+
+- **`RUN_ID`** = `<YYYYMMDD>-<HHMMSS>-<kebab-slug>` where `<slug>` is a short (<=40 char) kebab-case summary of `$ARGUMENTS`. Compute once, reuse throughout the run. Example: `20260417-163000-session-cookie-drop`.
+- The directory `docs/xlfg/runs/<RUN_ID>/` will receive `diagnosis.md` at the end of the debug phase. Create it lazily when you write the file.
 
 ## Operating contract
 
@@ -49,14 +58,16 @@ You MAY use `TaskCreate` / `TaskUpdate` to track the 4 phases. That's the only s
 
 ## Phase 1 — Recall
 
-**Purpose.** Has this failure, or something that smells like it, been seen before in this repo?
+**Purpose.** Has this failure, or something that smells like it, been seen before in this repo — in git history, in prior xlfg runs, or in the project's distilled memory?
 
 **Lens.** You are a librarian.
 
 **How to work it.**
-- `git log --grep=<term>` for the symptom, the module name, and adjacent concepts.
-- `Grep` for similar error messages or stack frame names across the codebase. If a failure mode has a test, there's often a comment or commit message naming the cause.
-- Check the project's CHANGELOG, issue tracker (if accessible), and any `docs/` notes that touch the failing surface.
+- **xlfg durable memory first.** If `docs/xlfg/current-state.md` exists, read it. Known traps and load-bearing invariants live there; a bug often violates one.
+- **Prior runs.** List `docs/xlfg/runs/` and read the 2–3 most recent `diagnosis.md` or `run-summary.md` files that touch the surface or symptom in question. A prior diagnosis of "webhook retry hangs on 5xx" is worth ten minutes of blind grepping.
+- **Git history.** `git log --grep=<term>` for the symptom, the module name, and adjacent concepts.
+- **Lexical repo recall.** `Grep` for similar error messages or stack frame names across the codebase. If a failure mode has a test, there's often a comment or commit message naming the cause.
+- **Project docs.** Check the project's CHANGELOG, issue tracker (if accessible), and any `docs/` notes that touch the failing surface.
 
 **Done signal.** You can name the closest prior failure (or explicitly say "no prior match found") and whether the prior fix class applies to this case.
 
@@ -130,7 +141,46 @@ You MAY use `TaskCreate` / `TaskUpdate` to track the 4 phases. That's the only s
 
 7. **Name the residual unknowns.** Not "unknown factors may apply" — specific named things. *"I do not know whether this failure mode also affects the webhook path, because I did not reproduce it there."*
 
-**Done signal.** Your diagnosis fits on one page. A teammate reading it can:
+8. **Write the diagnosis to disk.** Create `docs/xlfg/runs/<RUN_ID>/diagnosis.md` using this template exactly:
+
+   ```markdown
+   # Diagnosis — <RUN_ID>
+
+   ## Ask
+   <1–2 sentences restating the reported failure.>
+
+   ## Mechanism
+   <1–2 sentences on what is actually breaking. Not the symptom; the mechanism.>
+
+   ## Strongest evidence
+   <The concrete artifact — log line, test output, diff of observed vs. expected
+   state, captured stdout from a re-run — that makes the mechanism load-bearing
+   rather than hypothetical.>
+
+   ## Likely repair surface
+   <File(s) / function(s) / boundary. One paragraph on the minimum honest fix
+   and why a larger fix would be over-scoped. Do NOT open that surface.>
+
+   ## Fake fixes rejected
+   - `<tempting non-fix>` — <why it would mask the defect>
+   - `<tempting non-fix>` — <why>
+
+   ## No-code-change guarantee
+   No product source, tests, fixtures, migrations, or configs were edited in
+   this run.
+
+   ## Residual unknowns
+   - <named, specific, falsifiable>
+   - <named, specific, falsifiable>
+
+   ## Next safest proof step
+   <The single experiment or read that would most cheaply confirm or refute
+   the diagnosis.>
+   ```
+
+   This file is the durable artifact of the run. A future `/xlfg` or `/xlfg-debug` session will surface it during recall.
+
+**Done signal.** `docs/xlfg/runs/<RUN_ID>/diagnosis.md` exists and is complete. A teammate reading it can:
   - repro the bug using your steps,
   - see why the mechanism you name causes the observed symptom,
   - tell which file to open to fix it,
@@ -146,21 +196,22 @@ You MAY use `TaskCreate` / `TaskUpdate` to track the 4 phases. That's the only s
 
 - **Completion barrier.** Do not stop on progress chatter. Stop only after the diagnosis summary below, or after surfacing a true human-only blocker with ≤3 numbered questions.
 - **No silent loopbacks.** If the debug phase lands on a promising hypothesis but evidence is too thin (you need a different repro, a cleaner log, a tighter boundary), go back to context **once**. After the second context cycle, stop and surface the exact missing evidence to the user.
-- **No source edits.** Worth repeating. `Edit` / `MultiEdit` / `Write` are not in `allowed-tools` for a reason. If you need them, you're in `/xlfg`, not `/xlfg-debug`.
+- **No source edits.** `Edit` and `MultiEdit` are not in `allowed-tools`. `Write` is, but its only sanctioned path is `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Writing to any other path — especially any product file — is a contract violation. If you catch yourself wanting to edit source, you're in `/xlfg`, not `/xlfg-debug`.
 - **Scope discipline.** If you find a second unrelated bug, name it in the diagnosis — do not investigate it in this run.
 - **Read rather than run where possible.** If reading the code answers the question, don't pay for a runtime experiment. If reading doesn't answer it, then experiment.
 - **Authorization scope.** Do not run destructive or externally-visible commands without explicit user authorization scoped to this diagnosis. A dev-server restart is usually fine; dropping a table is not.
 
-## Diagnosis summary (end-of-run template)
+## End-of-run summary
 
-Finish the run with a compact diagnosis. Prose, not tables:
+The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written in phase 4 step 8). Your chat response should be a short pointer — 4–6 sentences — not a paste of the whole file.
 
-1. **The mechanism.** 1–2 sentences. What's actually breaking.
-2. **Strongest evidence.** The concrete artifact (log line, test output, diff of observed vs. expected state) that makes the mechanism load-bearing rather than hypothetical.
-3. **Likely repair surface.** File(s) / function(s) / boundary. One paragraph on the minimum honest fix and why a larger fix would be over-scoped.
-4. **Fake fixes rejected.** The 1–3 tempting non-fixes and why each would mask the defect.
-5. **No-code-change guarantee.** One sentence: "No product source, tests, fixtures, migrations, or configs were edited in this run."
-6. **Residual unknowns.** Named, specific, falsifiable.
-7. **Next safest proof step.** The single experiment or read that would most cheaply confirm (or refute) the diagnosis.
+Say, in order:
 
-That's the diagnosis. Do not append post-hoc rationalization or reassurance. Hand it to the user; they decide whether to open `/xlfg` to ship the fix.
+1. **The mechanism**, in one sentence.
+2. **The strongest evidence**, in one sentence.
+3. **The likely repair surface**, in one sentence.
+4. **Residual unknowns**, in one sentence (or "none worth naming").
+5. **The path to the full diagnosis:** `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+6. **Suggested next step**, in one sentence — usually "open `/xlfg` to ship the fix" or "run `<experiment>` to confirm before fixing".
+
+Do not append post-hoc rationalization or reassurance. Hand the pointer to the user; they decide whether to open `/xlfg` to ship the fix.

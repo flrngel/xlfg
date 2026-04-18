@@ -1,10 +1,19 @@
 # xlfg-engineering plugin development
 
-## What this plugin is (v6)
+## What this plugin is (v6.1+)
 
-Two slash commands (`/xlfg`, `/xlfg-debug`), one audit script, one hooks file, two manifests. No sub-agents, no phase skills, no file-based run state, no Codex surface, no ledger. The runtime is pure inline prose the main model reads at invocation time.
+Two slash commands (`/xlfg`, `/xlfg-debug`), one audit script, one hooks file, two manifests, plus a minimal durable archive convention under `docs/xlfg/`. No sub-agents, no phase skills, no file-based run *coordination* state, no Codex surface, no ledger. The runtime is pure inline prose the main model reads at invocation time.
 
-If you're tempted to re-add a specialist agent, a hidden phase skill, a dispatch header, or a per-phase artifact: stop. The v6 test suite will catch you (`tests/test_xlfg_v6.py::TestPluginShape` and `TestCommands`). The decision to remove those surfaces was deliberate — strong reasoners don't need them, and the scaffolding was pure overhead.
+### What's a coordination file vs. a durable archive?
+
+This distinction bit v6.0.0. They look the same — both are .md files under `docs/xlfg/` — but they're different concerns:
+
+- **Coordination files** (v5, dead): `spec.md`, `workboard.md`, `phase-state.json`, `task-division.md`, `verification.md`, etc. Written *during* a run by one phase so a *later phase* (or a sub-agent) can read them. These were the sub-agent orchestration substrate. Strong reasoners hold this in context; the files were pure overhead.
+- **Durable archive** (v6.1+, kept): `docs/xlfg/current-state.md`, `docs/xlfg/runs/<RUN_ID>/run-summary.md`, `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Written *at the end* of a run so a *future session* (new context window) can recall what happened. Cross-session memory, not intra-run coordination.
+
+If you're tempted to re-add a specialist agent, a hidden phase skill, a dispatch header, or a per-phase *coordination* artifact: stop. The v6 test suite will catch you (`tests/test_xlfg_v6.py::TestPluginShape` and `TestCommands`). The decision to remove those surfaces was deliberate.
+
+If you're tempted to remove the durable archive writes (`run-summary.md`, `diagnosis.md`, `current-state.md`): also stop. Those are load-bearing for cross-session recall, and the test suite asserts the command bodies wire them in.
 
 ## Versioning (required)
 

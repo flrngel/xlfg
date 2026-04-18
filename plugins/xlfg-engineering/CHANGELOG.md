@@ -1,3 +1,33 @@
+## 6.1.0 — restore the durable archive
+
+v6.0.0 overcorrected. Removing the sub-agent coordination layer (`spec.md`, `workboard.md`, `phase-state.json`) was right — strong reasoners hold that in context. But the same commit also deleted the **cross-run durable memory** (`docs/xlfg/current-state.md` and `docs/xlfg/runs/<RUN_ID>/`), which was a separate concern: the model's context does not span sessions. With those gone, the compound phase was ceremonial (a lesson with nowhere to land), recall was blind to prior runs, and every `/xlfg-debug` session evaporated its own diagnosis.
+
+This release restores the durable archive, slim.
+
+### Added
+
+- **`docs/xlfg/current-state.md`** — optional, tracked, one-page living summary of the project's load-bearing truths. Read in recall (phase 1). Updated sparingly in compound (phase 8) when a run earns promotion. Capped at ~300 words; most runs do NOT update it.
+- **`docs/xlfg/runs/<RUN_ID>/run-summary.md`** — written by every `/xlfg` run at the end of the compound phase. One file per run, ~200 words, fixed template (Ask / What changed / Proof / Residual risk / Durable lesson). Grep-able months later.
+- **`docs/xlfg/runs/<RUN_ID>/diagnosis.md`** — written by every `/xlfg-debug` run at the end of the debug phase. Fixed template (Ask / Mechanism / Strongest evidence / Likely repair surface / Fake fixes rejected / No-code-change guarantee / Residual unknowns / Next safest proof step).
+- **`RUN_ID`** = `<YYYYMMDD>-<HHMMSS>-<kebab-slug>`, computed once at startup of each run.
+
+### Changed
+
+- `/xlfg` phase 1 (recall) now explicitly reads `docs/xlfg/current-state.md` and scans `docs/xlfg/runs/` for recent run-summary / diagnosis files touching the target surface.
+- `/xlfg` phase 8 (compound) now requires writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` and offers an optional promotion path to `current-state.md`.
+- `/xlfg-debug` phase 4 (debug) now requires writing `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. The chat response becomes a short pointer to the file, not a paste of it.
+- `/xlfg-debug` `allowed-tools` regains `Write` (previously excluded entirely). `Edit` and `MultiEdit` are still excluded — product source remains off-limits. The command body narrows the sanctioned `Write` target to `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+
+### Unchanged (still dead)
+
+- No `.xlfg/` directory. v5 used it for phase-state coordination with the Stop hook; v6 has no Stop hook and no coordination state, so `.xlfg/` stays gone.
+- No sub-agents, no phase skills, no Codex surface, no `spec.md` / `workboard.md` / `phase-state.json` / `ledger.jsonl`. Those are sub-agent-era scaffolding and do not come back.
+- No `/xlfg-audit`, `/xlfg-status`, or `/xlfg-init`.
+
+### Tests
+
+- `test_xlfg_v6.py` gains `test_xlfg_wires_durable_archive`, `test_xlfg_debug_wires_durable_diagnosis`, and `test_xlfg_body_disclaims_dotxlfg_directory`. Existing `test_xlfg_debug_has_no_edit_tools` was split into a stricter `test_xlfg_debug_cannot_modify_existing_files` that allows `Write` but still forbids `Edit` / `MultiEdit`, and also asserts the body names the sanctioned `Write` path.
+
 ## 6.0.0 — the philosophy cut
 
 **xlfg is now a single inline guide, not an orchestration graph.** Opus 4.7-class models hold an SDLC run in their own context; sub-agent dispatch and per-phase file artifacts were crutches from an earlier era that became pure overhead. This release rips them out.

@@ -1,8 +1,57 @@
 # Next agent context
 
-## Current state (6.0.0)
+## Current state (6.1.0)
 
-v6 is the **philosophy cut**. xlfg is now a single inline guide, not an orchestration graph. The v5 scaffolding — 27 specialist agents, 9 hidden phase skills, file-based run state (`spec.md`, `workboard.md`, `phase-state.json`, the whole `docs/xlfg/runs/<RUN_ID>/` tree), Stop / SubagentStop hooks, a durable JSONL ledger, and a parallel Codex surface — is all gone. Opus 4.7-class models hold a multi-phase SDLC run in their own context; the scaffolding was paying serialization cost for state the model no longer externalizes.
+v6.1.0 keeps the v6 philosophy cut — no sub-agents, no hidden phase skills, no `spec.md` / `workboard.md` / `phase-state.json` coordination layer, no Codex surface — and restores the **minimal durable archive** that v6.0.0 mistakenly swept out with the same broom.
+
+The distinction that matters: the sub-agent coordination layer is dead, but the **cross-session memory** isn't. Opus 4.7 holds one run in context; it does not hold last week's run in context. The model needs somewhere to read from on the way in and somewhere to write to on the way out.
+
+### The durable archive
+
+Three tracked artifacts, all under `docs/xlfg/`:
+
+1. `docs/xlfg/current-state.md` — optional, one-page, ~300 words max. The "read this first" handoff for any agent entering the repo. Load-bearing truths, known traps, active constraints. Read in recall (phase 1). Updated sparingly in compound (phase 8) when a run earns promotion — most runs should NOT update it.
+2. `docs/xlfg/runs/<RUN_ID>/run-summary.md` — written by every `/xlfg` run at the end of the compound phase. Fixed template: Ask / What changed / Proof / Residual risk / Durable lesson. ~200 words.
+3. `docs/xlfg/runs/<RUN_ID>/diagnosis.md` — written by every `/xlfg-debug` run at the end of the debug phase. Fixed template: Mechanism / Strongest evidence / Likely repair surface / Fake fixes rejected / No-code-change guarantee / Residual unknowns / Next safest proof step.
+
+`RUN_ID = <YYYYMMDD>-<HHMMSS>-<kebab-slug>`, computed once at startup.
+
+`.xlfg/` does not exist. v5 used it for phase-state coordination with the Stop hook; v6 has no Stop hook, so nothing goes there.
+
+### What `/xlfg-debug` can write
+
+v6.0.0 excluded `Write` from `/xlfg-debug` allowed-tools to enforce "diagnosis-only." v6.1.0 re-grants `Write` but keeps `Edit` and `MultiEdit` out. The sanctioned Write target is `docs/xlfg/runs/<RUN_ID>/diagnosis.md` and nothing else — the command body spells this out, and the test suite asserts both the tool grant and the body's mention of the path.
+
+### What v6 ships
+
+- `plugins/xlfg-engineering/commands/xlfg.md` — the SDLC guide (now wires the durable archive into phases 1 and 8)
+- `plugins/xlfg-engineering/commands/xlfg-debug.md` — the diagnosis guide (writes `diagnosis.md` in phase 4)
+- `plugins/xlfg-engineering/scripts/audit_harness.py` — CI self-audit, four checks
+- `plugins/xlfg-engineering/scripts/phase-gate.mjs` + `subagent-stop-guard.mjs` — ~11-line compat shims so cached v5.0.0 sessions stop erroring. Byte-capped by test.
+- `plugins/xlfg-engineering/hooks/hooks.json` — just ExitPlanMode auto-allow
+- `tests/test_xlfg_v6.py` — 23 tests guarding plugin shape, command frontmatter, philosophy retention, and the durable-archive wiring
+
+### What NOT to reintroduce
+
+The test suite catches these drifts:
+- Files under `plugins/xlfg-engineering/agents/**` or `skills/**`
+- A `codex/` tree or `.codex-plugin/` manifest
+- Any script under `scripts/` besides `audit_harness.py` and the two `.mjs` shims (the shims are byte-capped)
+- Dispatch-contract tokens in command bodies (`PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:`)
+- Stop or SubagentStop hook registrations
+- `Skill(...)`, `Agent`, or `SendMessage` in command `allowed-tools`
+- `.xlfg/` directory use (the `/xlfg` body contains an explicit disclaimer the test asserts on)
+
+### Migration (v5.x → v6.1.0)
+
+- Public entry surface is `/xlfg` and `/xlfg-debug`. `/xlfg-audit`, `/xlfg-status`, `/xlfg-init`, and the Codex `$xlfg` / `$xlfg-debug` skills were removed in 6.0.0 and stay removed.
+- In-progress v5 runs: finish under v5 or abandon. Delete `.xlfg/` and the old `docs/xlfg/runs/<RUN_ID>/` tree (with the full v5 artifact set) before upgrading. v6 writes a much smaller set of files into the same `docs/xlfg/runs/` path.
+- If you had a v5 `ledger.jsonl`: there is no ledger in v6. Read through the old entries and promote anything still load-bearing into `docs/xlfg/current-state.md` manually.
+- Runtime: `python3` on PATH (for CI audit). No Node (the two `.mjs` files are compat shims for cached v5 sessions — they exit 0).
+
+## Previous state (6.0.0)
+
+v6.0.0 was the philosophy cut. xlfg is now a single inline guide, not an orchestration graph. The v5 scaffolding — 27 specialist agents, 9 hidden phase skills, file-based run state (`spec.md`, `workboard.md`, `phase-state.json`, the whole `docs/xlfg/runs/<RUN_ID>/` tree), Stop / SubagentStop hooks, a durable JSONL ledger, and a parallel Codex surface — is all gone. Opus 4.7-class models hold a multi-phase SDLC run in their own context; the scaffolding was paying serialization cost for state the model no longer externalizes.
 
 ### What v6 ships
 
