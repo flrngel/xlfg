@@ -1,3 +1,44 @@
+## 6.3.0 — restore v5 specialists as on-demand hidden skills
+
+v6.0 nuked the 27 specialist sub-agents. v6.2 restored the phase skills for context-budget discipline. v6.3 restores the specialist expertise too — but as **hidden skills that phase skills load on-demand**, not as sub-agents with dispatch packets. Opus-class models can reach for a focused lens (security reviewer, root-cause analyst, test strategist, etc.) when the work calls for it, without paying the context cost of all 27 lenses being loaded up front.
+
+### Added
+
+- **27 specialist lens skills** under `plugins/xlfg-engineering/skills/xlfg-<name>/SKILL.md`, all `user-invocable: false`:
+  - intent lens: `xlfg-why-analyst`, `xlfg-query-refiner`, `xlfg-spec-author`, `xlfg-brainstorm`
+  - context lens: `xlfg-repo-mapper`, `xlfg-harness-profiler`, `xlfg-env-doctor`, `xlfg-researcher`, `xlfg-context-adjacent-investigator`, `xlfg-context-constraints-investigator`, `xlfg-context-unknowns-investigator`
+  - plan lens: `xlfg-solution-architect`, `xlfg-test-strategist`, `xlfg-task-divider`, `xlfg-risk-assessor`, `xlfg-root-cause-analyst`, `xlfg-ui-designer`, `xlfg-test-readiness-checker`
+  - implement lens: `xlfg-task-implementer`, `xlfg-test-implementer`, `xlfg-task-checker`
+  - verify lens: `xlfg-verify-runner`, `xlfg-verify-reducer`
+  - review lens: `xlfg-architecture-reviewer`, `xlfg-security-reviewer`, `xlfg-performance-reviewer`, `xlfg-ux-reviewer`
+- Each specialist follows the same 5-section template as phase skills (Purpose / Lens / How to work it / Done signal / Stop-traps), ~30–50 lines each. No dispatch packets, no `allowed-tools` beyond `Read, Grep, Glob, LS, Bash` (with `Edit, MultiEdit, Write` for implementer specialists and `WebSearch, WebFetch` for the researcher).
+- 7 phase skills (intent, context, plan, implement, verify, review, debug) gained an "Optional specialist skills" section listing the specialists loadable at that phase and when to reach for each.
+- Both conductors' `allowed-tools` grant `Skill(xlfg-engineering:xlfg-<specialist> *)` for each applicable specialist, so invocation paths work either from the conductor context or from within a phase skill.
+- Two new tests in `TestSkills`:
+  - `test_specialist_skills_carry_five_section_shape` — enforces the 5-section template on specialist skills.
+  - `test_phase_skills_advertise_specialists` — enforces that each of the 7 non-trivial phase skills names at least one specialist.
+
+### Changed
+
+- `EXPECTED_SKILLS` in both `scripts/audit_harness.py` and `tests/test_xlfg_v6.py` is now split into `EXPECTED_PHASE_SKILLS` (9) + `EXPECTED_SPECIALIST_SKILLS` (27). The union (36) replaces the old 9-element tuple.
+- `_check_skill_surface` now covers all 36 skills; test suite grew from 33 to 35.
+
+### Unchanged
+
+- No sub-agents. `test_no_agents_or_codex` still enforces no `agents/` directory exists. The specialists are *skills*, not agents — they run in the conductor's own context, not in delegated sub-contexts.
+- No dispatch-packet contracts. Specialists have no `PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, or `DONE_CHECK:` anywhere. Forbidden-token sweep extended naturally to cover them.
+- No `Agent` or `SendMessage` in any skill's allowed-tools.
+- Durable archive unchanged: `docs/xlfg/current-state.md`, `docs/xlfg/runs/<RUN_ID>/run-summary.md`, `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+
+### Migration from 6.2.x
+
+- No user-facing change. `/xlfg` and `/xlfg-debug` still take `$ARGUMENTS`. Specialist skills are hidden; users never invoke them directly.
+- For plugin developers: the rule against adding skill directories beyond `xlfg-<phase>-phase/` is retired for specialists specifically. Adding a new specialist means expanding `EXPECTED_SPECIALIST_SKILLS` in both `audit_harness.py` and `tests/test_xlfg_v6.py`, then creating a `skills/xlfg-<name>/SKILL.md` that follows the 5-section template. Don't add random skill directories; the test suite still guards the surface.
+
+### Why the split makes sense
+
+Hidden specialists give Opus a library of focused lenses it can reach for when the task warrants. A security-heavy review loads `xlfg-security-reviewer`; a routine test-only review loads nothing extra. Context cost scales with the work, not with the ambient palette of options. The v5 architecture did this via sub-agents (dispatched, sandboxed contexts); v6.3 does it via skills (loaded into the same context on demand). The expertise survives; the serialization cost doesn't.
+
 ## 6.2.1 — fix RUN_ID generation to use the real system clock
 
 `/xlfg` and `/xlfg-debug` told the model to "compute" `RUN_ID` as `<YYYYMMDD>-<HHMMSS>-<kebab-slug>` without prescribing how to get the timestamp. The model guessed a plausible-looking datetime from context, which meant run directories could be labeled with times that never happened. Pre-v3.0.0 xlfg had a Python `datetime.now()` call for this; when the CLI was removed, the deterministic clock call went with it and v3–v6.2.0 all quietly inherited the bug.

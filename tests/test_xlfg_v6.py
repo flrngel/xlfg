@@ -19,7 +19,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 PLUGIN = REPO / "plugins" / "xlfg-engineering"
 
-EXPECTED_SKILLS = (
+EXPECTED_PHASE_SKILLS = (
     "xlfg-recall-phase",
     "xlfg-intent-phase",
     "xlfg-context-phase",
@@ -30,6 +30,42 @@ EXPECTED_SKILLS = (
     "xlfg-compound-phase",
     "xlfg-debug-phase",
 )
+
+# v6.3 restored the v5 specialists as hidden on-demand lens skills. Phase
+# skills list these and load them via the `Skill` tool only when the task
+# calls for that specific expertise. They share the hidden-skill discipline
+# of phase skills but do not appear in conductor pipelines.
+EXPECTED_SPECIALIST_SKILLS = (
+    "xlfg-brainstorm",
+    "xlfg-context-adjacent-investigator",
+    "xlfg-context-constraints-investigator",
+    "xlfg-context-unknowns-investigator",
+    "xlfg-env-doctor",
+    "xlfg-harness-profiler",
+    "xlfg-query-refiner",
+    "xlfg-repo-mapper",
+    "xlfg-researcher",
+    "xlfg-risk-assessor",
+    "xlfg-root-cause-analyst",
+    "xlfg-solution-architect",
+    "xlfg-spec-author",
+    "xlfg-task-divider",
+    "xlfg-test-readiness-checker",
+    "xlfg-test-strategist",
+    "xlfg-ui-designer",
+    "xlfg-why-analyst",
+    "xlfg-task-implementer",
+    "xlfg-test-implementer",
+    "xlfg-task-checker",
+    "xlfg-verify-runner",
+    "xlfg-verify-reducer",
+    "xlfg-architecture-reviewer",
+    "xlfg-security-reviewer",
+    "xlfg-performance-reviewer",
+    "xlfg-ux-reviewer",
+)
+
+EXPECTED_SKILLS = EXPECTED_PHASE_SKILLS + EXPECTED_SPECIALIST_SKILLS
 
 XLFG_PIPELINE = (
     "xlfg-recall-phase",
@@ -367,11 +403,12 @@ class TestSkills(unittest.TestCase):
         self.assertIn("docs/xlfg/runs/", text)
 
     def test_skill_bodies_cover_their_load_bearing_philosophy(self) -> None:
-        """Each skill must carry its own core concept(s).
+        """Each phase skill must carry its own core concept(s).
 
         These substrings are what make a skill a *skill* rather than a pasted
         outline — drift detection against someone stripping bodies down to
-        one-liners.
+        one-liners. Scoped to phase skills; specialist skills have their own
+        shape test below.
         """
         expectations = {
             "xlfg-recall-phase": ("librarian", "prior", "git log"),
@@ -391,6 +428,46 @@ class TestSkills(unittest.TestCase):
                     needle,
                     text,
                     f"skills/{skill}: missing load-bearing concept {needle!r}",
+                )
+
+    def test_specialist_skills_carry_five_section_shape(self) -> None:
+        """v6.3 specialist skills follow the same 5-section template as phase
+        skills (Purpose, Lens, How to work it, Done signal, Stop-traps).
+
+        This catches drift toward one-liner stubs or v5 packet-contract
+        scaffolding creeping back in.
+        """
+        required_sections = ("## Purpose", "## Lens", "## How to work it", "## Done signal", "## Stop-traps")
+        for name in EXPECTED_SPECIALIST_SKILLS:
+            text = (PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+            for section in required_sections:
+                self.assertIn(
+                    section,
+                    text,
+                    f"skills/{name}: missing section {section!r}",
+                )
+
+    def test_phase_skills_advertise_specialists(self) -> None:
+        """The 7 non-trivial phase skills must name which specialist skills are
+        loadable from them. Recall and compound are deterministic/terminal and
+        don't need specialist injection.
+        """
+        phase_to_specialists = {
+            "xlfg-intent-phase": ("xlfg-why-analyst",),
+            "xlfg-context-phase": ("xlfg-repo-mapper",),
+            "xlfg-plan-phase": ("xlfg-solution-architect",),
+            "xlfg-implement-phase": ("xlfg-task-implementer",),
+            "xlfg-verify-phase": ("xlfg-verify-runner",),
+            "xlfg-review-phase": ("xlfg-security-reviewer",),
+            "xlfg-debug-phase": ("xlfg-root-cause-analyst",),
+        }
+        for phase, expected_mentions in phase_to_specialists.items():
+            text = (PLUGIN / "skills" / phase / "SKILL.md").read_text(encoding="utf-8")
+            for mention in expected_mentions:
+                self.assertIn(
+                    mention,
+                    text,
+                    f"skills/{phase}: must advertise specialist {mention!r}",
                 )
 
 

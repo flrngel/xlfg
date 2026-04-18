@@ -1,7 +1,7 @@
 ---
 description: Internal xlfg phase skill. Gather the repo and runtime facts needed for the task. Bounded reads, not whole-repo scan.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash, WebSearch, WebFetch
+allowed-tools: Read, Grep, Glob, LS, Bash, WebSearch, WebFetch, Skill(xlfg-engineering:xlfg-repo-mapper *), Skill(xlfg-engineering:xlfg-harness-profiler *), Skill(xlfg-engineering:xlfg-env-doctor *), Skill(xlfg-engineering:xlfg-researcher *), Skill(xlfg-engineering:xlfg-context-adjacent-investigator *), Skill(xlfg-engineering:xlfg-context-constraints-investigator *), Skill(xlfg-engineering:xlfg-context-unknowns-investigator *)
 ---
 
 # xlfg-context-phase
@@ -40,3 +40,15 @@ For a `/xlfg-debug` run: you need the exact path from input to wrong output, not
 - Treating a README as the ground truth when the code has diverged. Always cross-check docs against code.
 - Skipping the harness pass because "I'll find the test command later." If you can't state the proof command now, your plan is not real.
 - For debug: reading too broadly. Context for debugging is narrower than context for building.
+
+## Optional specialist skills
+
+Load these hidden lens skills via the `Skill` tool when the corresponding pass is non-trivial and you'd benefit from a focused lens. Skip any pass whose answer is already obvious.
+
+- `xlfg-engineering:xlfg-repo-mapper` — structural pass; unfamiliar codebase or target surface spans more than one module.
+- `xlfg-engineering:xlfg-harness-profiler` — harness pass; the proof commands aren't obvious or multiple test runners coexist.
+- `xlfg-engineering:xlfg-env-doctor` — environment pass; setup depends on versions, services, ports, or secrets that may not be present.
+- `xlfg-engineering:xlfg-context-adjacent-investigator` — adjacent-requirement pass; a sibling feature exists and the change should inherit its implicit contract.
+- `xlfg-engineering:xlfg-context-constraints-investigator` — constraint pass; the change could plausibly violate performance, security, compatibility, or compliance invariants.
+- `xlfg-engineering:xlfg-context-unknowns-investigator` — audit the plan's shakiest assumptions before they become loopbacks.
+- `xlfg-engineering:xlfg-researcher` — external fact-finding when the repo is silent and correctness depends on freshness.

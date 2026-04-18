@@ -1,6 +1,25 @@
 # Next agent context
 
-## Current state (6.2.0)
+## Current state (6.3.0)
+
+v6.3.0 restores the v5 specialist expertise as **hidden on-demand lens skills** without bringing back the v5 sub-agent machinery. 27 specialist skills live under `plugins/xlfg-engineering/skills/xlfg-<name>/SKILL.md` (no `-phase` suffix), each `user-invocable: false`, each carrying the same 5-section template as the phase skills. The 7 non-trivial phase skills (intent, context, plan, implement, verify, review, debug) advertise their applicable specialists in an "Optional specialist skills" section and grant `Skill(xlfg-engineering:xlfg-<specialist> *)` in their `allowed-tools`. Both conductors also grant the specialists so invocation works from any point in the pipeline.
+
+The invariants v6.0–v6.2 established all hold:
+
+- No sub-agents. No `agents/` directory. `test_no_agents_or_codex` still enforces this.
+- No nested delegation. No `Agent` or `SendMessage` in any command or skill's `allowed-tools`.
+- No dispatch-packet contracts. No `PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:` anywhere.
+- No v5 coordination files. No `.xlfg/`. No Stop or SubagentStop hooks. No Codex surface.
+
+What the specialists are: **focused lens skills** a phase skill can load via the `Skill` tool when the work calls for that particular expertise. They run in the conductor's own context, not in a delegated sub-context. They have no `maxTurns`, no preseed, no final-chat contract — they are just skills.
+
+Directory layout at v6.3:
+- `skills/xlfg-<phase>-phase/SKILL.md` — 9 phase skills (unchanged since v6.2)
+- `skills/xlfg-<name>/SKILL.md` — 27 specialist lens skills (new in v6.3)
+
+Tests expanded: 33 → 35 (added `test_specialist_skills_carry_five_section_shape` and `test_phase_skills_advertise_specialists`). Audit harness `_check_skill_surface` now covers all 36 skills (144 assertions vs 36 before).
+
+## Previous state (6.2.0)
 
 v6.2.0 is the **conductor + phase-skills** architecture. v6.0 had collapsed all phase guidance into monolithic command bodies (~3000 words each) that loaded in full on every invocation. v5 had split phases into hidden skills loaded just-in-time via the `Skill` tool; the context-budget win of that architecture is real and v6.2 brings it back — without any of the v5 sub-agent baggage.
 

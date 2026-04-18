@@ -23,7 +23,7 @@ PUBLIC_COMMANDS = ("xlfg.md", "xlfg-debug.md")
 
 # The 9 phase skills the conductors dispatch. Shared ones (recall/intent/context)
 # are consumed by both `/xlfg` and `/xlfg-debug`.
-EXPECTED_SKILLS = (
+EXPECTED_PHASE_SKILLS = (
     "xlfg-recall-phase",
     "xlfg-intent-phase",
     "xlfg-context-phase",
@@ -34,6 +34,42 @@ EXPECTED_SKILLS = (
     "xlfg-compound-phase",
     "xlfg-debug-phase",
 )
+
+# v6.3 restored the v5 specialist expertise as hidden skills that phase skills
+# can load on-demand. These are optional lenses — the phase skill decides
+# whether a given specialist is worth loading for the work at hand. They stay
+# hidden (user-invocable: false) and run in the conductor's own context.
+EXPECTED_SPECIALIST_SKILLS = (
+    "xlfg-brainstorm",
+    "xlfg-context-adjacent-investigator",
+    "xlfg-context-constraints-investigator",
+    "xlfg-context-unknowns-investigator",
+    "xlfg-env-doctor",
+    "xlfg-harness-profiler",
+    "xlfg-query-refiner",
+    "xlfg-repo-mapper",
+    "xlfg-researcher",
+    "xlfg-risk-assessor",
+    "xlfg-root-cause-analyst",
+    "xlfg-solution-architect",
+    "xlfg-spec-author",
+    "xlfg-task-divider",
+    "xlfg-test-readiness-checker",
+    "xlfg-test-strategist",
+    "xlfg-ui-designer",
+    "xlfg-why-analyst",
+    "xlfg-task-implementer",
+    "xlfg-test-implementer",
+    "xlfg-task-checker",
+    "xlfg-verify-runner",
+    "xlfg-verify-reducer",
+    "xlfg-architecture-reviewer",
+    "xlfg-security-reviewer",
+    "xlfg-performance-reviewer",
+    "xlfg-ux-reviewer",
+)
+
+EXPECTED_SKILLS = EXPECTED_PHASE_SKILLS + EXPECTED_SPECIALIST_SKILLS
 
 # Tokens that indicate the v5 sub-agent dispatch contract is creeping back into
 # the runtime prompt. v6.2 keeps phase skills (see EXPECTED_SKILLS) but does
@@ -269,7 +305,7 @@ def _check_forbidden_tokens(plugin_root: Path) -> dict[str, object]:
 
 
 def _check_skill_surface(plugin_root: Path) -> dict[str, object]:
-    """v6.2 ships 9 phase skills — the 8 /xlfg phases plus /xlfg-debug's debug phase.
+    """v6.3 ships 9 phase skills + 27 specialist lens skills.
 
     Each skill must:
       - live at skills/<name>/SKILL.md

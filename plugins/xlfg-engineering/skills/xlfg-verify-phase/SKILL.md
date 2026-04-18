@@ -1,7 +1,7 @@
 ---
 description: Internal xlfg phase skill. Run the declared proof commands, read every failure honestly, classify GREEN or RED or FAILED.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash
+allowed-tools: Read, Grep, Glob, LS, Bash, Skill(xlfg-engineering:xlfg-verify-runner *), Skill(xlfg-engineering:xlfg-verify-reducer *)
 ---
 
 # xlfg-verify-phase
@@ -38,3 +38,10 @@ The proof contract from the plan matches the run you actually executed, command-
 - Paving over a RED by tweaking the test. If the test was wrong, explain why in 1–2 sentences; if the code was wrong, fix the code.
 - Declaring GREEN when the command printed a warning like "deprecated" or "skipped 12 tests" without reading it. Deprecations and skips are signals, not noise.
 - UI changes declared done without opening a browser and using the feature on the golden path and one edge case.
+
+## Optional specialist skills
+
+Load these when you want runner/reducer concerns cleanly separated — useful for a long suite, flaky harness, or ambiguous results. For a simple `fast_check`, just run it inline.
+
+- `xlfg-engineering:xlfg-verify-runner` — faithful execution and evidence capture, no interpretation.
+- `xlfg-engineering:xlfg-verify-reducer` — judge the captured evidence; classify GREEN / RED / FAILED with an actionable next step.
