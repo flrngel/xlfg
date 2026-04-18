@@ -6,7 +6,7 @@ An autonomous proof-first SDLC guide for Claude Code, designed for Opus-class mo
 
 Two slash commands that act as **conductors**, each dispatching a pipeline of hidden phase skills just-in-time.
 
-- `/xlfg "<request>"` — dispatches 8 phase skills in order: recall → intent → context → plan → implement → verify → review → compound. Each skill loads when invoked, does its phase work in the main model's context, and returns. Ends by writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` and optionally updating `docs/xlfg/current-state.md`.
+- `/xlfg "<request>"` — dispatches 8 phase skills in order: recall → intent → context → plan → implement → verify → review → compound. Each skill loads when invoked, does its phase work in the main model's context, and returns. After compound, the conductor commits tracked product changes as one Conventional Commits-style commit (skipped cleanly on investigation-only runs; `docs/xlfg/runs/**` and `.xlfg/**` never staged). Ends by writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` and optionally updating `docs/xlfg/current-state.md`.
 - `/xlfg-debug "<request>"` — dispatches 4 phase skills: recall → intent → context → debug. Diagnosis-only: `allowed-tools` excludes `Edit` and `MultiEdit`, so product source cannot be modified. Ends by writing `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
 
 The phases are `plugins/xlfg-engineering/skills/xlfg-<name>-phase/SKILL.md` — 9 files total. Three of them (recall, intent, context) are shared by both conductors.

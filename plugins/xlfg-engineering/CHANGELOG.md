@@ -1,3 +1,23 @@
+## 6.3.2 — conductor commits tracked changes at end of run
+
+Fixes a regression that landed when v6 gitignored `docs/xlfg/runs/` (April 2026, commit `cb0a7b7`). Pre-gitignore, every `/xlfg` run produced tracked artifacts (`spec.md`, `workboard.md`, `ledger.jsonl`, etc.), so the big staged diff after `compound` was a natural cue for Claude to honor the user's global "Always git commit when work is done" rule. Once runs were gitignored and v6.1+ leaned on the ignore, `git status` after a run showed only the product edits — and the conductor's Completion summary template read as terminal ("run archive path → stop"), with no step that asked for a commit. Net effect: v4 mostly committed, v6 often didn't.
+
+### Added
+
+- New section in `commands/xlfg.md`: **"End-of-run commit (mandatory when tracked files changed)"**, dispatched after `xlfg-compound-phase` returns and before the user-facing summary. The step:
+  - Inspects `git status --porcelain` and skips cleanly on investigation-only runs.
+  - Stages product paths explicitly (never `-A`/`.`), always excluding `docs/xlfg/runs/**` and `.xlfg/**`.
+  - Creates one Conventional Commits-style commit; never pushes, never amends, never skips hooks.
+  - Captures the short SHA for the completion summary.
+- New entry in the Completion summary template: **Commit** (SHA + subject, or an explicit "no product changes to commit" note).
+- New test `test_xlfg_conductor_prescribes_end_of_run_commit` asserting the conductor body names `git status --porcelain`, forbids `git add -A`, keeps `docs/xlfg/runs/` excluded from staging, and references Conventional Commits. Guards against future edits silently dropping this step. Suite: 37 → 38 tests.
+
+### Unchanged
+
+- `/xlfg-debug` does not get a commit step — it's product-frozen by contract (`Edit` and `MultiEdit` absent from `allowed-tools`), and the `diagnosis.md` it writes lives under the gitignored `docs/xlfg/runs/` prefix.
+- `xlfg-compound-phase` is untouched. Archive authoring and release discipline stay separate concerns: compound writes the archive, the conductor owns the commit.
+- No new skills, no new `allowed-tools` entries, no hook changes, no manifest surface changes beyond the version bump.
+
 ## 6.3.1 — drift lint + specialist body ceiling
 
 Test-only patch closing the two residual risks flagged in the v6.3.0 run summary. No behavior change.

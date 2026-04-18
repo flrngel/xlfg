@@ -89,15 +89,32 @@ Loopbacks that do **not** count:
 
 Track loopback count in your own working notes — there is no `.xlfg/phase-state.json` in v6. If you're using the harness task bridge, a `TaskCreate` with subject `xlfg: loopback N/2` is a reasonable way to surface it.
 
+## End-of-run commit (mandatory when tracked files changed)
+
+After the compound skill returns and before you write the user-facing summary, close the run with a commit. A run that edited product code and didn't land a commit isn't done — it's dangling in the working tree.
+
+1. Run `git status --porcelain` once via `Bash`. Read the output yourself; don't assume.
+2. **If there are no tracked changes** (porcelain is empty, or lists only `docs/xlfg/runs/` / `.xlfg/` / other gitignored paths), skip the commit. Note "no product changes to commit — investigation-only run" in the completion summary and stop.
+3. **If there are tracked product changes**, commit them:
+   - Stage the product paths explicitly by name — source files, tests, shipped docs, plugin manifests, CHANGELOG, READMEs. **Never `git add -A` or `git add .`.** Those would sweep in files you don't own.
+   - **Never stage `docs/xlfg/runs/**` or `.xlfg/**`.** They're gitignored already, but an explicit `git add` on them would override the ignore. Run artifacts are per-run scratch, not product — confirmed by the user on 2026-04-13.
+   - Create one Conventional Commits-style commit (`feat(scope): ...`, `fix(scope): ...`, `test(scope): ...`, `docs(scope): ...`, `refactor(scope): ...`, `chore(scope): ...`). Subject ≤72 chars, written in the imperative. If the body adds value, keep it short and focused on the *why*, not a diff recap.
+   - Do not `git push`. Do not `--amend` a prior commit. Do not `--no-verify`. If a pre-commit hook fails, fix the underlying issue and make a new commit; never skip the hook.
+   - If the run genuinely spans two unrelated concerns the user asked for in one invocation (rare — the intent skill should have caught it and split), you may create two commits. Default is one.
+4. Capture the short SHA (`git rev-parse --short HEAD`) so you can cite it in the summary.
+
+This step is the v6.3.2 repair for a regression where v6 runs finished with edits unstaged. Do not skip it, do not turn it into an ask-the-user gate, and do not collapse it into the compound skill — compound writes the archive, the conductor owns the commit.
+
 ## Completion summary (end-of-run template)
 
-After the compound skill returns, finish the run with a concise summary. Prose the user can skim in under 30 seconds:
+Once the commit is done (or correctly skipped), finish the run with a concise summary. Prose the user can skim in under 30 seconds:
 
 1. **What changed.** 1–2 sentences naming the files touched and the behavior delivered.
 2. **Proof.** The exact command(s) the verify skill ran and the result.
-3. **Residual risk.** What you did not test, what might still be wrong, and what you'd check next if you had another hour.
-4. **Follow-ups (optional).** Broken windows you spotted but did not fix, or objective groups deferred.
-5. **The one durable lesson** from the compound skill, if there is one.
-6. **Run archive.** The path `docs/xlfg/runs/<RUN_ID>/run-summary.md`, and whether `docs/xlfg/current-state.md` was updated.
+3. **Commit.** The short SHA and subject line, or "no product changes to commit — investigation-only run".
+4. **Residual risk.** What you did not test, what might still be wrong, and what you'd check next if you had another hour.
+5. **Follow-ups (optional).** Broken windows you spotted but did not fix, or objective groups deferred.
+6. **The one durable lesson** from the compound skill, if there is one.
+7. **Run archive.** The path `docs/xlfg/runs/<RUN_ID>/run-summary.md`, and whether `docs/xlfg/current-state.md` was updated.
 
 Do not append post-hoc rationalizations, meta-commentary about the xlfg process itself, or reassurances about your own work. The summary is for the user; keep it for them.

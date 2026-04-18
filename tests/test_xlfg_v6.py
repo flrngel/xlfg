@@ -616,6 +616,86 @@ class TestConductorDiscipline(unittest.TestCase):
         self.assertIn("docs/xlfg/runs/<RUN_ID>/diagnosis.md", text)
         self.assertIn("RUN_ID", text)
 
+    def test_xlfg_conductor_prescribes_end_of_run_commit(self) -> None:
+        """`/xlfg` runs must commit tracked product changes at end-of-run.
+
+        v6 runs often finished with edits unstaged because the Completion summary
+        template read as terminal ("write run-archive path → stop") and no phase
+        owned committing. Pre-April-2026 runs got away with it because the run
+        dir was tracked and Claude committed everything; once `docs/xlfg/runs/`
+        was gitignored (commit cb0a7b7, 2026-04-13) the cue disappeared.
+
+        The fix: a mandatory commit step in the conductor body, between
+        `xlfg-compound-phase` returning and the user-facing summary.
+        """
+        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        lower = text.lower()
+
+        # The commit step must actually exist under a recognizable heading.
+        self.assertIn(
+            "end-of-run commit",
+            lower,
+            "xlfg.md: missing `End-of-run commit` section — v6.3.2 regression fix",
+        )
+
+        # It must prescribe inspecting git state before deciding.
+        self.assertIn(
+            "git status --porcelain",
+            text,
+            "xlfg.md: commit step must read `git status --porcelain`, "
+            "not assume what has changed",
+        )
+
+        # It must forbid the dangerous shortcut.
+        self.assertIn(
+            "`git add -A`",
+            text,
+            "xlfg.md: commit step must explicitly forbid `git add -A` — "
+            "staging must be per-path to honor the run-artifact exclusion",
+        )
+
+        # It must keep the user's feedback memory as a written-down rule in the
+        # command body (the memory file alone is not enough; the command must
+        # carry the invariant so new contexts honor it without the memory).
+        self.assertIn(
+            "docs/xlfg/runs/",
+            text,
+        )
+        self.assertIn(
+            ".xlfg/",
+            text,
+        )
+
+        # It must name Conventional Commits so the style isn't left to guesswork.
+        self.assertIn(
+            "conventional commits",
+            lower,
+            "xlfg.md: commit step must prescribe Conventional Commits style",
+        )
+
+        # And it must flow the commit SHA into the Completion summary so the
+        # user can find the commit without chasing `git log`.
+        self.assertIn(
+            "**Commit.**",
+            text,
+            "xlfg.md: Completion summary template must surface the commit "
+            "(SHA + subject) as its own item",
+        )
+
+    def test_xlfg_debug_conductor_does_not_prescribe_commit(self) -> None:
+        """`/xlfg-debug` is product-frozen (no Edit/MultiEdit in allowed-tools).
+
+        It writes only `diagnosis.md` under the gitignored run dir, so a commit
+        step would at best be a no-op and at worst stage something it shouldn't.
+        Asserts the commit language from v6.3.2 did not bleed into the debug
+        conductor.
+        """
+        text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
+        lower = text.lower()
+        self.assertNotIn("end-of-run commit", lower)
+        self.assertNotIn("git status --porcelain", text)
+        self.assertNotIn("conventional commits", lower)
+
     def test_conductors_prescribe_real_clock_for_run_id(self) -> None:
         """RUN_ID must come from the system clock via `date`, not model guesswork.
 

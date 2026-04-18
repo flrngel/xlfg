@@ -1,6 +1,14 @@
 # Next agent context
 
-## Current state (6.3.0)
+## Current state (6.3.2)
+
+v6.3.2 closes a long-standing regression: `/xlfg` runs often finished with tracked product edits unstaged. The conductor's Completion summary template read as terminal (write run-archive path → stop) and no phase owned committing. Pre-April-2026 runs mostly committed by accident, because every phase wrote tracked files under `docs/xlfg/runs/` and Claude saw a big staged diff; once that prefix was gitignored in `cb0a7b7` (April 13, 2026) the cue disappeared and the commit step disappeared with it.
+
+The fix adds one section to `commands/xlfg.md`: **"End-of-run commit (mandatory when tracked files changed)"**, dispatched after `xlfg-compound-phase` returns and before the user-facing summary. It runs `git status --porcelain`, skips cleanly on investigation-only runs, stages product paths explicitly (never `-A`/`.`, always excluding `docs/xlfg/runs/**` and `.xlfg/**`), creates one Conventional Commits-style commit, and captures the short SHA for the summary. No push, no amend, no hook-skipping. `/xlfg-debug` is untouched — it's product-frozen by contract and has nothing commit-worthy to produce.
+
+Guarded by `test_xlfg_conductor_prescribes_end_of_run_commit` in `tests/test_xlfg_v6.py`. Suite: 37 → 38 tests.
+
+## Previous state (6.3.0)
 
 v6.3.0 restores the v5 specialist expertise as **hidden on-demand lens skills** without bringing back the v5 sub-agent machinery. 27 specialist skills live under `plugins/xlfg-engineering/skills/xlfg-<name>/SKILL.md` (no `-phase` suffix), each `user-invocable: false`, each carrying the same 5-section template as the phase skills. The 7 non-trivial phase skills (intent, context, plan, implement, verify, review, debug) advertise their applicable specialists in an "Optional specialist skills" section and grant `Skill(xlfg-engineering:xlfg-<specialist> *)` in their `allowed-tools`. Both conductors also grant the specialists so invocation works from any point in the pipeline.
 
