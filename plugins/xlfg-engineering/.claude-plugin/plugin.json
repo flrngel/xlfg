@@ -1,7 +1,7 @@
 {
   "name": "xlfg-engineering",
-  "version": "5.1.0",
-  "description": "Skill-first autonomous SDLC harness for Claude Code with lean run cards, proof, review, and compounding.",
+  "version": "6.0.0",
+  "description": "Autonomous proof-first SDLC guide for Opus-class models. Two inline commands (/xlfg, /xlfg-debug) — no sub-agents, no per-phase artifacts, no codex surface.",
   "author": {
     "name": "xlfg",
     "email": "",

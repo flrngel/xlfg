@@ -1,8 +1,42 @@
 # Next agent context
 
-## Current state (5.1.0)
+## Current state (6.0.0)
 
-5.1.0 ports every runtime helper from Node to Python. Previously the plugin
+v6 is the **philosophy cut**. xlfg is now a single inline guide, not an orchestration graph. The v5 scaffolding — 27 specialist agents, 9 hidden phase skills, file-based run state (`spec.md`, `workboard.md`, `phase-state.json`, the whole `docs/xlfg/runs/<RUN_ID>/` tree), Stop / SubagentStop hooks, a durable JSONL ledger, and a parallel Codex surface — is all gone. Opus 4.7-class models hold a multi-phase SDLC run in their own context; the scaffolding was paying serialization cost for state the model no longer externalizes.
+
+### What v6 ships
+
+- `plugins/xlfg-engineering/commands/xlfg.md` — ~3000-word inline guide covering all 8 phases (recall → intent → context → plan → implement → verify → review → compound). Specialist lenses (PM, architect, security, perf, UX, test strategist, runner/reducer, reviewer) appear as mental passes the main model adopts in-line, not as dispatch targets.
+- `plugins/xlfg-engineering/commands/xlfg-debug.md` — diagnosis-only guide (recall → intent → context → debug). `allowed-tools` intentionally excludes `Edit`, `MultiEdit`, `Write`.
+- `plugins/xlfg-engineering/scripts/audit_harness.py` — four-check self-audit for CI (version sync, command surface, command frontmatter, forbidden-token sweep).
+- `plugins/xlfg-engineering/hooks/hooks.json` — just the `PermissionRequest` `ExitPlanMode` auto-allow.
+- `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json` — manifests (version 6.0.0). Codex manifest removed.
+- `tests/test_xlfg_v6.py` — 20 focused tests that guard the plugin shape, command frontmatter, and load-bearing philosophy tokens.
+
+Everything else from v5 is deleted. See `plugins/xlfg-engineering/CHANGELOG.md` for the full "removed" list.
+
+### What NOT to reintroduce
+
+The test suite catches these drifts; don't try:
+- Files under `plugins/xlfg-engineering/agents/**` or `skills/**`
+- A `codex/` tree or `.codex-plugin/` manifest
+- More than `audit_harness.py` under `scripts/`
+- Dispatch-contract tokens in command bodies (`PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:`)
+- Stop or SubagentStop hook registrations
+- `Skill(...)`, `Agent`, or `SendMessage` in command `allowed-tools`
+
+If you have a real case for re-adding any of those, open a discussion. The removal was intentional.
+
+### Migration (v5.1.0 → v6.0.0)
+
+- Public entry surface is smaller: only `/xlfg` and `/xlfg-debug` remain. `/xlfg-audit`, `/xlfg-status`, `/xlfg-init`, and the Codex `$xlfg` / `$xlfg-debug` skills were all removed.
+- In-progress v5 runs: finish under v5 or abandon. The v5 phase-state format is unused in v6. Delete `docs/xlfg/runs/` and `.xlfg/` before upgrading.
+- If you relied on the ledger for cross-run memory: promote durable lessons to the target project's `CLAUDE.md` before upgrading. v6 has no ledger.
+- Runtime: `python3` on PATH (for the CI audit only). No Node. Zero runtime deps for end users.
+
+## Previous state (5.1.0)
+
+5.1.0 ported every runtime helper from Node to Python. Previously the plugin
 shipped 7 `.mjs` scripts (stopped hooks, phase tick, ledger append, workboard
 render, audit harness, post-mortem) plus a parallel Python test suite that
 spawned them via `node`. CI required both runtimes. The new layout collapses

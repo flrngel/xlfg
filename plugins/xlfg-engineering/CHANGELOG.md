@@ -1,3 +1,38 @@
+## 6.0.0 — the philosophy cut
+
+**xlfg is now a single inline guide, not an orchestration graph.** Opus 4.7-class models hold an SDLC run in their own context; sub-agent dispatch and per-phase file artifacts were crutches from an earlier era that became pure overhead. This release rips them out.
+
+### Removed
+
+- **All 27 specialist agents** under `plugins/xlfg-engineering/agents/**` (solution-architect, task-divider, test-strategist, verify-runner, verify-reducer, review-architecture, review-security, review-performance, review-ux, task-implementer, test-implementer, task-checker, repo-mapper, harness-profiler, env-doctor, researcher, query-refiner, why-analyst, brainstorm, spec-author, test-readiness-checker, risk-assessor, ui-designer, context-adjacent-investigator, context-constraints-investigator, context-unknowns-investigator, root-cause-analyst). Their expertise is now embedded as mental lenses the main model adopts in-line.
+- **All 9 hidden phase skills** under `plugins/xlfg-engineering/skills/xlfg-*-phase/**` plus the support skills (`xlfg-recall`, `xlfg-file-context`, `xlfg-quality-gates`). Phases are a discipline, not a file layout.
+- **The file-based run artifact tree** — `docs/xlfg/runs/`, `docs/xlfg/knowledge/`, `docs/xlfg/migrations/`, and `docs/xlfg/meta.json`. No more `spec.md`, `workboard.md`, `phase-state.json`, `phase-timings.jsonl`, `memory-recall.md`, `context.md`, `task-division.md`, `test-contract.md`, `test-readiness.md`, `solution-decision.md`, `verification.md`, `verify-runner.md`, `verify-fix-plan.md`, `review-summary.md`, `compound-summary.md`, `diagnosis.md`, or `debug-report.md`.
+- **The `Stop` and `SubagentStop` hooks.** With no sub-agents to guard and no phase-state file to gate on, the hooks were vestigial. `hooks.json` now carries only the `PermissionRequest` `ExitPlanMode` auto-allow.
+- **The Codex surface** — `plugins/xlfg-engineering/codex/`, `plugins/xlfg-engineering/.codex-plugin/`, and `.agents/plugins/marketplace.json`. v6 ships on Claude Code and Cursor only.
+- **The durable ledger** — `ledger.jsonl`, `ledger-schema.md`, `ledger-append.py`, and the ledger documentation. Cross-run memory now rides the user's own memory (Claude Code auto-memory, project CLAUDE.md, git history) rather than a bespoke JSONL.
+- **Transitional Python scripts** — `phase_gate.py`, `subagent_stop_guard.py`, `phase_tick.py`, `ledger_append.py`, `render_workboard.py`, `post_mortem.py`. The Node `.mjs` shims added as a v5.1.0 hotfix are also gone.
+- **`/xlfg-audit`, `/xlfg-status`, `/xlfg-init`** slash commands. The post-mortem, status snapshot, and scaffold-repair commands were file-state-dependent; with no state, nothing to audit.
+- **~95 unit tests** asserting on the removed surface, plus `test_codex_plugin.py`. Replaced by `tests/test_xlfg_v6.py` (20 focused tests covering tree shape, manifest sync, command frontmatter, philosophy retention, and the new lean audit harness).
+
+### Kept (minimally)
+
+- `commands/xlfg.md` — now a single ~3000-word inline guide: 8 phases (recall → intent → context → plan → implement → verify → review → compound), each with purpose, lens, "good" signal, and stop-traps. Specialist lenses (PM, architect, security, perf, UX, test strategist, runner/reducer, review) appear as mental models the main model adopts, not as dispatch targets.
+- `commands/xlfg-debug.md` — diagnosis-only guide. 4 phases (recall → intent → context → debug). `allowed-tools` intentionally excludes `Edit`, `MultiEdit`, and `Write` so the command cannot ship patches.
+- `scripts/audit_harness.py` — four deterministic checks (version sync, command surface, command frontmatter, forbidden-token sweep). Runs in CI.
+- `hooks/hooks.json` — just the `ExitPlanMode` auto-allow.
+- `.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json` — version synced at 6.0.0.
+
+### Migration
+
+- **Public entry surface:** `/xlfg` and `/xlfg-debug` still exist and still take `$ARGUMENTS`. Everything else (`/xlfg-audit`, `/xlfg-status`, `/xlfg-init`, `$xlfg`/`$xlfg-debug` in Codex) is gone.
+- **Runtime:** Python 3.9+ on PATH (for the CI audit only). No Node. The plugin has zero runtime dependencies for end users.
+- **In-progress v5 runs:** finish under v5 or abandon — the v5 phase-state file format is unused in v6 and no migration path exists. Delete `docs/xlfg/runs/` and `.xlfg/` before installing v6.
+- **If you relied on the ledger:** carry forward durable lessons into your project's `CLAUDE.md` before upgrading. There is no v6 equivalent.
+
+### Why now
+
+The v5 line carried 44 files of delegation scaffolding, preambles, dispatch rules, and cross-cutting file-protocol guards. That made sense when weaker models needed externalized state to stay coherent. Opus 4.7 has a 1M-token context and strong self-monitoring; the file protocol was paying serialization cost for a feature the model no longer needs. The guide survives; the scaffolding does not.
+
 ## 5.1.0
 
 **Single-runtime port: all hook and CLI helpers move from Node to Python 3.** The plugin's automation surface (`phase-gate`, `subagent-stop-guard`, `phase-tick`, `ledger-append`, `render-workboard`, `audit-harness`, `post-mortem`) was split across Node `.mjs` and Python. The Python tests orchestrated Node subprocesses, CI required both runtimes, and every new inspector tempted someone to improvise Python one-liners instead of extending a reusable script. Everything is now Python; Node is no longer a runtime dependency.

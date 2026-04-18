@@ -1,9 +1,9 @@
 ---
 name: xlfg
-description: Autonomous xlfg SDLC run. Batches hidden recall, intent, context, plan, implement, verify, review, and compound skills end-to-end.
+description: Autonomous proof-first SDLC run. Walks recall, intent, context, plan, implement, verify, review, and compound inline — no sub-agents, no per-phase artifacts.
 argument-hint: "[feature, bugfix, investigation, or delivery request]"
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch, TaskCreate, TaskUpdate, TaskList, Skill(xlfg-engineering:xlfg-recall-phase *), Skill(xlfg-engineering:xlfg-intent-phase *), Skill(xlfg-engineering:xlfg-context-phase *), Skill(xlfg-engineering:xlfg-plan-phase *), Skill(xlfg-engineering:xlfg-implement-phase *), Skill(xlfg-engineering:xlfg-verify-phase *), Skill(xlfg-engineering:xlfg-review-phase *), Skill(xlfg-engineering:xlfg-compound-phase *)
+allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch, TaskCreate, TaskUpdate, TaskList
 effort: high
 hooks:
   PermissionRequest:
@@ -14,195 +14,227 @@ hooks:
             echo '{"hookSpecificOutput": {"hookEventName": "PermissionRequest", "decision": {"behavior": "allow"}}}'
 ---
 
-Use this when the user wants a serious engineering run with PM, UX, Engineering, QA, and release discipline.
+# /xlfg — one autonomous SDLC run
+
+Use this when the user wants a serious engineering run with PM, UX, engineering, QA, and release discipline all in one pass.
 
 INPUT: `$ARGUMENTS`
 
-Treat this invocation as **one autonomous run**.
+Treat this invocation as **one autonomous run**. You are a senior staff engineer with a PM, a UX reviewer, a security reviewer, a performance reviewer, and a QA lead sitting in your head. You walk the 8 phases below from top to bottom, playing each of those roles in turn, holding the entire run in your own context.
 
-`/xlfg` is the conductor for a **batch of hidden phase skills**. Load only the current phase skill, execute it, then move to the next one. Do not inline the whole workflow from memory and do not ask the user to run internal skills or phase commands.
+## What xlfg is (and isn't) in this version
 
-## Run contract
+xlfg v6 is a **philosophy guide, not an orchestration graph.** There are no sub-agents to dispatch. There is no `docs/xlfg/runs/<RUN_ID>/` tree. There is no `spec.md`, no `workboard.md`, no `phase-state.json`, no `verification.md`. The whole run lives in your context and the real repo.
 
-- divide specialist work into atomic task packets: one clear mission in, one required artifact out
-- keep `spec.md` as the single source of truth for intent, chosen solution, task map, proof status, and PM / UX / Engineering / QA / Release notes
-- do **not** recreate a separate intent file; the intent contract now lives inside `spec.md`
-- create optional docs only when they change a decision, proof obligation, or durable lesson
-- do not stop for internal phase approvals
-- treat designated specialists as lane owners whose artifacts should drive synthesis, not optional advisors the main agent can casually ignore
-- ask the user only for true human-only blockers: missing secrets, destructive external approvals, or correctness-changing product ambiguity you cannot ground from the repo or current research
-- prefer repo truth first, then targeted web research when freshness matters or the repo is insufficient
-- for bundled or messy requests, split the work into stable objective groups (`O1`, `O2`, ...) before broad repo fan-out
+The 8 phases are a discipline, not a file layout. They exist to make you slow down in exactly the places where strong reasoners cut corners: listening before coding, proving before claiming, and distilling the durable lesson at the end.
 
-## Startup
+You MAY use the Claude Code task tool (`TaskCreate` / `TaskUpdate`) to track the 8 phases for the user's benefit — one task per phase, mark each completed as you go. That's the only state surface. Do not create a parallel file-based tracker.
 
-1. Sync scaffold if missing or stale: ensure `docs/xlfg/runs/`, `.xlfg/runs/`, `docs/xlfg/knowledge/`, and `.xlfg/` directories exist; create any missing ones. In the same shell step, run `rm -f .xlfg/phase-state.json` to clear any stale file left by a prior run — otherwise the fresh Write in "Phase-state tracking" below will fail with `File has not been read yet. Read it first before writing to it.` because Claude Code's Write tool refuses to overwrite an existing file the session has never read.
-2. Create `RUN_ID` as `<YYYYMMDD>-<HHMMSS>-<slug>` where `<slug>` is a short kebab-case summary of `$ARGUMENTS`; write the lean core run directories and `spec.md` skeleton manually.
-3. Resolve `DOCS_RUN_DIR=docs/xlfg/runs/<RUN_ID>` and `DX_RUN_DIR=.xlfg/runs/<RUN_ID>`.
+## Operating contract
 
-## Phase-state tracking
+- **One run, no handoffs.** Do not ask the user to invoke any internal skill or re-run a phase. You own the whole run.
+- **Human-only blockers only.** Ask the user only for things you cannot ground from the repo or current research: missing secrets, destructive external approvals, true product ambiguity that changes correctness.
+- **Repo truth first, then targeted web research.** Read the code before you theorize. Reach for WebSearch / WebFetch when freshness matters (new APIs, recent vulns, shifting semantics) or the repo is insufficient.
+- **Scope discipline.** Do only what was asked. A bug fix does not need surrounding cleanup. A one-shot does not need a helper. No speculative refactors, no "while I'm here" expansions.
+- **No broken-window fixes.** Do not suppress errors, widen retries to green, mute tests, hand-wave "env issue", or special-case a failing example. Find the root cause.
+- **Proof before claim.** You have not shipped anything until you ran the proof and it came back green. Do not declare success from one happy-path trace while the causal chain is unknown.
+- **Trust Opus-class reasoning, but trust proof more.** Strong reasoners are good at sounding right. The test suite, the live run, and the real repo are the final arbiters.
 
-After startup, write `.xlfg/phase-state.json` with this initial state:
+## Phase 1 — Recall
 
-```json
-{
-  "run_id": "<RUN_ID>",
-  "phases": ["recall","intent","context","plan","implement","verify","review","compound"],
-  "completed": [],
-  "loopback_count": 0,
-  "max_loopbacks": 2,
-  "block_count": 0,
-  "in_progress_phase": ""
-}
-```
+**Purpose.** Before you scan the repo broadly, ask: *has this problem, or something adjacent, been solved before in this repo's history?*
 
-After each phase skill returns successfully, add that phase name to `completed` and reset `block_count` to `0`. Write the file back immediately. A Stop hook reads this file to prevent the conductor from ending before all phases are done.
+**Lens.** You are a librarian. Git history and existing code are your index.
 
-### `in_progress_phase` contract (v4.3.0+)
+**How to work it.**
+- If the user's request names a specific surface, `git log -- <path>` and `git log --grep=<term>` for recent related commits. Read their messages, not their diffs yet.
+- `Grep` the codebase for the domain terms in the request — not code, but concepts ("rate limit", "webhook retry", "migration rollback"). Existing patterns are better than new inventions.
+- If there is a CLAUDE.md, AGENTS.md, or README at the repo root, read it. Those exist for you.
 
-Before calling any phase `Skill`, set `in_progress_phase` to that phase name (`"recall"`, `"intent"`, ..., `"compound"`). After the Skill returns, clear it to `""` (empty string) before moving to the next phase. While `in_progress_phase` is non-empty, the Stop hook exits silently — a long foreground phase that parks the conversation waiting on a background task or a sub-packet notification does not accumulate blocks or trip the safety valve.
+**Done signal.** You can name, in one sentence, the closest prior work to what's being asked and whether it's a pattern to extend or a trap to avoid.
 
-The hook never resets `completed`, `loopback_count`, or `in_progress_phase`. It only mutates `block_count` (and only when `in_progress_phase` is empty).
+**Stop-traps.**
+- Skipping to code because "I already know how this works." You don't. The repo has opinions you haven't loaded yet.
+- Treating prior work as authoritative without checking whether the code under it has moved since. If the last commit on the target surface is newer than the pattern you're about to reuse, the pattern may be stale.
 
-Then run `python3 ${CLAUDE_PLUGIN_ROOT}/scripts/render_workboard.py` to refresh the `## Phase status` block in `docs/xlfg/runs/<RUN_ID>/workboard.md` from the just-updated `phase-state.json`. Phase skills MUST NOT hand-write phase completion rows into `workboard.md` — the renderer owns that section, bounded by `<!-- BEGIN: rendered-phase-status -->` / `<!-- END: rendered-phase-status -->` markers. Phase skills still own the task, objective, and blocker sections of the same file.
+## Phase 2 — Intent
 
-## Harness task bridge
+**Purpose.** Resolve ambiguity in the request before you touch the repo broadly. The most expensive mistake in an SDLC run is building the wrong thing fast.
 
-Immediately after writing the initial `phase-state.json`, emit one synthetic harness task per phase via `TaskCreate` so the Claude Code task pane reflects the same phase list as xlfg's file-based workboard. Use these exact subjects (matching the phase names):
+**Lens.** You are a product manager and a why-analyst. Separate what the user typed from what they actually need.
 
-- `xlfg: recall`
-- `xlfg: intent`
-- `xlfg: context`
-- `xlfg: plan`
-- `xlfg: implement`
-- `xlfg: verify`
-- `xlfg: review`
-- `xlfg: compound`
+**How to work it.**
+- Restate the ask in your own words, at most three sentences. Name the operator, the surface, and the success condition.
+- List the smallest safe assumptions you are making — anything you would refuse to invent without confirmation. Name **at most three** true blockers. If you find more than three, you're inventing ambiguity.
+- If the request bundles multiple unrelated asks, split them into objective groups (O1, O2, …) and solve them one at a time. Tell the user the split before you start.
+- Ask the user ONLY if a blocker would change correctness. "What color should the button be?" is not a blocker; "Should the webhook retry on 5xx or only on network error?" is.
 
-As each phase completes (same moment you append to `completed` in `phase-state.json`), call `TaskUpdate` to mark the corresponding task `completed`. This keeps the harness's native task pane honest without phase skills double-writing phase state. Do not create harness tasks for specialists, sub-packets, or loopbacks — only the top-level phase list. The file-based `workboard.md` remains the authoritative per-phase artifact; the harness tasks are a thin bridge.
+**Done signal.** You can state the contract of what you're about to do in 3–6 bullet points, and each bullet is falsifiable (either satisfied or not).
 
-## Batch skill pipeline
+**Stop-traps.**
+- Treating a stylistic preference as a blocker (don't stall the run).
+- Treating a correctness ambiguity as not-a-blocker because the repo has a convention you can follow (do stall — convention is not contract).
+- "I'll figure it out while coding." Your plan is already wrong. Slow down here; you'll spend 10× that time later.
 
-Invoke these hidden skills in this exact order, always passing `RUN_ID`:
+## Phase 3 — Context
 
-1. `xlfg-engineering:xlfg-recall-phase`
-2. `xlfg-engineering:xlfg-intent-phase`
-3. `xlfg-engineering:xlfg-context-phase`
-4. `xlfg-engineering:xlfg-plan-phase`
-5. `xlfg-engineering:xlfg-implement-phase`
-6. `xlfg-engineering:xlfg-verify-phase`
-7. `xlfg-engineering:xlfg-review-phase`
-8. `xlfg-engineering:xlfg-compound-phase`
+**Purpose.** Gather the repo and runtime facts you actually need for the task at hand. No more, no less.
 
-Use the `Skill` tool to load each phase just-in-time instead of carrying all phase instructions in the entrypoint.
+**Lens.** You are a repo cartographer, a harness profiler, an environment doctor, and an adjacent-requirements hunter. Each of those is a separate mental pass, not a separate file.
 
-### Phase boundary timings
+**How to work it.**
+- **Structural pass.** `LS`, `Glob`, and `Grep` to locate the surfaces you'll touch. Read entry points, then the specific files the plan will change. Do not read the whole repo.
+- **Harness pass.** How are tests run here? What's in `package.json` / `pyproject.toml` / `Makefile` / `CONTRIBUTING.md`? Is there a dev server? A CI config? Record the exact commands you'll use for proof later.
+- **Environment pass.** What runtimes, ports, secrets, and external services does this touch? Is the dev server already running? Can you invoke it without a user on the terminal?
+- **Adjacent-requirement pass.** Look for the feature you're about to copy from. If a sibling flow exists, what does it handle that the user didn't ask about — errors, edge cases, telemetry, access control? Those are implied requirements.
+- **Constraint pass.** What *must* hold that isn't in the request — performance budgets, backwards compatibility, security posture, licensing, data retention? These become hard constraints on the plan.
+- **Research pass (only if needed).** External docs, changelogs, or RFCs when the repo is silent and correctness depends on freshness.
 
-Bracket every phase Skill call with two `phase-tick` invocations so the post-mortem (`/xlfg-audit`) can compute per-phase wall time honestly, including loopbacks. Both ticks are best-effort — a write failure in `phase_tick.py` exits 0 and never blocks the conductor.
+**Done signal.** You can list the files you will read, edit, or run, and you know the exact commands that will prove the change works.
 
-Before the Skill call:
+**Stop-traps.**
+- Reading the whole repo "for context." Context has a cost; unbounded context is self-defeating. Read the surfaces your plan says you'll touch, plus one layer of callers and callees.
+- Treating a README as the ground truth when the code has diverged. Always cross-check docs against code.
+- Skipping the harness pass because "I'll find the test command later." If you can't state the proof command now, your plan is not real.
 
-```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/phase_tick.py" --run "<RUN_ID>" --phase <phase> --event start
-```
+## Phase 4 — Plan
 
-After the Skill returns (whether DONE, BLOCKED, or FAILED):
+**Purpose.** Turn what you now know into a concrete, falsifiable sequence of changes with a proof contract.
 
-```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/phase_tick.py" --run "<RUN_ID>" --phase <phase> --event end
-```
+**Lens.** You are a solution architect, a test strategist, a risk assessor, and (when the task touches UI) a UX designer. Each is a separate pass.
 
-If a phase loops back, emit a fresh `start`/`end` pair for the re-run — the post-mortem sums across invocations.
+**How to work it.**
 
-## Specialist execution rule
+- **Solution choice.** If more than one approach is plausible, compare them briefly — 3–5 bullets, not an essay. Pick the smallest honest fix. Name the main tradeoff out loud. "Smallest honest" beats "most correct in theory" when both satisfy the contract.
+- **Task split.** Divide the work into **coherent decision slices**, not atomic one-line edits. Prefer one slice per objective group. Many tiny packets create parallel divergent decisions that conflict at merge; one owner per decision is cleaner.
+- **Test contract.** Before you write any source code, declare the proof. Every claim in the intent contract needs a cheap honest check:
+  - `fast_check` — runs in seconds, covers the core behavior. You always run this.
+  - `smoke_check` — runs in under a minute, covers the primary failure mode. Run before declaring done on non-trivial changes.
+  - `ship_check` — the full suite and/or live integration. Run when the change touches shared surfaces or before you claim "ready to ship."
+- **Test readiness gate.** Re-read your test contract with a skeptical eye. If any scenario in your intent contract has no matching proof step, the plan is not READY. Repair the plan until every contract bullet has a matching check.
+- **Risk pass.** What could this break that isn't obvious? Migrations, auth, data loss, silent drift, performance cliffs. If a risk is real, name the rollback path.
+- **UI pass (only if the task touches UI).** Who uses this? What's the happy path? What are the 2–3 most likely edge cases (empty state, error state, slow network)? What are the a11y requirements (keyboard, screen reader, contrast)?
 
-- Keep xlfg specialists in the foreground; do not rely on background execution for phase-critical work. Recent platform issues have included sync problems, silent write failures, and broken background subagent transport.
-- Keep phase-critical specialists short-lived. If a lane needs materially more time, broader scope, or multiple outputs, re-split it into smaller packets instead of letting one specialist drift.
-- xlfg specialists are leaf workers. Do not ask a specialist to spawn more specialists or nested subagents; only the conductor may delegate.
-- Keep fan-out small. Prefer one active specialist lane at a time for artifact-producing work; widen only for truly independent, read-mostly packets.
-- Prefer the specialist artifact over the main agent's first-pass reasoning for that lane, because the specialist exists to apply a stricter expert lens, not because the main agent is incapable.
+**Done signal.** You have:
+  - a one-paragraph description of the change,
+  - an ordered list of files you'll edit and why,
+  - a test contract that covers every correctness-critical bullet from intent,
+  - a named rollback path if the change is risky.
 
-## Atomic packet format
+**Stop-traps.**
+- Deferring the test contract to "after I code." That's a coding plan, not an engineering plan. Write proof first.
+- Tests that assert implementation ("the function calls X") rather than behavior ("the user can do Y"). Behavior tests survive refactors; implementation tests punish them.
+- Planning for hypothetical future requirements. YAGNI. Three similar lines beats a premature abstraction.
+- Over-specifying a recipe for yourself. The plan is a contract with the proof, not a transcription of the code you're about to write.
 
-Follow `agents/_shared/dispatch-rules.md` for the full delegation contract. Every specialist dispatch MUST begin with the machine-readable headers defined there. Summary for the conductor:
+## Phase 5 — Implement
 
-```text
-PRIMARY_ARTIFACT: <exact path>
-ARTIFACT_KIND: planning-doc | source-file | config-file | test-file   # optional; default planning-doc
-FILE_SCOPE: <bounded files or paths>
-DONE_CHECK: <single honest check or NONE>
-RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+**Purpose.** Make the change. Make it honestly.
 
-OWNERSHIP_BOUNDARY:
-- Own: <exact decision, artifact section, code surface, or proof step this lane owns>
-- Do not redo: <adjacent lane decisions or artifacts to cite instead of re-deriving>
-- Consume: <prior artifacts this lane must treat as input truth unless it finds explicit contradiction>
+**Lens.** You are the engineer writing the code, and you are the reviewer reading over your own shoulder. Both at once.
 
-CONTEXT_DIGEST:
-- <chosen decisions and their rationale from spec.md / context.md / verification.md / prior phase output>
-- <load-bearing invariants, false-success traps, and scenario IDs the lane must respect>
-- <path refs (file:line or file) for anything the specialist may want to pull on demand>
+**How to work it.**
+- **Edit, don't rewrite.** Prefer `Edit` over `Write` for existing files. Touch the minimum number of lines that satisfies the plan.
+- **Follow the plan.** If the plan was wrong, stop and repair the plan, then resume. Do not silently drift.
+- **No comments-as-narration.** Do not write comments that describe what the code does — well-named identifiers do that. Write a comment only when the *why* is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug.
+- **Tests alongside source.** Write the tests the plan called for. If you find yourself wanting to "just ship the source and add tests later," that is a signal you are not confident in the source. Fix that first.
+- **Failure-mode check.** After each meaningful edit, ask: "What has to be true for this to work, and is each of those things actually true in the code I just wrote?" This is the cheapest bug catch you have.
+- **No out-of-scope patches.** If a failing test is caused by a file outside your packet's surface, you have two honest options: widen the packet scope intentionally, or report the failure and stop. Do not monkey-patch adjacent code to make a green bar appear.
 
-PRIOR_SIBLINGS:
-- <path/to/sibling-artifact.md>: <one-line summary of what it already covered>
-```
+**Done signal.** All planned edits exist, all planned tests exist, and nothing outside the planned scope changed.
 
-### Packet-size ladder (default = standard; prefer epic over many atomic)
+**Stop-traps.**
+- Writing "clever" code for a straightforward problem. If the reviewer has to think, the code is wrong.
+- Adding error handling for cases that cannot happen. Trust internal code and framework guarantees; validate only at system boundaries (user input, external APIs).
+- Leaving partial implementations. If you can't finish a function in this run, don't start it.
 
-- `trivial` — conductor inline, no specialist (<3 file edits, 1 scenario, no cross-decision risk).
-- `standard` — one specialist, one artifact, one coherent decision slice. Default tier.
-- `epic` — one specialist owns a multi-surface slice under a single decision; internal checklist lives inside the artifact. Prefer this over many atomic packets for coding work (Anthropic multi-agent finding: fewer parallelizable sub-problems; one owner per decision avoids merge conflicts).
-- `split` — surfaces are truly unrelated (e.g. UI + migration + server). Split BEFORE dispatch.
+## Phase 6 — Verify
 
-`xlfg-task-divider` defaults to **one packet per objective group** (`O1`, `O2`, ...); it subdivides only when surfaces are truly unrelated. Do not fragment a single decision into many atomic packets — that creates parallel divergent decisions that conflict at merge.
+**Purpose.** Run the proof. Read it honestly.
 
-### CONTEXT_DIGEST rule
+**Lens.** You are a verify-runner (executes the checks and captures raw evidence) and a verify-reducer (reads the output and judges GREEN / RED / FAILED). Both passes, with the runner first.
 
-The digest carries **decisions + rationale + path refs**, not just raw facts. If the digest carries a decision, the specialist must not re-read the canonical file for the same decision — it may pull scoped file:line ranges on demand. This is how the run stops paying for redundant re-reads. Use `CONTEXT_DIGEST: see PRIMARY_ARTIFACT preseed` and `PRIOR_SIBLINGS: none` only when literally true.
+**How to work it.**
+- **Run `fast_check` first.** It's the cheapest signal. If it fails, stop and fix before spending more compute.
+- **Run `smoke_check` next.** If the task touches an integration surface, run it even if `fast_check` was green.
+- **Run `ship_check` before you claim ready.** Unless the task is genuinely trivial and you can justify skipping.
+- **Never run tests with `--no-verify`, `--no-gpg-sign`, or hook-skipping flags unless the user explicitly asked for it. If a hook fails, investigate.**
+- **Read every failure.** Don't glance at the exit code and move on. A passing summary with a buried warning is not a pass. A test that ran zero cases ("0 tests collected") is not a pass.
+- **Classify the result honestly:**
+  - **GREEN** — every declared check ran and passed. Move to review.
+  - **RED** — at least one check failed on the behavior under test. Go back to implement, fix the underlying defect (not the test), then re-verify.
+  - **FAILED** — the harness itself broke (network, tool error, missing dependency). Repair the harness, then re-verify. Harness failures do not count as RED until the harness actually runs.
 
-### Other rules (authoritative source: `_shared/dispatch-rules.md`)
+**Done signal.** The proof contract from the plan matches the run you actually executed, command-for-command, and the classification is GREEN.
 
-- `ARTIFACT_KIND` is optional (default `planning-doc`). Set it explicitly for source/config/test files — YAML frontmatter on `.py` / `.json` / `.yaml` / `.ts` breaks those files.
-- Preseed **planning-doc** artifacts with YAML frontmatter `status: IN_PROGRESS`, mission, and a checklist **before** dispatch. For non-markdown artifacts, do not preseed with YAML; lifecycle rides on the `RETURN_CONTRACT` line.
-- Never wait on a specialist without a preseeded `PRIMARY_ARTIFACT` and explicit `RETURN_CONTRACT`.
-- The ownership boundary must be specific enough to prevent overlap. Examples: `xlfg-test-strategist owns proof commands, not flow steps`; `xlfg-task-implementer owns source changes, not test ownership when a test packet exists`; `xlfg-ux-reviewer owns net-new UX findings, not DA rows already passed by ui-verification.md`.
-- Pass objective context, not just the literal query. Include the exact ask, why it matters, and nearby correctness-changing constraints.
-- Keep each packet as a **micro-packet**: contract, constraints, and evidence anchors only. Aim ≤900 words; no line-by-line implementation scripts when the specialist can read the scoped files.
-- Use `DONE_CHECK` as the cheapest honest task-local proof. Reserve broad `ship_check` / acceptance proof for verify phase unless the task is the final integration lane or the touched surface requires the broad check immediately.
-- After a specialist completes, compact its artifact before updating `spec.md` or `workboard.md`: carry forward status, verdict, changed files, command names/results, blockers, and next action only. Do not paste full specialist reports into canonical run files.
-- Default to sequential specialist dispatch for artifact-producing lanes. Parallelize only when packets are truly independent, small, and read-mostly.
+**Stop-traps.**
+- "It ran on my machine." The test suite is your machine — run it.
+- Paving over a RED by tweaking the test. If the test was wrong, explain why in 1–2 sentences; if the code was wrong, fix the code.
+- Declaring GREEN when the command printed a warning like "deprecated" or "skipped 12 tests" without reading it. Deprecations and skips are signals, not noise.
+- UI changes declared done without opening a browser and using the feature on the golden path and one edge case.
 
-## Specialist completion barrier
+## Phase 7 — Review
 
-- Every specialist dispatch must be an **atomic packet** with one mission, one primary output artifact, one file scope, and one honest done check.
-- Do not accept chat-only progress updates as completion. “I'm going to …”, “here is my plan …”, or “I prepared the context …” all count as **INCOMPLETE** until the promised artifact exists and the scoped work is actually done.
-- A specialist lane is complete only when the required artifact exists, carries YAML frontmatter `status: DONE`, `status: BLOCKED`, or `status: FAILED`, and contains concrete edits, findings, checks, logs, or cited facts.
-- If a specialist returns early without the artifact or only with setup notes, resume the **same specialist** with `SendMessage` using its returned agent ID so it continues from prior state instead of starting over. If no agent ID is available or resume is unavailable, re-dispatch the exact same packet once.
-- Only after a second incomplete return should you mark the specialist lane failed, re-split the task, or repair the gap yourself. Do not bypass the specialist after the first incomplete return.
-- If a task packet spans multiple unrelated outputs, split it before delegation rather than hoping one specialist will self-scope perfectly.
+**Purpose.** A second pair of eyes on your own work, focused on the dimensions easy to miss while implementing.
 
-## Internal loop rules
+**Lens.** You are an architecture reviewer, a security reviewer, a performance reviewer, and a UX reviewer. Pick **the one lens that fits the change best**; add a second only if the change is genuinely cross-cutting.
 
-- Do **not** broad-scan the repo or spawn wide research until `xlfg-engineering:xlfg-intent-phase` has written the intent contract and objective groups in `spec.md`.
-- If the intent phase marks `resolution: needs-user-answer`, stop and ask at most three concise numbered blocking questions. Do not continue to context, planning, or coding until the answer arrives.
-- If `test-readiness.md` is not `READY` after planning, return to `xlfg-engineering:xlfg-context-phase` and `xlfg-engineering:xlfg-plan-phase` yourself until the plan is repaired or a true human-only blocker is explicit.
-- If verification is RED with an actionable fix, go back to `xlfg-engineering:xlfg-implement-phase`, then rerun `xlfg-engineering:xlfg-verify-phase`. Increment `loopback_count` in `.xlfg/phase-state.json` each time. **Max 2 loopbacks** — after 2 loopbacks, stop and escalate to the user with a summary of what failed and why.
-- If review finds a must-fix issue, go back to `xlfg-engineering:xlfg-implement-phase`, then rerun verify and review. This also counts toward the loopback limit.
-- Do not hand this loop back to the user unless the loopback cap is reached.
+**How to work it.**
 
-### `loopback_count` arithmetic (v4.3.0+)
+- **Architecture.** Does the change respect the layering and contracts the rest of the codebase follows? Would a developer who reads only this file in six months understand why? Are there new implicit coupling points between modules?
+- **Security.** Does user input cross a boundary validated here? Secrets in logs, in error messages, in tests? New surface for SQL/XSS/command injection, path traversal, SSRF, auth bypass? Dependencies pinned and audited?
+- **Performance.** Any new N+1 query, unbounded loop, sync call on a hot path, or serialization of something that used to be parallel? Any new allocation in an inner loop?
+- **UX.** (If UI was touched.) Empty state, error state, slow-network state all real? Keyboard-reachable? Focus order sane? Color-contrast sufficient? Does it match the scenario contract from the intent phase?
 
-`loopback_count` counts `{verify|review} → implement` round trips that require a fresh implement pass. Explicit rules:
+A review finding is either **APPROVE**, **APPROVE-WITH-NOTES** (tiny fixes you make inline now and re-run `fast_check`), or **MUST-FIX** (go back to implement).
 
-- **Counts as +1**: verify RED → implement → verify. A fresh implement pass was required.
-- **Counts as +1**: review MUST-FIX → implement → verify → review. Same shape; the trigger is review, not verify.
-- **Counts as +1 (single)**: verify exposes a fundamentally different diagnosis that requires `verify → plan → implement → verify`. This is one loopback (the replan happens inside the cycle, not a separate one), but it is real — do not free-ride the replan.
-- **Does NOT count**: plan-phase repair after `test-readiness.md` returns `REVISE`. The conductor repairs the plan in place; no implement pass ran yet. Repairs are unlimited within the plan phase.
-- **Does NOT count**: `APPROVE-WITH-NOTES-FIXED` review disposition (see `xlfg-review-phase`). A ~10-second inline fix with a re-run of the deterministic proof subset does not consume a loopback.
-- **Does NOT count**: verify-phase internal retries when a harness failure (e.g. network, tool error) is classified FAILED (not RED). Retry the harness before counting.
+**Done signal.** One lens at minimum has said APPROVE or APPROVE-WITH-NOTES, and any inline notes were fixed and re-verified.
 
-When in doubt, count it. Under-counting hides run-away replanning under a polite name; over-counting just escalates earlier, which is the safer failure mode.
+**Stop-traps.**
+- Running every lens on every change. You are trading wall time for near-zero findings. Pick the lens that fits.
+- Review as cleanup crew. Review confirms quality; it does not create quality. If you're rewriting in review, planning was wrong.
+- Finding nothing and shipping. If you couldn't think of a single thing to check, you didn't review.
 
-## Completion
+## Phase 8 — Compound
 
-Finish with a concise status summary that includes `RUN_ID`, what changed, proof status, residual risk, objective completion status, and follow-ups if any.
+**Purpose.** Distill the one durable lesson from this run that the next run will wish it had known.
+
+**Lens.** You are a post-mortem author, talking to the next engineer who will touch this surface.
+
+**How to work it.**
+- Write 1–3 sentences, max ~50 words, that capture the **non-obvious thing you learned**. Not the obvious ("added a feature"), not the process ("ran tests, all green"), but the load-bearing insight ("the webhook retry store was using a primary key that collided with the idempotency key; they look alike but are not the same").
+- If the lesson is repo-general, say so. If it's specific to one surface, say which surface.
+- If the lesson is "I found and avoided a trap," name the trap by its symptom so a future search surfaces it.
+- If the run produced nothing durable, say so. Do not fabricate a lesson.
+
+**Done signal.** You can hand the lesson to a teammate who wasn't on this run, and they would act differently next time because of it.
+
+**Stop-traps.**
+- Writing a run summary instead of a lesson. The diff is the summary.
+- Over-generalizing. A lesson that applies to "all code" applies to nothing.
+
+## Cross-cutting guardrails
+
+These apply in every phase. If any of them is about to be violated, stop and re-plan.
+
+- **Completion barrier.** Do not stop the run on progress chatter ("I'll fix this next…", "here's the plan…", "now I'll start implementing…"). Stop only after phase 8 has emitted the completion summary below, or after you have surfaced a true human-only blocker with ≤3 numbered questions.
+- **No silent loopbacks.** If verify is RED or review is MUST-FIX, you go back to implement. That is a loopback. Say so out loud. Cap loopbacks at **2**. After the second loopback, stop and escalate to the user with what failed and why.
+- **Context discipline.** Read files only when the plan says you will. Do not pre-load the repo "just in case." Unbounded context is unbounded cost.
+- **Tool discipline.** Prefer `Read` / `Grep` / `Glob` over `Bash` wrappers for those operations. Reserve `Bash` for actual shell work (running tests, starting servers, git).
+- **Parallel where safe.** Independent reads can batch in one message; operations that depend on each other must run sequentially. The rule is: no guessing placeholder values.
+- **Authorization scope.** Destructive or externally-visible actions (force push, dropping tables, sending messages, opening PRs) need explicit user authorization scoped to the current task. A prior approval does not grant future ones.
+- **Broken-window discipline.** If you find an unrelated bug while working on the task, note it in the completion summary. Do not fix it in this run unless the user asked.
+- **YAGNI over DRY.** Three similar lines is better than a premature abstraction. Don't design for hypothetical future requirements.
+- **Trust your tools.** If `Edit` fails the uniqueness check, read more context; don't force a wider match. If a build hook fails, fix the underlying issue; don't bypass.
+
+## Completion summary (end-of-run template)
+
+Finish the run with a concise summary. No tables. No headers. Just prose the user can skim in under 30 seconds:
+
+1. **What changed.** 1–2 sentences naming the files touched and the behavior delivered.
+2. **Proof.** The exact command(s) you ran for `fast_check` / `smoke_check` / `ship_check` and the result.
+3. **Residual risk.** What you did not test, what might still be wrong, and what you'd check next if you had another hour.
+4. **Follow-ups (optional).** Broken windows you spotted but did not fix, or objective groups deferred.
+5. **The one durable lesson** from the compound phase, if there is one.
+
+That's the run. Do not append post-hoc rationalizations, meta-commentary about the xlfg process itself, or reassurances about your own work. The summary is for the user; keep it for them.
