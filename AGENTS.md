@@ -22,7 +22,7 @@ Read `NEXT_AGENT_CONTEXT.md` first. It is the required handoff document and expl
 - `plugins/xlfg-engineering/scripts/audit_harness.py` — CI self-audit (5 checks)
 - `plugins/xlfg-engineering/CHANGELOG.md` — v6 evolution notes
 - `plugins/xlfg-engineering/CLAUDE.md` — plugin development rules
-- `tests/test_xlfg_v6.py` — the 35 invariants that guard the v6.3 shape
+- `tests/test_xlfg_v6.py` — the 37 invariants that guard the v6.3 shape
 - `docs/` — archival research notes from the v3–v5 era (kept for reading, not active guidance)
 
 ## What NOT to reintroduce

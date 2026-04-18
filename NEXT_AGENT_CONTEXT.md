@@ -17,7 +17,7 @@ Directory layout at v6.3:
 - `skills/xlfg-<phase>-phase/SKILL.md` — 9 phase skills (unchanged since v6.2)
 - `skills/xlfg-<name>/SKILL.md` — 27 specialist lens skills (new in v6.3)
 
-Tests expanded: 33 → 35 (added `test_specialist_skills_carry_five_section_shape` and `test_phase_skills_advertise_specialists`). Audit harness `_check_skill_surface` now covers all 36 skills (144 assertions vs 36 before).
+Tests expanded: 33 → 37. v6.3.0 added `test_specialist_skills_carry_five_section_shape` and `test_phase_skills_advertise_specialists`. v6.3.1 added `test_phase_skills_body_and_allowed_tools_stay_in_sync` (drift lint between body and frontmatter) and `test_specialist_skill_bodies_stay_concise` (400-word ceiling per specialist body). Audit harness `_check_skill_surface` covers all 36 skills (144 assertions vs 36 before).
 
 ## Previous state (6.2.0)
 

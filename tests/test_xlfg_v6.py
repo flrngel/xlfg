@@ -470,6 +470,73 @@ class TestSkills(unittest.TestCase):
                     f"skills/{phase}: must advertise specialist {mention!r}",
                 )
 
+    def test_phase_skills_body_and_allowed_tools_stay_in_sync(self) -> None:
+        """Drift lint: the specialists named in a phase skill's "Optional
+        specialist skills" body section must match the specialists granted in
+        its `allowed-tools` frontmatter exactly.
+
+        This catches the failure mode where a future edit adds a specialist
+        bullet to the body but forgets the matching Skill grant (or vice versa).
+        """
+        phases_with_specialists = (
+            "xlfg-intent-phase",
+            "xlfg-context-phase",
+            "xlfg-plan-phase",
+            "xlfg-implement-phase",
+            "xlfg-verify-phase",
+            "xlfg-review-phase",
+            "xlfg-debug-phase",
+        )
+        specialist_name_re = re.compile(r"xlfg-engineering:(xlfg-[\w-]+)")
+        for phase in phases_with_specialists:
+            text = (PLUGIN / "skills" / phase / "SKILL.md").read_text(encoding="utf-8")
+            fm = _frontmatter(text)
+            tools = fm.get("allowed-tools", "")
+            granted = {
+                name for name in specialist_name_re.findall(tools)
+                if name in EXPECTED_SPECIALIST_SKILLS
+            }
+            body_start = text.find("## Optional specialist skills")
+            self.assertGreater(
+                body_start, -1,
+                f"skills/{phase}: missing '## Optional specialist skills' section",
+            )
+            next_section = text.find("\n## ", body_start + 1)
+            body_section = text[body_start:next_section] if next_section != -1 else text[body_start:]
+            advertised = {
+                name for name in specialist_name_re.findall(body_section)
+                if name in EXPECTED_SPECIALIST_SKILLS
+            }
+            self.assertEqual(
+                granted, advertised,
+                f"skills/{phase}: drift between allowed-tools Skill grants and "
+                f"'Optional specialist skills' body.\n"
+                f"  in allowed-tools only: {sorted(granted - advertised)}\n"
+                f"  in body only: {sorted(advertised - granted)}",
+            )
+
+    def test_specialist_skill_bodies_stay_concise(self) -> None:
+        """Specialist bodies follow the lean 5-section template — under 400
+        words, excluding frontmatter. Ceiling is ~33% above the current max
+        (~302 words) so no existing specialist needs a rewrite; bloat gets
+        caught early.
+        """
+        word_ceiling = 400
+        for name in EXPECTED_SPECIALIST_SKILLS:
+            text = (PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+            lines = text.split("\n")
+            if lines and lines[0].strip() == "---":
+                end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), -1)
+                body = "\n".join(lines[end + 1:]) if end > 0 else text
+            else:
+                body = text
+            words = len(re.findall(r"\S+", body))
+            self.assertLessEqual(
+                words, word_ceiling,
+                f"skills/{name}: body is {words} words, ceiling is {word_ceiling}. "
+                "Tighten the 5 sections before adding more prose.",
+            )
+
 
 # ---------------------------------------------------------------------------
 # Hooks

@@ -1,3 +1,16 @@
+## 6.3.1 — drift lint + specialist body ceiling
+
+Test-only patch closing the two residual risks flagged in the v6.3.0 run summary. No behavior change.
+
+### Added
+
+- `test_phase_skills_body_and_allowed_tools_stay_in_sync` — for each of the 7 non-trivial phase skills, the set of specialists mentioned in the "Optional specialist skills" body section must equal the set granted via `Skill(xlfg-engineering:xlfg-<name> *)` in `allowed-tools`. Catches the failure mode where a future edit updates one side and not the other.
+- `test_specialist_skill_bodies_stay_concise` — each specialist `SKILL.md` body (excluding frontmatter) must be ≤400 words. Ceiling is ~33% above the current maximum (302 words, `xlfg-test-readiness-checker`) so no existing specialist needs a rewrite; bloat gets caught early. Phase skills are not covered — they legitimately run longer (up to ~840 words for `xlfg-debug-phase`).
+
+### Changed
+
+- Test suite grew 35 → 37.
+
 ## 6.3.0 — restore v5 specialists as on-demand hidden skills
 
 v6.0 nuked the 27 specialist sub-agents. v6.2 restored the phase skills for context-budget discipline. v6.3 restores the specialist expertise too — but as **hidden skills that phase skills load on-demand**, not as sub-agents with dispatch packets. Opus-class models can reach for a focused lens (security reviewer, root-cause analyst, test strategist, etc.) when the work calls for it, without paying the context cost of all 27 lenses being loaded up front.
