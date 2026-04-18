@@ -1,72 +1,39 @@
 ---
-description: Internal xlfg phase skill. Use only during /xlfg runs to run proportional multi-lens review and capture only net-new findings or residual risk.
+description: Internal xlfg phase skill. Second pair of eyes on the change — architecture, security, performance, or UX. One lens by default.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write, Agent, SendMessage
+allowed-tools: Read, Grep, Glob, LS, Bash
 ---
 
 # xlfg-review-phase
 
-Use only during `/xlfg` orchestration.
+Use only during `/xlfg` orchestration. The conductor passes `RUN_ID` as `$ARGUMENTS`.
 
-Input: `$ARGUMENTS` (`RUN_ID` or `latest`)
+## Purpose
 
-## Objective
+A second pair of eyes on your own work, focused on the dimensions easy to miss while implementing.
 
-Run proportional review after verification, not cleanup theater before it.
+## Lens
 
-## Process
+You are an architecture reviewer, a security reviewer, a performance reviewer, and a UX reviewer. Pick **the one lens that fits the change best**; add a second only if the change is genuinely cross-cutting.
 
-1. Resolve `RUN_ID`, `DOCS_RUN_DIR`, and `DX_RUN_DIR`.
-2. Read:
-   - `spec.md`
-   - `verification.md`
-   - `workboard.md`
-   - optional `risk.md`, `review-summary.md`, `proof-map.md`
-   - `docs/xlfg/knowledge/current-state.md`
-3. Choose review fan-out by risk:
-   - quick / low risk: 0–1 lens
-   - standard: 1 lens
-   - deep / high risk: up to 2 lenses
-4. Use the specialized review agents as lane owners for the chosen lenses:
-   - `xlfg-architecture-reviewer`
-   - `xlfg-security-reviewer`
-   - `xlfg-performance-reviewer`
-   - `xlfg-ux-reviewer`
-5. Before dispatch, shrink each review assignment to one change cluster plus one review lens. If a single lens would otherwise cover multiple unrelated fixes, split it into review packets (for example `architecture-R1.md`, `architecture-R2.md`) so each reviewer still gets one clear input and one clear output.
-6. Keep them foregrounded, short-lived, and leaf-only. Preseed each review artifact before dispatch. Each chosen reviewer must write its own artifact under `DOCS_RUN_DIR/reviews/` before the conductor synthesizes `review-summary.md`. If a reviewer returns only a chat summary or setup note, use `SendMessage` with the returned agent ID to resume the same reviewer once instead of accepting the lane. If no agent ID is available, re-dispatch the exact same packet once.
-7. Synthesize `review-summary.md` from the reviewer artifacts. Do not treat an empty or missing reviewer artifact as a clean review.
-8. Write `review-summary.md` only when there are real findings or non-trivial residual risks.
-9. Update `spec.md` and `workboard.md` with must-fix findings or accepted residual risk.
+## How to work it
 
-## Delegation packet rules
+- **Architecture.** Does the change respect the layering and contracts the rest of the codebase follows? Would a developer who reads only this file in six months understand why? Are there new implicit coupling points between modules?
+- **Security.** Does user input cross a boundary validated here? Secrets in logs, in error messages, in tests? New surface for SQL/XSS/command injection, path traversal, SSRF, auth bypass? Dependencies pinned and audited?
+- **Performance.** Any new N+1 query, unbounded loop, sync call on a hot path, or serialization of something that used to be parallel? Any new allocation in an inner loop?
+- **UX.** (If UI was touched.) Empty state, error state, slow-network state all real? Keyboard-reachable? Focus order sane? Color-contrast sufficient? Does it match the scenario contract from the intent phase?
 
-Follow `agents/_shared/dispatch-rules.md` for the full delegation contract (packet-size ladder, preseed rule, machine-readable headers with `PRIMARY_ARTIFACT` / `DONE_CHECK` / `RETURN_CONTRACT` / `OWNERSHIP_BOUNDARY` / `CONTEXT_DIGEST` / `PRIOR_SIBLINGS` / `Do not redo` / `Consume:`, micro-packet budget, proof budget, compaction, sequential-dispatch default, resume-same-specialist-before-fallback). Only the phase conductor may delegate.
+A review finding is either:
+- **APPROVE** — ship it.
+- **APPROVE-WITH-NOTES** — tiny fixes you make inline now and re-run `fast_check`; does not count toward the loopback cap.
+- **MUST-FIX** — go back to implement. Counts as one loopback.
 
-Every review-phase packet MUST begin with the machine-readable headers from `_shared/dispatch-rules.md §3`. `CONTEXT_DIGEST` carries the relevant objective(s) and false-success trap from `spec.md`, the verdict and key findings from `verification.md`, and the changed file list. The digest saves the reviewer 3–5 turns of re-reading files the conductor already loaded. The siblings list is how a second reviewer (e.g., security after architecture) avoids re-flagging findings the first reviewer already raised — net-new findings only.
+## Done signal
 
-### Review ownership boundaries
+One lens at minimum has said APPROVE or APPROVE-WITH-NOTES, and any inline notes were fixed and re-verified.
 
-- Every reviewer must fill "Already covered by verification" before "Net-new findings".
-- Architecture owns structural drift and boundaries, not security, performance, or UX unless those are the structural cause.
-- Security owns auth/data/secret/injection risks, not generic maintainability or harness speed.
-- Performance owns runtime and harness cost traps, not broad architecture preference.
-- UX owns user-flow and accessibility critique not already covered by `ui-verification.md` or checker DA results.
+## Stop-traps
 
-Keep dispatches as **micro-packets**: lens, changed-file cluster, verification verdict, and unresolved risk anchors only. Do not paste full diffs, full verification logs, or prior review reports into review packets.
-
-Compact review artifacts before updating `review-summary.md`, `spec.md`, or `workboard.md`: carry forward disposition, must-fix findings, fixed-in-run notes, residual risk, and next action only; leave full lens detail in `reviews/*.md`. Do not paste full specialist reports into canonical run files.
-
-## Verdicts
-
-- `APPROVE` — ship.
-- `APPROVE-WITH-NOTES` — ship; findings recorded as accepted residual risk.
-- `APPROVE-WITH-NOTES-FIXED` — reviewer flagged a P1 concern with an explicit fix-in-place disposition (e.g. "add a one-line comment", "rename this parameter"), the conductor applied the fix immediately, and the deterministic proof subset was re-run green. Record the fix in `review-summary.md` under "Fixed in-run" with the before/after one-liner. This verdict does **not** consume a loopback — it is cheaper than a full `implement → verify → review` round trip and the review already named the exact change.
-- `MUST-FIX` — do not ship. Send the run back through `implement → verify → review`. This DOES consume a loopback.
-
-Use `APPROVE-WITH-NOTES-FIXED` only when all three are true: (1) reviewer explicitly labeled the finding "fix in place" or equivalent, (2) the fix is a ≤ a few-line local edit, (3) the deterministic proof subset re-ran green after the fix. Anything bigger is `MUST-FIX`.
-
-## Guardrails
-
-- Review is not the first place to discover that verification never happened.
-- Capture only net-new findings and real residual risk. One clear input and one clear output are the rule for review packets too.
-- If review finds a must-fix issue, send the run back through implement → verify → review yourself.
+- Running every lens on every change. You are trading wall time for near-zero findings. Pick the lens that fits.
+- Review as cleanup crew. Review confirms quality; it does not create quality. If you're rewriting in review, planning was wrong.
+- Finding nothing and shipping. If you couldn't think of a single thing to check, you didn't review.

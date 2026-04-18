@@ -1,51 +1,87 @@
 ---
-description: Internal xlfg phase skill. Use only during /xlfg runs to promote verified durable lessons into knowledge without copying the entire run into memory.
+description: Internal xlfg phase skill. Write the per-run durable archive; sparingly promote load-bearing insights into docs/xlfg/current-state.md.
 user-invocable: false
 allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write
 ---
 
-
 # xlfg-compound-phase
 
-Use only during `/xlfg` orchestration.
+Use only during `/xlfg` orchestration. The conductor passes `RUN_ID` as `$ARGUMENTS`.
 
-Input: `$ARGUMENTS` (`RUN_ID` or `latest`)
+## Purpose
 
-## Objective
+Produce the durable artifacts of this run — the per-run archive future sessions can recall, and (rarely) a promotion to the project's living summary.
 
-Promote only verified, reusable lessons into durable knowledge and leave the next run a better starting point.
+## Lens
 
-## Process
+You are a post-mortem author, talking to the next engineer who will touch this surface.
 
-1. Resolve `RUN_ID`, `DOCS_RUN_DIR`, and `DX_RUN_DIR`.
-2. Read the highest-signal artifacts from the run:
-   - `spec.md`
-   - `memory-recall.md`
-   - `verification.md`
-   - optional `review-summary.md`, `risk.md`, `run-summary.md`
-   - `docs/xlfg/knowledge/current-state.md`
-   - `docs/xlfg/knowledge/*.md`
-   - `docs/xlfg/knowledge/ledger.jsonl`
-3. Promote only verified durable lessons into the appropriate tracked files under `docs/xlfg/knowledge/`.
-4. Use `current-state.md` for repo-wide durable handoff when appropriate; keep branch-local lessons in the run when they are not yet durable.
-5. Append durable events to `ledger.jsonl`.
-6. Write `compound-summary.md` and, when helpful, `run-summary.md`.
-7. Update any residual task/blocker notes in `workboard.md`. The `## Phase status` block (including `compound: DONE`) is rendered by the conductor from `.xlfg/phase-state.json`.
+## How to work it
 
-## `current-state.md` size cap (v4.3.0+)
+### 1. Write `docs/xlfg/runs/<RUN_ID>/run-summary.md` (mandatory)
 
-`current-state.md` is the shortest tracked handoff for the next agent. Each run may add at most **~200 words** to it. Longer narrative, per-run decision history, and repro steps belong in the run's own `compound-summary.md` (long-form home).
+This is mandatory for every `/xlfg` run. Create the directory if needed. Use this template exactly:
 
-Apply this cap before writing:
+```markdown
+# Run summary — <RUN_ID>
 
-1. Draft the durable carry-forward as if it were a one-paragraph entry (≤ ~200 words).
-2. If the draft is longer, split: keep the ≤200-word essence in `current-state.md`; move the rest to `compound-summary.md` and reference it from the ledger.
-3. If two consecutive runs' drafts collide on the same section of `current-state.md`, consolidate — do not append. An ever-growing wall is a smell that the file has stopped being a handoff.
+## Ask
+<1–2 sentences restating what the user asked. Not a paste of $ARGUMENTS.>
 
-Anything beyond ~200 words of a single run's entry in `current-state.md` should be read as a signal to move text to `compound-summary.md`, not as license to grow the handoff.
+## What changed
+- `<path/to/file>`: <one line, why the change>
+- `<path/to/file>`: <one line, why the change>
 
-## Guardrails
+## Proof
+- fast_check: `<exact command>` — <result: PASSED / FAILED / NOT RUN with justification>
+- smoke_check: `<exact command>` — <result>
+- ship_check: `<exact command>` — <result>
 
-- Do not copy the whole run into memory.
-- Do not promote lessons that were not actually verified.
-- Favor small, reusable truths over vague retrospective prose.
+## Residual risk
+<What you did not test, what might still be wrong, what you'd check next with another hour. 1–3 bullets.>
+
+## Durable lesson
+<1–3 sentences, ~50 words, capturing the non-obvious thing learned. Omit the section entirely if the run produced nothing durable — do not fabricate.>
+```
+
+Aim ~200 words total. It's an archive, not a narrative.
+
+### 2. Consider promoting to `docs/xlfg/current-state.md`
+
+This is the project's one-page "read this first" handoff. Promote only when the run learned something **a future run would regret not knowing** — a load-bearing invariant, an active constraint, a trap that already bit someone.
+
+- If `current-state.md` doesn't exist and this run earned one, create it with the template below.
+- If it exists, edit it in place. Keep the whole file under ~300 words.
+- Promote sparingly: most runs should NOT update `current-state.md`. The signal is diluted if every run adds a line.
+
+Template for `current-state.md`:
+
+```markdown
+# <project name> — current state
+
+Read this first when entering this repo with xlfg.
+
+## What this project is
+<1–2 sentences>
+
+## Load-bearing truths
+- <fact a future run must know>
+- <fact a future run must know>
+
+## Known traps
+- <failure mode that bit us before>
+
+## Active constraints
+- <deadline, compliance requirement, migration in flight>
+```
+
+## Done signal
+
+`docs/xlfg/runs/<RUN_ID>/run-summary.md` exists and is complete. If you updated `current-state.md`, you can hand it to a teammate who wasn't on this run and they would act differently next time because of it.
+
+## Stop-traps
+
+- Skipping the run-summary write because "the chat already has it." Chat evaporates; disk doesn't.
+- Promoting every run to `current-state.md`. Most runs don't earn it.
+- Pasting the entire chat log into `run-summary.md`. The template is terse on purpose.
+- Over-generalizing the durable lesson. A lesson that applies to "all code" applies to nothing.

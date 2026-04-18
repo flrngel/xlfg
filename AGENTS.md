@@ -1,34 +1,29 @@
 # xlfg repo guide
 
-Read `NEXT_AGENT_CONTEXT.md` first. It is the bundle-level handoff document and the fastest way for a new agent to understand what this repo is trying to become.
+Read `NEXT_AGENT_CONTEXT.md` first. It is the required handoff document and explains why v6.2 looks the way it does.
 
-## Core principles
+## Core principles (v6.2)
 
-- `/xlfg` is one autonomous SDLC run by default. Do not reintroduce manual phase slash-command choreography.
-- `/xlfg` must always use deterministic recall before broad repo fan-out.
-- `/xlfg` must resolve intent before broad repo/context fan-out.
-- `spec.md` is the run card and single source of truth, including the intent contract and objective groups.
-- Planning must declare concise practical scenario contracts and get `test-readiness.md = READY` before implementation.
-- Planning should load optional agents progressively, not automatically.
-- Implementation must use explicit agents and targeted proof.
-- Verification must run scenario-targeted proof, not only generic repo checks.
-- `workboard.md` is execution truth.
-- Verification evidence in `verification.md` is proof truth; `proof-map.md` is optional only when it changes a decision.
+- `/xlfg` is a conductor that dispatches 8 hidden phase skills via the `Skill` tool, in order: recall → intent → context → plan → implement → verify → review → compound. Each skill loads just-in-time and runs in the main model's own context. No sub-agents, no nested delegation.
+- `/xlfg-debug` is the diagnosis-only conductor dispatching 4 skills (recall → intent → context → debug). Its `allowed-tools` excludes `Edit` and `MultiEdit`; `Write` is granted narrowly for `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+- The 8-phase SDLC is a discipline implemented as 9 phase skills under `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md`. Three are shared between conductors (recall, intent, context); five are `/xlfg`-only; one is `/xlfg-debug`-only.
+- Specialist expertise (PM, architect, security, perf, UX, test strategist, runner/reducer, reviewer) lives as lenses inside the phase skill bodies, not as separate agent files.
+- Durable cross-session memory lives under `docs/xlfg/` — `current-state.md`, `runs/<RUN_ID>/run-summary.md`, `runs/<RUN_ID>/diagnosis.md`. No `.xlfg/` coordination state, no `spec.md`, no `workboard.md`, no ledger. If you find yourself adding any of those, you're reinventing v5.
 - Review confirms quality; it does not create quality.
-- The repo is the system of record for long-running agent work.
-- Intent quality should be measured with artifact-based evaluation, not vibes.
+- Proof before claim. A run isn't done until the test command actually ran green.
 
 ## Important paths
 
-- `NEXT_AGENT_CONTEXT.md` — bundle-level handoff and rationale
-- `docs/architecture.md` — current entrypoint and run-file architecture
-- `plugins/xlfg-engineering/commands/` — Claude Code plugin commands
-- `plugins/xlfg-engineering/agents/` — subagent prompts
-- `plugins/xlfg-engineering/skills/` — hidden support skills
-- `tests/` — regression tests for plugin shape, version sync, and specialist contracts
+- `NEXT_AGENT_CONTEXT.md` — required handoff, explains v5 → v6.2 migration
+- `plugins/xlfg-engineering/commands/xlfg.md` — the SDLC conductor (dispatches 8 skills)
+- `plugins/xlfg-engineering/commands/xlfg-debug.md` — the diagnosis conductor (dispatches 4 skills)
+- `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md` — 9 phase skills (where the real phase work lives)
+- `plugins/xlfg-engineering/scripts/audit_harness.py` — CI self-audit (5 checks)
+- `plugins/xlfg-engineering/CHANGELOG.md` — v6 evolution notes
+- `plugins/xlfg-engineering/CLAUDE.md` — plugin development rules
+- `tests/test_xlfg_v6.py` — the 32 invariants that guard the v6.2 shape
+- `docs/` — archival research notes from the v3–v5 era (kept for reading, not active guidance)
 
+## What NOT to reintroduce
 
-## 2.7.1 note
-
-- Main conductor now dispatches specialists with an atomic task packet: one mission, one required artifact, one done check.
-- Progress-only specialist replies are treated as incomplete; the conductor resumes the same specialist once before accepting failure or repairing the lane.
+See `plugins/xlfg-engineering/CLAUDE.md` for the full drift-prevention list. Summary: no `agents/` directory, no unexpected skill directories, no Codex surface, no nested delegation (`Agent`/`SendMessage` in any `allowed-tools`), no dispatch-contract headers (`PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, etc.) in commands or skills, no Stop or SubagentStop hooks.

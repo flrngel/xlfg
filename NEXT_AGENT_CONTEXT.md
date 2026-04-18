@@ -1,8 +1,135 @@
 # Next agent context
 
-## Current state (5.1.0)
+## Current state (6.2.0)
 
-5.1.0 ports every runtime helper from Node to Python. Previously the plugin
+v6.2.0 is the **conductor + phase-skills** architecture. v6.0 had collapsed all phase guidance into monolithic command bodies (~3000 words each) that loaded in full on every invocation. v5 had split phases into hidden skills loaded just-in-time via the `Skill` tool; the context-budget win of that architecture is real and v6.2 brings it back — without any of the v5 sub-agent baggage.
+
+### The architecture
+
+- Two **conductors** (`commands/xlfg.md`, `commands/xlfg-debug.md`), each ~500–600 words. Frontmatter grants the phase skills via `Skill(xlfg-engineering:xlfg-<phase>-phase *)`. Body carries: startup (RUN_ID creation), pipeline order, loopback rules (cap 2 for /xlfg, 1 for /xlfg-debug), operating contract, completion summary template. No phase bodies inline.
+- Nine **phase skills** under `skills/xlfg-<phase>-phase/SKILL.md`. Each is hidden (`user-invocable: false`), describes one phase's purpose/lens/how-to-work-it/done-signal/stop-traps, and carries its own `allowed-tools`. Three are shared between conductors (recall, intent, context); five are `/xlfg`-only (plan, implement, verify, review, compound); one is `/xlfg-debug`-only (debug).
+- Durable archive conventions from v6.1 are unchanged: `docs/xlfg/current-state.md` read by recall, `docs/xlfg/runs/<RUN_ID>/run-summary.md` written by compound, `docs/xlfg/runs/<RUN_ID>/diagnosis.md` written by debug.
+
+### What survives from v6.0/v6.1 (unchanged)
+
+v6.2 keeps the v6 philosophy cut intact:
+
+- No sub-agents. Tests assert no `Agent` or `SendMessage` in any command or skill's `allowed-tools`.
+- No dispatch-packet contract tokens (`PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:`). Forbidden in commands AND in skill bodies.
+- No v5 coordination files (`spec.md`, `workboard.md`, `phase-state.json`, `verification.md`, `test-contract.md`, etc.). Phases share the conductor's context; they don't pass state through files.
+- No `.xlfg/` directory. No Stop or SubagentStop hooks.
+- No Codex surface (`codex/`, `.codex-plugin/`, `.agents/`).
+- No `/xlfg-audit`, `/xlfg-status`, `/xlfg-init`.
+
+### Why the skill split came back
+
+Claude Code loads slash-command bodies on every invocation; it loads `Skill` bodies only when the tool fires. Keeping 3000 words of phase guidance in the command means every `/xlfg` invocation pays that token cost up front, even for trivial runs. Splitting phases into skills moves ~95% of the content behind just-in-time loading. While the model runs phase 3, only the context skill body is loaded — not all 8 phases simultaneously.
+
+### The 9 phase skills
+
+Shared (used by both `/xlfg` and `/xlfg-debug`):
+- `xlfg-recall-phase` — deterministic recall over git history, durable archive, lexical repo scan
+- `xlfg-intent-phase` — resolve ambiguity, name blockers, split bundled asks
+- `xlfg-context-phase` — gather repo + runtime facts, bounded reads
+
+`/xlfg`-only:
+- `xlfg-plan-phase` — solution choice, task split, test contract (fast/smoke/ship), risk pass
+- `xlfg-implement-phase` — edit-not-rewrite, tests-alongside-source, failure-mode check
+- `xlfg-verify-phase` — run the proof, classify GREEN / RED / FAILED
+- `xlfg-review-phase` — pick one lens (architecture / security / performance / UX)
+- `xlfg-compound-phase` — write `run-summary.md`, consider promoting to `current-state.md`
+
+`/xlfg-debug`-only:
+- `xlfg-debug-phase` — scientific debugging, write `diagnosis.md`, no source edits
+
+Each skill carries its own `allowed-tools`, tuned to its phase. The debug skill is the only skill that grants `Write` — and its body specifies the sanctioned path is `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+
+### Durable archive (unchanged from v6.1)
+
+- `docs/xlfg/current-state.md` — optional, tracked, one-page (~300 words max). The "read this first" handoff. Updated sparingly in compound.
+- `docs/xlfg/runs/<RUN_ID>/run-summary.md` — written by every `/xlfg` run. Fixed template: Ask / What changed / Proof / Residual risk / Durable lesson.
+- `docs/xlfg/runs/<RUN_ID>/diagnosis.md` — written by every `/xlfg-debug` run. Fixed template: Mechanism / Strongest evidence / Likely repair surface / Fake fixes rejected / No-code-change guarantee / Residual unknowns / Next safest proof step.
+
+`RUN_ID = <YYYYMMDD>-<HHMMSS>-<kebab-slug>`, computed once at startup.
+
+### What v6.2 ships
+
+- `plugins/xlfg-engineering/commands/xlfg.md` — conductor (~600 words), dispatches 8 phase skills
+- `plugins/xlfg-engineering/commands/xlfg-debug.md` — conductor (~500 words), dispatches 4 phase skills
+- `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md` — 9 phase skills, each hidden (`user-invocable: false`)
+- `plugins/xlfg-engineering/scripts/audit_harness.py` — CI self-audit, 5 checks (adds `_check_skill_surface`)
+- `plugins/xlfg-engineering/scripts/phase-gate.mjs` + `subagent-stop-guard.mjs` — byte-capped compat shims for cached v5.0.0 hook sessions
+- `plugins/xlfg-engineering/hooks/hooks.json` — ExitPlanMode auto-allow only
+- `tests/test_xlfg_v6.py` — 32 tests covering plugin shape, manifests, commands, skills, hooks, audit, conductor discipline
+
+### What NOT to reintroduce
+
+The test suite catches these drifts:
+- Files under `plugins/xlfg-engineering/agents/**` (sub-agents — gone for good)
+- Skill directories under `skills/` beyond the 9 named `xlfg-<phase>-phase/` (if you have a case for a new one, expand `EXPECTED_SKILLS` in both `audit_harness.py` and the test suite first)
+- A `codex/` tree or `.codex-plugin/` manifest
+- Any script under `scripts/` besides `audit_harness.py` and the two `.mjs` shims (byte-capped by test)
+- `Agent` or `SendMessage` in any command or skill `allowed-tools` (no nested delegation)
+- Dispatch-contract tokens in commands OR skills: `PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:`
+- Stop or SubagentStop hook registrations
+- `.xlfg/` directory use (the `/xlfg` body contains an explicit disclaimer the test asserts on)
+
+### Migration (v6.1.0 → v6.2.0)
+
+Users see no change: `/xlfg` and `/xlfg-debug` still take `$ARGUMENTS` and do the same thing. The architectural change is internal:
+
+- Phase bodies moved from the monolithic command into 9 `SKILL.md` files.
+- If you had local edits to the v6.0/v6.1 command bodies, port them into the matching `skills/xlfg-<phase>-phase/SKILL.md`.
+- The audit harness gained a 5th check. The test suite grew from 23 to 32 tests.
+
+### Migration (v5.x → v6.x)
+
+- Public entry surface shrank: `/xlfg` and `/xlfg-debug` only. `/xlfg-audit`, `/xlfg-status`, `/xlfg-init`, and the Codex `$xlfg`/`$xlfg-debug` skills were removed in 6.0.0.
+- In-progress v5 runs: finish under v5 or abandon. Delete `.xlfg/` and the old `docs/xlfg/runs/<RUN_ID>/` tree (with the full v5 artifact set) before upgrading.
+- If you had a v5 `ledger.jsonl`: there is no ledger in v6. Promote anything still load-bearing into `docs/xlfg/current-state.md` manually.
+- Runtime: `python3` on PATH (for CI audit). No Node.
+
+## Previous state (6.1.0)
+
+v6.1.0 restored the `docs/xlfg/` durable archive that v6.0.0 deleted. Same archive is present in v6.2.0; the 6.2 change is the conductor/skills split, not the archive.
+
+## Previous state (6.0.0)
+
+v6.0.0 was the philosophy cut. xlfg is now a single inline guide, not an orchestration graph. The v5 scaffolding — 27 specialist agents, 9 hidden phase skills, file-based run state (`spec.md`, `workboard.md`, `phase-state.json`, the whole `docs/xlfg/runs/<RUN_ID>/` tree), Stop / SubagentStop hooks, a durable JSONL ledger, and a parallel Codex surface — is all gone. Opus 4.7-class models hold a multi-phase SDLC run in their own context; the scaffolding was paying serialization cost for state the model no longer externalizes.
+
+### What v6 ships
+
+- `plugins/xlfg-engineering/commands/xlfg.md` — ~3000-word inline guide covering all 8 phases (recall → intent → context → plan → implement → verify → review → compound). Specialist lenses (PM, architect, security, perf, UX, test strategist, runner/reducer, reviewer) appear as mental passes the main model adopts in-line, not as dispatch targets.
+- `plugins/xlfg-engineering/commands/xlfg-debug.md` — diagnosis-only guide (recall → intent → context → debug). `allowed-tools` intentionally excludes `Edit`, `MultiEdit`, `Write`.
+- `plugins/xlfg-engineering/scripts/audit_harness.py` — four-check self-audit for CI (version sync, command surface, command frontmatter, forbidden-token sweep).
+- `plugins/xlfg-engineering/hooks/hooks.json` — just the `PermissionRequest` `ExitPlanMode` auto-allow.
+- `plugins/xlfg-engineering/.claude-plugin/plugin.json` and `.cursor-plugin/plugin.json` — manifests (version 6.0.0). Codex manifest removed.
+- `tests/test_xlfg_v6.py` — 20 focused tests that guard the plugin shape, command frontmatter, and load-bearing philosophy tokens.
+
+Everything else from v5 is deleted. See `plugins/xlfg-engineering/CHANGELOG.md` for the full "removed" list.
+
+### What NOT to reintroduce
+
+The test suite catches these drifts; don't try:
+- Files under `plugins/xlfg-engineering/agents/**` or `skills/**`
+- A `codex/` tree or `.codex-plugin/` manifest
+- More than `audit_harness.py` under `scripts/`
+- Dispatch-contract tokens in command bodies (`PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:`)
+- Stop or SubagentStop hook registrations
+- `Skill(...)`, `Agent`, or `SendMessage` in command `allowed-tools`
+
+If you have a real case for re-adding any of those, open a discussion. The removal was intentional.
+
+### Migration (v5.1.0 → v6.0.0)
+
+- Public entry surface is smaller: only `/xlfg` and `/xlfg-debug` remain. `/xlfg-audit`, `/xlfg-status`, `/xlfg-init`, and the Codex `$xlfg` / `$xlfg-debug` skills were all removed.
+- In-progress v5 runs: finish under v5 or abandon. The v5 phase-state format is unused in v6. Delete `docs/xlfg/runs/` and `.xlfg/` before upgrading.
+- If you relied on the ledger for cross-run memory: promote durable lessons to the target project's `CLAUDE.md` before upgrading. v6 has no ledger.
+- Runtime: `python3` on PATH (for the CI audit only). No Node. Zero runtime deps for end users.
+
+## Previous state (5.1.0)
+
+5.1.0 ported every runtime helper from Node to Python. Previously the plugin
 shipped 7 `.mjs` scripts (stopped hooks, phase tick, ledger append, workboard
 render, audit harness, post-mortem) plus a parallel Python test suite that
 spawned them via `node`. CI required both runtimes. The new layout collapses

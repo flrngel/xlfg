@@ -1,61 +1,35 @@
 ---
-description: Internal xlfg phase skill. Use only during /xlfg runs to perform deterministic recall and record the smallest relevant carry-forward memory.
+description: Internal xlfg phase skill. Deterministic recall over git history, the xlfg durable archive, and lexical repo scan — before broad fan-out.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write
-status: DONE
+allowed-tools: Read, Grep, Glob, LS, Bash
 ---
-
 
 # xlfg-recall-phase
 
-Use only during `/xlfg` orchestration.
+Use only during `/xlfg` or `/xlfg-debug` orchestration. The conductor passes `RUN_ID` as `$ARGUMENTS`.
 
-Input: `$ARGUMENTS` (`RUN_ID` or `latest`)
+## Purpose
 
-## Objective
+Before you scan the repo broadly, ask: *has this problem, or something adjacent, been solved before — in this repo's history, in prior xlfg runs, or in the project's distilled memory?*
 
-Perform deterministic recall before broad repo scanning and record only the smallest relevant carry-forward context.
+## Lens
 
-## Process
+You are a librarian. Git history, existing code, and the project's tracked `docs/xlfg/` layer are your index.
 
-1. Resolve `RUN_ID`, `DOCS_RUN_DIR`, and `DX_RUN_DIR`.
-2. Read in this order when present:
-   - `docs/xlfg/knowledge/current-state.md`
-   - the latest related run if you are continuing work
-   - `docs/xlfg/knowledge/*.md`
-   - `docs/xlfg/knowledge/agent-memory/*.md`
-   - `docs/xlfg/knowledge/ledger.jsonl`
-3. Perform deterministic recall using Read and Grep:
-   - Read `docs/xlfg/knowledge/current-state.md` and related run `spec.md` first
-   - Use `Grep` with exact lexical terms (role, stage, kind, scope filters) over `docs/xlfg/knowledge/`
-   - Use temporal filters by scanning ledger.jsonl or recent run dirs when the query is date-scoped
-4. Write `memory-recall.md` with:
-   - sources checked
-   - strong matches
-   - carry-forward rules for this run
-   - rejected near-matches
-   - an explicit no-hit statement when nothing relevant applies
-5. Update `spec.md` so the recall summary is visible in the single source of truth.
-6. Update the task/objective/next-action sections of `workboard.md` if needed. The `## Phase status` block (including `recall: DONE`) is rendered by the conductor via `render_workboard.py` after the phase returns — do not hand-write phase completion rows.
+## How to work it
 
-## Guardrails
+- **xlfg durable memory first.** If `docs/xlfg/current-state.md` exists, read it first. It's the prior authors' distilled load-bearing truths about this project — what it is, active constraints, known traps. This is short by design; read it in full.
+- **Prior runs.** List `docs/xlfg/runs/` (if present) and read the 2–3 most recent `run-summary.md` or `diagnosis.md` files that touch the surface you're about to work on. A run summary from last week that names your exact surface is gold; ignore unrelated ones.
+- **Git history.** If the user's request names a specific surface, `git log -- <path>` and `git log --grep=<term>` for recent related commits. Read their messages, not their diffs yet.
+- **Lexical repo recall.** `Grep` the codebase for the domain terms in the request — not code, but concepts ("rate limit", "webhook retry", "migration rollback"). Existing patterns are better than new inventions.
+- **Root-level orientation.** If there is a CLAUDE.md, AGENTS.md, or README at the repo root, read it. Those exist for you.
 
-- Do not write vague history dumps.
-- Do not invent semantic recall when lexical evidence is weak.
-- Keep the memory note compact enough to help the next phase immediately.
+## Done signal
 
-## Git-recency guard (mandatory when promoting a prior fix class)
+You can name, in one sentence, the closest prior work to what's being asked and whether it's a pattern to extend or a trap to avoid. You also know whether `current-state.md` exists; if it does, every assumption you make in later phases should be consistent with it (or consciously supersede it).
 
-When you promote a carry-forward rule from a prior STABLE run, you MUST run a git-recency check against the diagnosed surface before recording the rule. This catches cases where the baseline's fix class is stale — the code that baseline covered has moved under it, so the new regression looks the same from the symptom angle but has a different root cause.
+## Stop-traps
 
-Required steps:
-
-1. Identify the cited prior run's date and the list of files the carry-forward rule names.
-2. Run: `git log --since=<baseline-date> -- <file1> <file2> ...`. Record the exact command and the result inside `memory-recall.md` (even an empty result — record that the window was checked).
-3. If the result is empty, record the rule as normal carry-forward.
-4. If the result contains ANY commit in the window:
-   - Mark the rule as `HYPOTHESIS-ONLY` in `memory-recall.md`.
-   - Add a `Verify-before-use:` line telling the plan phase to re-diagnose from the current code before treating the rule as established.
-   - Do not let intent / context / plan phases silently adopt the hypothesis as an accepted root cause.
-
-The cost is ~1 shell call per promoted rule. The saved cost on a stale promotion is one full verify→implement loopback.
+- Skipping to code because "I already know how this works." You don't. The repo has opinions you haven't loaded yet.
+- Treating prior work as authoritative without checking whether the code under it has moved since. If the last commit on the target surface is newer than the pattern you're about to reuse, the pattern may be stale.
+- Reading 10 prior run summaries "to be thorough." Read the 2–3 that match your surface and stop.

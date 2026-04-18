@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""xlfg audit-harness — deterministic self-check of the xlfg plugin.
+"""xlfg audit-harness (v6) — deterministic self-check of the xlfg plugin.
 
-Replaces the previous /xlfg-audit slash command body. Every check
-here is a file read, regex match, JSON parse, or word count — none
-of it needed an LLM, and none of it should pretend it did.
-
-Maintainer tool. Wire into pre-push, npm scripts, or CI. The
-/xlfg-audit slash command is now reserved for the per-run user
-post-mortem (see post_mortem.py).
+v6.0.0 removed sub-agents, phase skills, the Codex surface, and per-phase
+file artifacts. The audit is correspondingly smaller: four checks, each a
+simple file read / frontmatter parse / forbidden-token sweep.
 
 Usage:
   audit_harness.py                 # auto-detects plugin root
@@ -23,7 +19,11 @@ import re
 import sys
 from pathlib import Path
 
-EXPECTED_PHASE_SKILLS = (
+PUBLIC_COMMANDS = ("xlfg.md", "xlfg-debug.md")
+
+# The 9 phase skills the conductors dispatch. Shared ones (recall/intent/context)
+# are consumed by both `/xlfg` and `/xlfg-debug`.
+EXPECTED_SKILLS = (
     "xlfg-recall-phase",
     "xlfg-intent-phase",
     "xlfg-context-phase",
@@ -35,32 +35,31 @@ EXPECTED_PHASE_SKILLS = (
     "xlfg-debug-phase",
 )
 
-PUBLIC_COMMANDS = ("xlfg.md", "xlfg-debug.md")
-
-CODEX_PUBLIC_SKILLS = ("xlfg/SKILL.md", "xlfg-debug/SKILL.md")
-
-CODEX_FORBIDDEN_TOKENS = (
-    "allowed-tools",
-    "Skill(",
-    "TaskCreate",
-    "TaskUpdate",
-    "TaskList",
-    "ExitPlanMode",
-    "PermissionRequest",
-    "CLAUDE_PLUGIN_ROOT",
-    "user-invocable",
-    "model:",
-    "effort:",
-    "sonnet",
-    "haiku",
-    "opus",
+# Tokens that indicate the v5 sub-agent dispatch contract is creeping back into
+# the runtime prompt. v6.2 keeps phase skills (see EXPECTED_SKILLS) but does
+# NOT have sub-agents, dispatch packets, or per-phase coordination files.
+#
+# Note: `xlfg-engineering:xlfg-` is now the intended pattern (the conductor
+# frontmatter lists each skill this way), so it is NOT forbidden. The SubagentStop
+# hook / subagent-stop-guard / ledger-append tokens are forbidden because those
+# tools were deleted in v6.0.
+FORBIDDEN_RUNTIME_TOKENS = (
+    "PRIMARY_ARTIFACT",
+    "OWNERSHIP_BOUNDARY",
+    "CONTEXT_DIGEST",
+    "PRIOR_SIBLINGS",
+    "RETURN_CONTRACT:",
+    "ARTIFACT_KIND:",
+    "DONE_CHECK:",
+    "SubagentStop",
+    "subagent-stop-guard",
+    "ledger-append",
 )
 
 _FRONTMATTER_KV_RE = re.compile(r"^([A-Za-z0-9_-]+):\s*(.*)$")
 _EXIT_PLAN_MODE_RE = re.compile(
     r"PermissionRequest:\s*\n[\s\S]*?matcher:\s*\"ExitPlanMode\"[\s\S]*?behavior\":\s*\"allow\""
 )
-_STALE_TASK_RE = re.compile(r"^Task(\s*\(|$)")
 
 
 def _parse_args(argv: list[str]) -> dict[str, object]:
@@ -98,7 +97,7 @@ def _resolve_plugin(explicit: str | None) -> Path:
     raise ValueError("cannot locate plugin root; pass --plugin <path>")
 
 
-def _read_json(p: Path) -> object:
+def _read_json(p: Path) -> dict[str, object]:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
@@ -106,24 +105,23 @@ def _read_text(p: Path) -> str:
     return p.read_text(encoding="utf-8")
 
 
-def _frontmatter(text: str) -> dict[str, object]:
+def _frontmatter(text: str) -> dict[str, str]:
     lines = text.split("\n")
     if not lines or lines[0].strip() != "---":
-        return {"raw": "", "fields": {}}
+        return {}
     end = -1
     for i in range(1, len(lines)):
         if lines[i].strip() == "---":
             end = i
             break
     if end < 0:
-        return {"raw": "", "fields": {}}
-    raw = "\n".join(lines[1:end])
+        return {}
     fields: dict[str, str] = {}
     for line in lines[1:end]:
         m = _FRONTMATTER_KV_RE.match(line)
         if m:
             fields[m.group(1)] = m.group(2).strip()
-    return {"raw": raw, "fields": fields}
+    return fields
 
 
 def _word_count(p: Path) -> int:
@@ -134,46 +132,17 @@ def _word_count(p: Path) -> int:
     return len(re.findall(r"\S+", text))
 
 
-def _list_agent_files(plugin_root: Path) -> list[Path]:
-    root = plugin_root / "agents"
-    if not root.exists():
-        return []
-    out: list[Path] = []
-    for entry in root.iterdir():
-        if entry.is_dir() and entry.name == "_shared":
-            continue
-        if entry.is_dir():
-            for sub in entry.rglob("*.md"):
-                out.append(sub)
-        elif entry.is_file() and entry.name.endswith(".md"):
-            out.append(entry)
-    return out
-
-
-def _list_runtime_markdown(plugin_root: Path) -> list[Path]:
-    out: list[Path] = []
-    for sub in ("commands", "skills", "agents"):
-        root = plugin_root / sub
-        if not root.exists():
-            continue
-        for path in root.rglob("*"):
-            if path.is_file() and (path.name.endswith(".md") or path.name == "SKILL.md"):
-                out.append(path)
-    return out
-
-
 def _check_version_sync(plugin_root: Path) -> dict[str, object]:
     manifests = (
         ".claude-plugin/plugin.json",
         ".cursor-plugin/plugin.json",
-        ".codex-plugin/plugin.json",
     )
     versions: dict[str, str | None] = {}
     for m in manifests:
         p = plugin_root / m
         try:
-            versions[m] = _read_json(p).get("version")  # type: ignore[union-attr]
-        except (OSError, json.JSONDecodeError, AttributeError):
+            versions[m] = _read_json(p).get("version")  # type: ignore[assignment]
+        except (OSError, json.JSONDecodeError):
             versions[m] = None
     distinct = {v for v in versions.values() if v}
     all_present = all(v for v in versions.values())
@@ -193,55 +162,35 @@ def _check_version_sync(plugin_root: Path) -> dict[str, object]:
     }
 
 
-def _check_sdlc_coverage(plugin_root: Path) -> dict[str, object]:
-    present: list[str] = []
-    missing: list[str] = []
-    for phase in EXPECTED_PHASE_SKILLS:
-        skill_path = plugin_root / "skills" / phase / "SKILL.md"
-        (present if skill_path.exists() else missing).append(phase)
-    score = len(present) / len(EXPECTED_PHASE_SKILLS)
-    note = (
-        f"missing: {', '.join(missing)}"
-        if missing
-        else f"{len(present)}/{len(EXPECTED_PHASE_SKILLS)} phases present"
-    )
+def _check_command_surface(plugin_root: Path) -> dict[str, object]:
+    failures: list[str] = []
+    commands_dir = plugin_root / "commands"
+    shipped = sorted(p.name for p in commands_dir.glob("*.md"))
+    expected = set(PUBLIC_COMMANDS)
+    unexpected = [c for c in shipped if c not in expected]
+    missing = [c for c in expected if c not in shipped]
+    for m in missing:
+        failures.append(f"missing command: {m}")
+    for u in unexpected:
+        failures.append(f"unexpected command: {u} (v6 ships only {', '.join(sorted(expected))})")
     return {
         "id": 2,
-        "name": "SDLC coverage",
-        "pass": not missing,
-        "score": score,
-        "note": note,
-        "detail": {"present": present, "missing": missing},
+        "name": "command surface",
+        "pass": not failures,
+        "score": 1 if not failures else 0,
+        "note": (
+            f"{len(shipped)} command(s) shipped: {', '.join(shipped) or 'none'}"
+            if not failures
+            else f"{len(failures)} issue(s)"
+        ),
+        "detail": {"failures": failures, "shipped": shipped},
     }
 
 
-def _check_workflow_load(plugin_root: Path) -> dict[str, object]:
-    counts: dict[str, int] = {}
-    for cmd in PUBLIC_COMMANDS:
-        counts[f"commands/{cmd}"] = _word_count(plugin_root / "commands" / cmd)
-    for phase in EXPECTED_PHASE_SKILLS:
-        counts[f"skills/{phase}/SKILL.md"] = _word_count(
-            plugin_root / "skills" / phase / "SKILL.md"
-        )
-    total = sum(counts.values())
-    ranked = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)
-    top3 = ranked[:3]
-    top_label = f"{top3[0][0]} ({top3[0][1]})" if top3 else "(none)"
-    return {
-        "id": 3,
-        "name": "workflow load",
-        "pass": True,
-        "score": total,
-        "note": f"{total} total words; top driver: {top_label}",
-        "detail": {"counts": counts, "total": total, "top3": top3},
-    }
-
-
-def _check_claude_code_compat(plugin_root: Path) -> dict[str, object]:
+def _check_command_frontmatter(plugin_root: Path) -> dict[str, object]:
     failures: list[str] = []
     assertions = 0
     passes = 0
-
     for cmd in PUBLIC_COMMANDS:
         p = plugin_root / "commands" / cmd
         try:
@@ -251,172 +200,155 @@ def _check_claude_code_compat(plugin_root: Path) -> dict[str, object]:
             assertions += 4
             continue
         fm = _frontmatter(text)
-        fields: dict[str, str] = fm["fields"]  # type: ignore[assignment]
         checks = {
-            "allowed-tools present": "allowed-tools" in fields,
-            "effort=high": fields.get("effort") == "high",
-            "disable-model-invocation=true": fields.get("disable-model-invocation") == "true",
-            "PermissionRequest→ExitPlanMode auto-allow": bool(_EXIT_PLAN_MODE_RE.search(text)),
+            "name present": "name" in fm,
+            "description present and <= 220 chars": bool(fm.get("description")) and len(fm.get("description", "")) <= 220,
+            "effort=high": fm.get("effort") == "high",
+            "disable-model-invocation=true": fm.get("disable-model-invocation") == "true",
+            "allowed-tools present": "allowed-tools" in fm,
+            "ExitPlanMode auto-allow present": bool(_EXIT_PLAN_MODE_RE.search(text)),
         }
         for label, ok in checks.items():
             assertions += 1
             if ok:
                 passes += 1
             else:
-                failures.append(f"commands/{cmd}: {label} missing")
-
-    for phase in EXPECTED_PHASE_SKILLS:
-        p = plugin_root / "skills" / phase / "SKILL.md"
-        try:
-            text = _read_text(p)
-        except OSError:
-            failures.append(f"skills/{phase}: missing")
-            assertions += 2
-            continue
-        fm = _frontmatter(text)
-        fields = fm["fields"]  # type: ignore[assignment]
-        assertions += 1
-        if fields.get("user-invocable") == "false":
-            passes += 1
-        else:
-            failures.append(f"skills/{phase}: user-invocable!=false")
-        assertions += 1
-        if "name" not in fields:
-            passes += 1
-        else:
-            failures.append(
-                f"skills/{phase}: name field present (must be omitted for hidden skills)"
-            )
-
-    audit_cmd = (plugin_root / "commands" / "xlfg-audit.md").resolve()
-    for file in _list_runtime_markdown(plugin_root):
-        if file.resolve() == audit_cmd:
-            continue
-        text = _read_text(file)
-        fm = _frontmatter(text)
-        fields = fm["fields"]  # type: ignore[assignment]
-        tools_field = fields.get("tools") or fields.get("allowed-tools") or ""
-        tool_list = [s.strip() for s in tools_field.split(",")]
-        has_stale_task = any(_STALE_TASK_RE.match(t) for t in tool_list)
-        assertions += 1
-        if not has_stale_task:
-            passes += 1
-        else:
-            failures.append(
-                f"{file.relative_to(plugin_root)}: stale bare 'Task' in tools field"
-            )
-        assertions += 1
-        if "query-contract.md" not in text:
-            passes += 1
-        else:
-            failures.append(
-                f"{file.relative_to(plugin_root)}: forbidden 'query-contract.md' reference"
-            )
-
-    for agent_path in _list_agent_files(plugin_root):
-        text = _read_text(agent_path)
-        fm = _frontmatter(text)
-        fields = fm["fields"]  # type: ignore[assignment]
-        assertions += 1
-        try:
-            turns = int(fields.get("maxTurns", ""))
-            turns_ok = turns <= 150
-        except (TypeError, ValueError):
-            turns_ok = False
-        if turns_ok:
-            passes += 1
-        else:
-            failures.append(
-                f"{agent_path.relative_to(plugin_root)}: maxTurns missing or > 150 "
-                f"(got {fields.get('maxTurns')})"
-            )
-        assertions += 1
-        tools = fields.get("tools", "")
-        if not re.search(r"\bAgent\b", tools) and not re.search(r"\bSendMessage\b", tools):
-            passes += 1
-        else:
-            failures.append(
-                f"{agent_path.relative_to(plugin_root)}: leaf-worker rule violated "
-                "(Agent/SendMessage in tools)"
-            )
-
+                failures.append(f"commands/{cmd}: {label}")
     score = passes / assertions if assertions else 1
-    note = (
-        f"{passes}/{assertions} assertions pass; {len(failures)} failure(s)"
-        if failures
-        else f"{passes}/{assertions} assertions pass"
-    )
     return {
-        "id": 4,
-        "name": "Claude Code compatibility",
+        "id": 3,
+        "name": "command frontmatter",
         "pass": not failures,
         "score": score,
-        "note": note,
+        "note": (
+            f"{passes}/{assertions} assertions pass"
+            if not failures
+            else f"{passes}/{assertions} assertions pass; {len(failures)} failure(s)"
+        ),
         "detail": {"failures": failures, "assertions": assertions, "passes": passes},
     }
 
 
-def _check_codex_surface(plugin_root: Path) -> dict[str, object]:
+def _check_forbidden_tokens(plugin_root: Path) -> dict[str, object]:
+    """v6 runtime must not carry sub-agent dispatch contract or dead tool references.
+
+    Any leak of old dispatch-packet tokens (PRIMARY_ARTIFACT, OWNERSHIP_BOUNDARY,
+    etc.) or references to deleted v5 tooling (SubagentStop, subagent-stop-guard,
+    ledger-append) into either a command body or a skill body means a regression
+    is sneaking in.
+    """
     failures: list[str] = []
-    for rel in CODEX_PUBLIC_SKILLS:
-        p = plugin_root / "codex" / "skills" / rel
-        if not p.exists():
-            failures.append(f"missing codex/skills/{rel}")
+    targets: list[tuple[str, Path]] = []
+    for cmd in PUBLIC_COMMANDS:
+        targets.append((f"commands/{cmd}", plugin_root / "commands" / cmd))
+    for skill_name in EXPECTED_SKILLS:
+        targets.append(
+            (f"skills/{skill_name}/SKILL.md", plugin_root / "skills" / skill_name / "SKILL.md")
+        )
+    for label, path in targets:
+        try:
+            text = _read_text(path)
+        except OSError:
+            failures.append(f"{label}: missing")
             continue
-        text = _read_text(p)
-        for tok in CODEX_FORBIDDEN_TOKENS:
+        for tok in FORBIDDEN_RUNTIME_TOKENS:
             if tok in text:
-                failures.append(f"codex/skills/{rel}: contains Claude-only token '{tok}'")
+                failures.append(f"{label}: forbidden v6 token present: {tok!r}")
     return {
-        "id": 5,
-        "name": "Codex surface integrity",
+        "id": 4,
+        "name": "forbidden v5 dispatch tokens absent",
         "pass": not failures,
         "score": 1 if not failures else 0,
-        "note": f"{len(failures)} issue(s)" if failures else "2 codex skills clean",
+        "note": (
+            "no v5 dispatch tokens leaked into runtime"
+            if not failures
+            else f"{len(failures)} leak(s)"
+        ),
         "detail": {"failures": failures},
     }
 
 
-def _check_scaffold_consistency(plugin_root: Path, cwd: Path) -> dict[str, object]:
-    meta_path = cwd / "docs/xlfg/meta.json"
-    if not meta_path.exists():
-        return {
-            "id": 6,
-            "name": "scaffold self-consistency",
-            "pass": True,
-            "score": 1,
-            "note": "no scaffold in cwd (not an xlfg-initialized project)",
-            "detail": {"metaPath": str(meta_path), "present": False},
-        }
-    try:
-        tool_version = _read_json(meta_path).get("tool_version")  # type: ignore[union-attr]
-    except (OSError, json.JSONDecodeError, AttributeError):
-        tool_version = None
-    try:
-        claude_plugin_version = _read_json(plugin_root / ".claude-plugin/plugin.json").get(
-            "version"
-        )  # type: ignore[union-attr]
-    except (OSError, json.JSONDecodeError, AttributeError):
-        claude_plugin_version = None
-    passed = tool_version == claude_plugin_version and tool_version is not None
-    note = (
-        f"meta.tool_version matches plugin ({claude_plugin_version})"
-        if passed
-        else f"drift: meta.tool_version={tool_version}, plugin={claude_plugin_version}"
-    )
+def _check_skill_surface(plugin_root: Path) -> dict[str, object]:
+    """v6.2 ships 9 phase skills — the 8 /xlfg phases plus /xlfg-debug's debug phase.
+
+    Each skill must:
+      - live at skills/<name>/SKILL.md
+      - have frontmatter with `user-invocable: false` (hidden)
+      - have a description (≤220 chars for context-budget discipline)
+      - NOT grant `Agent` or `SendMessage` (no nested delegation in v6)
+    """
+    failures: list[str] = []
+    assertions = 0
+    passes = 0
+    for skill_name in EXPECTED_SKILLS:
+        skill_path = plugin_root / "skills" / skill_name / "SKILL.md"
+        assertions += 1
+        if not skill_path.exists():
+            failures.append(f"missing skill: skills/{skill_name}/SKILL.md")
+            continue
+        passes += 1
+        text = _read_text(skill_path)
+        fm = _frontmatter(text)
+        desc = fm.get("description", "")
+        user_invocable = fm.get("user-invocable", "")
+        tools = fm.get("allowed-tools", "")
+
+        assertions += 1
+        if user_invocable == "false":
+            passes += 1
+        else:
+            failures.append(
+                f"skills/{skill_name}: user-invocable must be 'false' (got {user_invocable!r})"
+            )
+        assertions += 1
+        if desc and len(desc) <= 220:
+            passes += 1
+        else:
+            failures.append(
+                f"skills/{skill_name}: description missing or > 220 chars (len={len(desc)})"
+            )
+        assertions += 1
+        tool_list = [t.strip() for t in tools.split(",")]
+        has_agent = any(re.match(r"^Agent\b", t) for t in tool_list)
+        has_send_message = any(re.match(r"^SendMessage\b", t) for t in tool_list)
+        if not has_agent and not has_send_message:
+            passes += 1
+        else:
+            failures.append(
+                f"skills/{skill_name}: nested-delegation tool leaked (Agent/SendMessage in allowed-tools)"
+            )
+
+    # Bonus: catch unexpected skill directories (drift toward v5 specialist sprawl).
+    skills_dir = plugin_root / "skills"
+    if skills_dir.exists():
+        shipped = sorted(p.name for p in skills_dir.iterdir() if p.is_dir())
+        for name in shipped:
+            if name not in EXPECTED_SKILLS:
+                failures.append(f"unexpected skill directory: skills/{name}")
+                assertions += 1
+    score = passes / assertions if assertions else 1
     return {
-        "id": 6,
-        "name": "scaffold self-consistency",
-        "pass": passed,
-        "score": 1 if passed else 0,
-        "note": note,
-        "detail": {"toolVersion": tool_version, "claudePluginVersion": claude_plugin_version},
+        "id": 5,
+        "name": "phase skill surface",
+        "pass": not failures,
+        "score": score,
+        "note": (
+            f"{passes}/{assertions} assertions pass"
+            if not failures
+            else f"{passes}/{assertions} assertions pass; {len(failures)} failure(s)"
+        ),
+        "detail": {
+            "failures": failures,
+            "expected": list(EXPECTED_SKILLS),
+            "assertions": assertions,
+            "passes": passes,
+        },
     }
 
 
 def _fmt_markdown(results: list[dict[str, object]], plugin_root: Path) -> str:
     lines: list[str] = []
-    lines.append("# xlfg audit-harness")
+    lines.append("# xlfg audit-harness (v6)")
     lines.append("")
     lines.append(f"Plugin: `{plugin_root}`")
     lines.append("")
@@ -467,14 +399,12 @@ def main(argv: list[str]) -> int:
         sys.stderr.write(f"audit-harness: {err}\n")
         return 2
 
-    cwd = Path.cwd()
     results = [
         _check_version_sync(plugin_root),
-        _check_sdlc_coverage(plugin_root),
-        _check_workflow_load(plugin_root),
-        _check_claude_code_compat(plugin_root),
-        _check_codex_surface(plugin_root),
-        _check_scaffold_consistency(plugin_root, cwd),
+        _check_command_surface(plugin_root),
+        _check_command_frontmatter(plugin_root),
+        _check_forbidden_tokens(plugin_root),
+        _check_skill_surface(plugin_root),
     ]
 
     if args.get("json"):

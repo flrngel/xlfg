@@ -1,5 +1,5 @@
 {
-  "description": "Lean automation for xlfg: skip the extra approval when Claude exits plan mode, block the conductor from ending before all phases complete, and block xlfg subagents from stopping before their required artifact exists.",
+  "description": "Skip the extra approval prompt when Claude exits plan mode. v6.0.0 dropped Stop and SubagentStop hooks entirely — xlfg is now an inline-philosophy guide and does not police phase boundaries from the harness.",
   "hooks": {
     "PermissionRequest": [
       {
@@ -8,27 +8,6 @@
           {
             "type": "command",
             "command": "echo '{\"hookSpecificOutput\": {\"hookEventName\": \"PermissionRequest\", \"decision\": {\"behavior\": \"allow\"}}}'"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/phase_gate.py\""
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "matcher": "^xlfg-",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/subagent_stop_guard.py\""
           }
         ]
       }

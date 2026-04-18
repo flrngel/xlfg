@@ -1,154 +1,104 @@
 ---
-description: Internal xlfg phase skill. Use only during /xlfg-debug runs to reproduce the failure, separate symptom from mechanism, and write an evidence-backed diagnosis without changing source code.
+description: Internal xlfg phase skill. Scientific debugging — reproduce, separate symptom from mechanism, hypothesis log, likely repair surface, no source edits.
 user-invocable: false
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, Write, WebSearch, WebFetch, Agent, SendMessage
+allowed-tools: Read, Grep, Glob, LS, Bash, Write
 ---
 
 # xlfg-debug-phase
 
-Use only during `/xlfg-debug` orchestration.
+Use only during `/xlfg-debug` orchestration. The conductor passes `RUN_ID` as `$ARGUMENTS`.
 
-Input: `$ARGUMENTS` (`RUN_ID` or `latest`)
+`allowed-tools` grants `Write` **only so this skill can create** `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Writing to any other path — especially any product file — is a contract violation. `Edit` and `MultiEdit` are intentionally not granted; you cannot modify existing source.
 
-## Objective
+## Purpose
 
-Produce an evidence-backed root-cause report and likely repair surface without modifying source code.
+Explain the mechanism. Not the fix — the mechanism.
 
-## Process
+## Lens
 
-1. Resolve `RUN_ID`, `DOCS_RUN_DIR`, and `DX_RUN_DIR`.
-2. Read:
-   - `context.md`
-   - `memory-recall.md`
-   - `spec.md`
-   - `test-contract.md`
-   - `test-readiness.md`
-   - `workboard.md`
-   - optional `repo-map.md`, `why.md`, `diagnosis.md`, `research.md`, `harness-profile.md`, `debug-report.md`
-   - `docs/xlfg/knowledge/current-state.md`
-3. Treat the intent contract in `spec.md` as canonical. For prompt or agent debugging, treat the prompt text, tool permissions or contracts, context windows, evaluation criteria, and false-success traps as first-class diagnosis surfaces. Do not collapse everything into one suspicious line too early.
-4. Use specialists as lane owners for diagnosis quality:
-   - always run `xlfg-repo-mapper` unless a fresh same-run `repo-map.md` already exists and clearly covers the failing surface
-   - always run `xlfg-why-analyst`
-   - always run `xlfg-root-cause-analyst`
-   - run `xlfg-harness-profiler` when any runnable harness, failing command, or log stream exists
-   - run `xlfg-env-doctor` when environment, local server health, race timing, infra, or dependency drift may be causal
-   - run `xlfg-test-strategist` when the reproducer or disproof probes are still vague after first-pass diagnosis
-   - run `xlfg-researcher` only when freshness or external docs materially change the diagnosis
-5. Keep the default specialist budget lean and sequential. Run one active artifact-producing specialist at a time, then load the next specialist only if the previous artifact leaves a concrete unresolved gap. Do not ask diagnosis specialists to spawn more specialists.
-6. Keep these specialists foregrounded, short-lived, and leaf-only. After each specialist returns, verify its expected artifact exists, begins with YAML frontmatter `status: DONE`, `status: BLOCKED`, or `status: FAILED`, and contains real findings instead of preparation notes. If it does not, use `SendMessage` with the returned agent ID to resume the same specialist once before treating the lane as failed. If no agent ID is available, re-dispatch the exact same packet once.
-7. Follow the debugging method in this order and record it in artifacts:
-   - make the expected correct behavior explicit
-   - verify the bug or user pain is real
-   - create the **smallest honest reproducer**
-   - simplify until irrelevant variables drop out
-   - compare failing vs passing inputs, prompts, states, environments, or commits
-   - form **falsifiable hypotheses** and try to disprove them
-   - trace the **first wrong state** or bad assumption, not just the final crash site
-   - use history search, `git bisect`, trace replay, targeted instrumentation, or log slicing when they materially shorten origin search
-   - ask "why" until the broken invariant or missing capability is clear, not merely the symptom
-8. Update `test-contract.md` so it becomes a diagnosis proof contract:
-   - at least one primary reproduction card
-   - at least one comparison or guard card
-   - exact `fast_check` or manual steps
-   - at least one `anti_monkey_probe` that would still fail under a shallow patch
-   - mark a command as `GUESS` when the repo evidence is not strong enough to claim certainty
-9. Update `spec.md` as the **single source of truth**:
-   - `Outcome / why`
-   - `Research and context`
-   - `Execution shape` for a diagnosis-only run
-   - `Solution summary`, where `chosen solution` becomes the likely repair surface only — no code changes
-   - `Task map` with diagnosis tasks only
-   - `Proof summary` with reproduction, disproof, confidence, and remaining unknowns
-10. Write `diagnosis.md` with the causal chain and rejected shortcuts.
-11. Write `debug-report.md` as the final diagnosis artifact.
-12. Update the blockers and next-safest-repair sections of `workboard.md`. Mark implementation-oriented stages as `SKIPPED (/xlfg-debug)` when that improves clarity. The `## Phase status` block is rendered by the conductor from `.xlfg/phase-state.json`.
-13. Create optional docs only when they change the evidence surface: `repro-notes.md`, `probe-log.md`, `history-findings.md`, `env-plan.md`, `research.md`. Do not create implementation tasks.
+You are a root-cause analyst. Your deliverable is a causal chain with evidence at each link, archived to `diagnosis.md`.
 
-## Required output shape
+## How to work it
 
-`debug-report.md` must open with YAML frontmatter declaring `status: DONE`, `status: BLOCKED`, or `status: FAILED` and contain:
+1. **Reproduce.** Actually run the minimal repro and capture the output. Not a paraphrase — the real output. "I think it would fail with X" is not a reproduction.
 
-```markdown
-# Debug report
+2. **Separate symptom from mechanism.** The first wrong state is rarely the one the user reports. Trace backward from the visible symptom to the earliest point where state deviates from expectation.
+   - If you can log or print at the suspect boundary, do so and re-run.
+   - If the bug is in a prompt/agent flow, capture the actual model output that drove the wrong decision — not a plausible reconstruction.
 
-## Problem summary
-- ...
+3. **Keep a hypothesis log.** Each hypothesis:
+   - is falsifiable (names a specific prediction about what you'll see),
+   - has direct evidence for or against it,
+   - dies cleanly when the evidence kills it.
 
-## Expected vs observed
-- ...
+   Do not hold contradictory hypotheses silently. If you have two live hypotheses, design a test that distinguishes them and run it.
 
-## Smallest honest reproduction
-- ...
+4. **Find the load-bearing invariant.** Most bugs are a broken invariant: something the code assumes is true that isn't. Name the invariant explicitly. Show where it breaks.
 
-## Causal chain
-1. ...
-2. ...
-3. ...
+5. **Describe the likely repair surface** (without opening it):
+   - Which file / function / boundary will the fix touch?
+   - What kind of fix is it — contract change, input validation, state reset, concurrency fence, dependency pin?
+   - What's the minimum honest fix vs. the tempting over-fix?
 
-## Deep root problem
-- ...
+6. **List the fake fixes you rejected.**
+   - "Just retry" — rejected because the underlying state is corrupted and retry compounds it.
+   - "Swallow the exception" — rejected because the caller's contract requires a real answer.
+   - "Change the test to match" — rejected because the test was correct and the code was wrong.
 
-## Strongest evidence
-- ...
+   These are the part of the diagnosis most likely to be useful to the next debugger.
 
-## Fake fixes to reject
-- ...
+7. **Name the residual unknowns.** Not "unknown factors may apply" — specific named things. *"I do not know whether this failure mode also affects the webhook path, because I did not reproduce it there."*
 
-## Likely repair surface (no edits made)
-- ...
+8. **Write `docs/xlfg/runs/<RUN_ID>/diagnosis.md`** using this template exactly:
 
-## Unknowns / confidence
-- ...
+   ```markdown
+   # Diagnosis — <RUN_ID>
 
-## Next safest proof step
-- ...
-```
+   ## Ask
+   <1–2 sentences restating the reported failure.>
 
-## Delegation packet rules
+   ## Mechanism
+   <1–2 sentences on what is actually breaking. Not the symptom; the mechanism.>
 
-- Preseed the target artifact before dispatch. The parent conductor should create the file named in `PRIMARY_ARTIFACT` with YAML frontmatter `status: IN_PROGRESS`, the scoped mission, and a short checklist so the specialist is resuming a concrete work item instead of starting from an empty chat turn.
-- Every specialist packet must begin with machine-readable headers:
+   ## Strongest evidence
+   <The concrete artifact — log line, test output, diff of observed vs. expected
+   state, captured stdout from a re-run — that makes the mechanism load-bearing
+   rather than hypothetical.>
 
-```text
-PRIMARY_ARTIFACT: <exact path>
-FILE_SCOPE: <bounded files or paths>
-DONE_CHECK: <single honest check or NONE>
-RETURN_CONTRACT: DONE|BLOCKED|FAILED <artifact-path> only
+   ## Likely repair surface
+   <File(s) / function(s) / boundary. One paragraph on the minimum honest fix
+   and why a larger fix would be over-scoped. Do NOT open that surface.>
 
-OWNERSHIP_BOUNDARY:
-- Own: the assigned diagnosis evidence lane and only the no-edit debug artifact named in PRIMARY_ARTIFACT
-- Do not redo: prior diagnosis sibling findings, intent decomposition, implementation planning, or source/test edits
-- Consume: `spec.md`, `context.md`, `repo-map.md`, `why.md`, and same-phase sibling artifacts listed below
+   ## Fake fixes rejected
+   - `<tempting non-fix>` — <why it would mask the defect>
+   - `<tempting non-fix>` — <why>
 
-CONTEXT_DIGEST:
-- <quoted excerpt or bullet from spec.md / context.md / repo-map.md the specialist actually needs>
+   ## No-code-change guarantee
+   No product source, tests, fixtures, migrations, or configs were edited in
+   this run.
 
-PRIOR_SIBLINGS:
-- <path/to/sibling-artifact.md>: <one-line summary of what it already covered, or `none`>
-```
+   ## Residual unknowns
+   - <named, specific, falsifiable>
+   - <named, specific, falsifiable>
 
-- `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, and `PRIOR_SIBLINGS` are mandatory. See `agents/_shared/output-template.md` for the canonical shape. The digest replaces the agent's "you will receive these N files" reads. Siblings is how `xlfg-root-cause-analyst` builds on `xlfg-why-analyst` instead of re-deriving the same expectation contract — and how each subsequent diagnosis specialist refines rather than restarts.
-- Debug ownership boundaries:
-  - `xlfg-repo-mapper` owns failing-surface structure and commands.
-  - `xlfg-why-analyst` owns expected behavior and false-success traps.
-  - `xlfg-root-cause-analyst` owns causal mechanism and disproof probes.
-  - `xlfg-harness-profiler` and `xlfg-env-doctor` own proof budget and environment health only when logs or runnable harnesses make them causal.
-  - `xlfg-test-strategist` owns reproducer/disproof proof cards only when the proof contract is still vague.
-  - `xlfg-researcher` owns external facts only when freshness changes the diagnosis.
-- Pass objective context, not just a naked query. Include the exact ask, nearby constraints, and why the artifact matters to the next phase.
-- Keep each dispatch as a **micro-packet**: diagnosis lane, evidence anchors, scoped files, and disproof/proof signal only. Do not paste long logs, full source files, or a step-by-step debugging script when the specialist can read the cited artifacts.
-- Compact returned artifacts before updating `debug-report.md`, `spec.md`, or `workboard.md`: carry forward causal claim, strongest evidence, disproof status, likely repair surface, blockers, and next proof step only.
-- Only the phase conductor may delegate. Never ask a debug specialist to spawn nested subagents or to hand off the lane to another worker.
-- Default to **sequential** dispatch for artifact-producing diagnosis work. Parallelize only when packets are truly independent, small, and read-mostly.
-- When a specialist hits a nonfatal tool failure, resume the same lane instead of accepting a stop. Common recoveries: use `LS` or `Glob` instead of `Read` on directories; use `Grep` plus chunked `Read` windows instead of loading an oversized file in one shot.
+   ## Next safest proof step
+   <The single experiment or read that would most cheaply confirm or refute
+   the diagnosis.>
+   ```
 
-## Guardrails
+   This file is the durable artifact of the run. A future `/xlfg` or `/xlfg-debug` session will surface it during recall.
 
-- Do not edit product source, tests, fixtures, migrations, prompts, or configs as part of this phase. Evidence artifacts only.
-- Do not stop at the first suspicious line; keep going until you can explain the mechanism that makes the symptom inevitable.
-- A green command without a stable explanation is not a diagnosis.
-- Do not call something a root cause if you cannot say what invariant is broken or missing.
-- Reject gimmicks: retry inflation, timeout padding, logging-only patches, silent catches, one-example special cases, or blaming the model, user, or environment without proof.
-- If the issue appears prompt-related, inspect instruction order, objective splitting, missing context, evaluation mismatch, and tool affordance mismatch before blaming the model.
-- If evidence remains weak after one repair loop, say so explicitly and name the smallest missing proof.
+## Done signal
+
+`docs/xlfg/runs/<RUN_ID>/diagnosis.md` exists and is complete. A teammate reading it can:
+- repro the bug using your steps,
+- see why the mechanism you name causes the observed symptom,
+- tell which file to open to fix it,
+- and know what you didn't check.
+
+## Stop-traps
+
+- Declaring a root cause from one passing reproduction of a hypothesis. That's confirming a hypothesis, not eliminating its rivals.
+- "It's flaky" — flakiness is a symptom, not a diagnosis. Flaky means there is a race, a resource leak, a clock dependence, or a seed dependence you haven't named yet.
+- Sliding into a fix. If you catch yourself wanting to `Edit`, stop — this phase doesn't ship patches. The tool isn't granted for a reason.
+- Over-scoping. "While diagnosing this I also noticed…" — note it in residual unknowns, don't chase it. One run, one diagnosis.
