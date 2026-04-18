@@ -69,13 +69,34 @@ class TestPluginShape(unittest.TestCase):
                 f"{banned}/ must not exist in v6 (subagent / phase-skill / codex surface removed)",
             )
 
-    def test_scripts_are_single_audit_harness(self) -> None:
-        scripts = sorted(p.name for p in (PLUGIN / "scripts").iterdir() if p.is_file())
-        self.assertEqual(scripts, ["audit_harness.py"])
+    def test_only_audit_harness_and_compat_shims_under_scripts(self) -> None:
+        """scripts/ ships the v6 audit + two transitional .mjs no-op shims.
 
-    def test_no_mjs_files_anywhere_in_plugin(self) -> None:
-        mjs = list(PLUGIN.rglob("*.mjs"))
-        self.assertEqual(mjs, [], f".mjs files leaked back in: {mjs}")
+        The `.mjs` shims exist ONLY so cached v5.0.0 Claude Code sessions,
+        whose hooks.json still spawns `node .../phase-gate.mjs`, do not
+        keep erroring. See scripts/phase-gate.mjs for the full rationale.
+        Any other script name is a regression.
+        """
+        scripts = sorted(p.name for p in (PLUGIN / "scripts").iterdir() if p.is_file())
+        self.assertEqual(
+            scripts,
+            ["audit_harness.py", "phase-gate.mjs", "subagent-stop-guard.mjs"],
+        )
+
+    def test_mjs_shims_are_no_ops(self) -> None:
+        """The .mjs compat shims must not regrow logic. Enforce a byte cap
+        so nobody rebuilds the v5.0.0 Stop hook under the shim name.
+        """
+        for name in ("phase-gate.mjs", "subagent-stop-guard.mjs"):
+            path = PLUGIN / "scripts" / name
+            self.assertTrue(path.exists(), f"missing compat shim: {name}")
+            # Cap at 1 KB — enough for the comment + the 4-line body, far
+            # too small to rebuild any real Stop hook logic.
+            self.assertLess(
+                path.stat().st_size,
+                1024,
+                f"{name} grew past the no-op shim budget; it must stay trivial",
+            )
 
 
 class TestManifests(unittest.TestCase):
