@@ -21,11 +21,28 @@ from pathlib import Path
 
 PUBLIC_COMMANDS = ("xlfg.md", "xlfg-debug.md")
 
-# Tokens that would indicate the sub-agent / phase-skill / codex / file-protocol
-# dispatch contract is creeping back into the runtime. A v6 runtime prompt must
-# be self-contained — no dispatch headers, no hidden-skill chaining, no Codex
-# surface. Plain mentions of historical filenames ("no more spec.md") are
-# allowed because they help users migrating from v5.
+# The 9 phase skills the conductors dispatch. Shared ones (recall/intent/context)
+# are consumed by both `/xlfg` and `/xlfg-debug`.
+EXPECTED_SKILLS = (
+    "xlfg-recall-phase",
+    "xlfg-intent-phase",
+    "xlfg-context-phase",
+    "xlfg-plan-phase",
+    "xlfg-implement-phase",
+    "xlfg-verify-phase",
+    "xlfg-review-phase",
+    "xlfg-compound-phase",
+    "xlfg-debug-phase",
+)
+
+# Tokens that indicate the v5 sub-agent dispatch contract is creeping back into
+# the runtime prompt. v6.2 keeps phase skills (see EXPECTED_SKILLS) but does
+# NOT have sub-agents, dispatch packets, or per-phase coordination files.
+#
+# Note: `xlfg-engineering:xlfg-` is now the intended pattern (the conductor
+# frontmatter lists each skill this way), so it is NOT forbidden. The SubagentStop
+# hook / subagent-stop-guard / ledger-append tokens are forbidden because those
+# tools were deleted in v6.0.
 FORBIDDEN_RUNTIME_TOKENS = (
     "PRIMARY_ARTIFACT",
     "OWNERSHIP_BOUNDARY",
@@ -34,7 +51,6 @@ FORBIDDEN_RUNTIME_TOKENS = (
     "RETURN_CONTRACT:",
     "ARTIFACT_KIND:",
     "DONE_CHECK:",
-    "xlfg-engineering:xlfg-",
     "SubagentStop",
     "subagent-stop-guard",
     "ledger-append",
@@ -214,33 +230,119 @@ def _check_command_frontmatter(plugin_root: Path) -> dict[str, object]:
 
 
 def _check_forbidden_tokens(plugin_root: Path) -> dict[str, object]:
-    """v6 runtime must be self-contained prose, not a dispatch contract.
+    """v6 runtime must not carry sub-agent dispatch contract or dead tool references.
 
-    Any leak of the old sub-agent / phase-skill / codex / file-protocol tokens
-    into the shipped command bodies means a regression is sneaking in.
+    Any leak of old dispatch-packet tokens (PRIMARY_ARTIFACT, OWNERSHIP_BOUNDARY,
+    etc.) or references to deleted v5 tooling (SubagentStop, subagent-stop-guard,
+    ledger-append) into either a command body or a skill body means a regression
+    is sneaking in.
     """
     failures: list[str] = []
+    targets: list[tuple[str, Path]] = []
     for cmd in PUBLIC_COMMANDS:
-        p = plugin_root / "commands" / cmd
+        targets.append((f"commands/{cmd}", plugin_root / "commands" / cmd))
+    for skill_name in EXPECTED_SKILLS:
+        targets.append(
+            (f"skills/{skill_name}/SKILL.md", plugin_root / "skills" / skill_name / "SKILL.md")
+        )
+    for label, path in targets:
         try:
-            text = _read_text(p)
+            text = _read_text(path)
         except OSError:
-            failures.append(f"commands/{cmd}: missing")
+            failures.append(f"{label}: missing")
             continue
         for tok in FORBIDDEN_RUNTIME_TOKENS:
             if tok in text:
-                failures.append(f"commands/{cmd}: forbidden v6 token present: {tok!r}")
+                failures.append(f"{label}: forbidden v6 token present: {tok!r}")
     return {
         "id": 4,
-        "name": "forbidden v5/codex tokens absent",
+        "name": "forbidden v5 dispatch tokens absent",
         "pass": not failures,
         "score": 1 if not failures else 0,
         "note": (
-            "no v5/codex tokens leaked into runtime"
+            "no v5 dispatch tokens leaked into runtime"
             if not failures
             else f"{len(failures)} leak(s)"
         ),
         "detail": {"failures": failures},
+    }
+
+
+def _check_skill_surface(plugin_root: Path) -> dict[str, object]:
+    """v6.2 ships 9 phase skills — the 8 /xlfg phases plus /xlfg-debug's debug phase.
+
+    Each skill must:
+      - live at skills/<name>/SKILL.md
+      - have frontmatter with `user-invocable: false` (hidden)
+      - have a description (≤220 chars for context-budget discipline)
+      - NOT grant `Agent` or `SendMessage` (no nested delegation in v6)
+    """
+    failures: list[str] = []
+    assertions = 0
+    passes = 0
+    for skill_name in EXPECTED_SKILLS:
+        skill_path = plugin_root / "skills" / skill_name / "SKILL.md"
+        assertions += 1
+        if not skill_path.exists():
+            failures.append(f"missing skill: skills/{skill_name}/SKILL.md")
+            continue
+        passes += 1
+        text = _read_text(skill_path)
+        fm = _frontmatter(text)
+        desc = fm.get("description", "")
+        user_invocable = fm.get("user-invocable", "")
+        tools = fm.get("allowed-tools", "")
+
+        assertions += 1
+        if user_invocable == "false":
+            passes += 1
+        else:
+            failures.append(
+                f"skills/{skill_name}: user-invocable must be 'false' (got {user_invocable!r})"
+            )
+        assertions += 1
+        if desc and len(desc) <= 220:
+            passes += 1
+        else:
+            failures.append(
+                f"skills/{skill_name}: description missing or > 220 chars (len={len(desc)})"
+            )
+        assertions += 1
+        tool_list = [t.strip() for t in tools.split(",")]
+        has_agent = any(re.match(r"^Agent\b", t) for t in tool_list)
+        has_send_message = any(re.match(r"^SendMessage\b", t) for t in tool_list)
+        if not has_agent and not has_send_message:
+            passes += 1
+        else:
+            failures.append(
+                f"skills/{skill_name}: nested-delegation tool leaked (Agent/SendMessage in allowed-tools)"
+            )
+
+    # Bonus: catch unexpected skill directories (drift toward v5 specialist sprawl).
+    skills_dir = plugin_root / "skills"
+    if skills_dir.exists():
+        shipped = sorted(p.name for p in skills_dir.iterdir() if p.is_dir())
+        for name in shipped:
+            if name not in EXPECTED_SKILLS:
+                failures.append(f"unexpected skill directory: skills/{name}")
+                assertions += 1
+    score = passes / assertions if assertions else 1
+    return {
+        "id": 5,
+        "name": "phase skill surface",
+        "pass": not failures,
+        "score": score,
+        "note": (
+            f"{passes}/{assertions} assertions pass"
+            if not failures
+            else f"{passes}/{assertions} assertions pass; {len(failures)} failure(s)"
+        ),
+        "detail": {
+            "failures": failures,
+            "expected": list(EXPECTED_SKILLS),
+            "assertions": assertions,
+            "passes": passes,
+        },
     }
 
 
@@ -302,6 +404,7 @@ def main(argv: list[str]) -> int:
         _check_command_surface(plugin_root),
         _check_command_frontmatter(plugin_root),
         _check_forbidden_tokens(plugin_root),
+        _check_skill_surface(plugin_root),
     ]
 
     if args.get("json"):

@@ -4,16 +4,16 @@ An autonomous proof-first SDLC guide for Claude Code, designed for Opus-class mo
 
 ## Status
 
-**v6.1.0** keeps the v6 philosophy cut — two slash commands whose bodies carry the whole SDLC discipline inline, no sub-agents, no hidden phase skills, no per-phase coordination files — and restores the minimal durable archive under `docs/xlfg/` that v6.0.0 dropped too eagerly. A fresh session needs something to recall; every run now ends by writing a compact summary or diagnosis to `docs/xlfg/runs/<RUN_ID>/`.
+**v6.2.0** is the conductor+skills architecture: two slash commands acting as conductors, each dispatching a pipeline of hidden phase skills. Phase bodies load just-in-time via the `Skill` tool, not all at once in the command body. No sub-agents, no nested delegation, no v5 coordination files, no Codex surface. The durable archive under `docs/xlfg/` (current-state + per-run summaries/diagnoses) stays.
 
-See `plugins/xlfg-engineering/CHANGELOG.md` for the migration notes from v5.1.0 and the v6.1.0 restore.
+See `plugins/xlfg-engineering/CHANGELOG.md` for the full evolution from v5 to v6.2.
 
 ## What you get
 
-- `/xlfg "<request>"` — walks recall → intent → context → plan → implement → verify → review → compound inline. The main model holds the whole run in its own context and plays PM, architect, security reviewer, performance reviewer, UX reviewer, test strategist, runner, reducer, and reviewer as separate mental passes. Ends by writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` (Ask / What changed / Proof / Residual risk / Durable lesson) and optionally updating `docs/xlfg/current-state.md`.
-- `/xlfg-debug "<request>"` — diagnosis-only. Walks recall → intent → context → debug. `allowed-tools` includes `Write` (for the diagnosis file) but excludes `Edit` and `MultiEdit` (product source stays untouched). Ends by writing `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+- `/xlfg "<request>"` — dispatches 8 phase skills in order: recall → intent → context → plan → implement → verify → review → compound. Each skill loads when invoked, runs in the main model's context, and returns. Ends by writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` (Ask / What changed / Proof / Residual risk / Durable lesson) and optionally updating `docs/xlfg/current-state.md`.
+- `/xlfg-debug "<request>"` — dispatches 4 phase skills: recall → intent → context → debug. Diagnosis-only: `allowed-tools` includes `Write` (for the diagnosis file) but excludes `Edit` and `MultiEdit` (product source stays untouched). Ends by writing `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
 
-Both bodies load the whole philosophy at invocation time. The tracked `docs/xlfg/` archive is how cross-session memory survives — there is no hidden tree to chase and no `.xlfg/` coordination state.
+The conductor carries the pipeline order, loopback rules, and operating contract; the phase bodies live in `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md` (9 files total, three shared between the conductors). The tracked `docs/xlfg/` archive is how cross-session memory survives — there is no `.xlfg/` coordination state.
 
 ## Install
 

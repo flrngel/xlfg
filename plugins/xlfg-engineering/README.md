@@ -1,48 +1,71 @@
-# xlfg-engineering (v6)
+# xlfg-engineering (v6.2)
 
 An autonomous proof-first SDLC guide for Claude Code, designed for Opus-class models.
 
 ## What you get
 
-Two slash commands, plus a tiny tracked archive under `docs/xlfg/`.
+Two slash commands that act as **conductors**, each dispatching a pipeline of hidden phase skills just-in-time.
 
-- `/xlfg "<request>"` — walks recall → intent → context → plan → implement → verify → review → compound inline. The main model holds the whole run in its own context and plays PM, architect, security reviewer, performance reviewer, UX reviewer, test strategist, runner, reducer, and reviewer as separate mental passes — no sub-agents, no dispatch headers, no per-phase coordination files. Ends by writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` (Ask / What changed / Proof / Residual risk / Durable lesson) and optionally updating the project's `docs/xlfg/current-state.md` if the run earned a promotion.
-- `/xlfg-debug "<request>"` — diagnosis-only. Walks recall → intent → context → debug. `allowed-tools` includes `Write` but excludes `Edit` and `MultiEdit` — the command cannot ship a patch. Ends by writing `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (Mechanism / Strongest evidence / Likely repair surface / Fake fixes rejected / No-code-change guarantee / Residual unknowns / Next safest proof step).
+- `/xlfg "<request>"` — dispatches 8 phase skills in order: recall → intent → context → plan → implement → verify → review → compound. Each skill loads when invoked, does its phase work in the main model's context, and returns. Ends by writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` and optionally updating `docs/xlfg/current-state.md`.
+- `/xlfg-debug "<request>"` — dispatches 4 phase skills: recall → intent → context → debug. Diagnosis-only: `allowed-tools` excludes `Edit` and `MultiEdit`, so product source cannot be modified. Ends by writing `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
 
-Both commands carry the full philosophy in their own bodies — the whole guide loads at invocation time. There is no hidden skill tree to chase.
+The phases are `plugins/xlfg-engineering/skills/xlfg-<name>-phase/SKILL.md` — 9 files total. Three of them (recall, intent, context) are shared by both conductors.
+
+## Architecture
+
+```
+commands/
+  xlfg.md          ← conductor (~600 words): frontmatter + pipeline + loopback rules
+  xlfg-debug.md    ← conductor (~500 words): frontmatter + pipeline + no-source-edits contract
+skills/
+  xlfg-recall-phase/SKILL.md      ← shared (used by /xlfg and /xlfg-debug)
+  xlfg-intent-phase/SKILL.md      ← shared
+  xlfg-context-phase/SKILL.md     ← shared
+  xlfg-plan-phase/SKILL.md        ← /xlfg only
+  xlfg-implement-phase/SKILL.md   ← /xlfg only
+  xlfg-verify-phase/SKILL.md      ← /xlfg only
+  xlfg-review-phase/SKILL.md      ← /xlfg only
+  xlfg-compound-phase/SKILL.md    ← /xlfg only
+  xlfg-debug-phase/SKILL.md       ← /xlfg-debug only
+scripts/
+  audit_harness.py  ← CI self-audit (5 checks)
+hooks/
+  hooks.json        ← ExitPlanMode auto-allow only
+```
+
+Skills run in the conductor's own context — no sub-agents, no nested delegation. The test suite enforces this: no `Agent` or `SendMessage` in any command or skill's `allowed-tools`.
 
 ## The durable archive under `docs/xlfg/`
 
-Opus-class models hold one run in context, but the model's context does not span sessions. The `docs/xlfg/` tree is how a future session recalls what past runs did:
+Opus-class models hold one run in context, but context doesn't span sessions. The `docs/xlfg/` tree is how a future session recalls what past runs did:
 
-- `docs/xlfg/current-state.md` — optional, one-page, tracked. The "read this first" handoff for anyone entering the repo. ~300 words max.
-- `docs/xlfg/runs/<RUN_ID>/run-summary.md` — one file per `/xlfg` run, ~200 words, fixed template.
+- `docs/xlfg/current-state.md` — optional, one-page, tracked. The "read this first" handoff. ~300 words max.
+- `docs/xlfg/runs/<RUN_ID>/run-summary.md` — one file per `/xlfg` run, fixed template.
 - `docs/xlfg/runs/<RUN_ID>/diagnosis.md` — one file per `/xlfg-debug` run, fixed template.
 
 `RUN_ID = <YYYYMMDD>-<HHMMSS>-<kebab-slug>`. Commit this directory to version control.
 
-There is no `.xlfg/` directory in v6. All durable state is under `docs/xlfg/` and tracked.
+There is no `.xlfg/` directory in v6.
 
 ## What's not in v6
 
-If you're migrating from v5 (or earlier), these are gone on purpose:
+If you're migrating from v5 or earlier:
 
-- **Sub-agents** — the 27 specialists (`xlfg-task-divider`, `xlfg-verify-runner`, `xlfg-ux-reviewer`, …) don't exist anymore. Their expertise is embedded in the `/xlfg` body as lenses the main model adopts in-line.
-- **Phase skills** — the 9 hidden phase skills (`xlfg-recall-phase`, `xlfg-intent-phase`, …) are gone. A phase is a discipline, not a Skill file.
-- **The sub-agent coordination layer** — no `spec.md`, no `workboard.md`, no `phase-state.json`, no `verification.md`, no ledger schema. The run lives in context, not in a cross-phase file protocol. (v6.1.0 note: the tracked `docs/xlfg/runs/<RUN_ID>/run-summary.md` and `docs/xlfg/current-state.md` are **not** this layer — they're cross-session memory, written once at the end of a run.)
-- **Stop and SubagentStop hooks** — with no sub-agents and no phase-state file, the hooks were vestigial. Only `PermissionRequest` `ExitPlanMode` auto-allow remains.
-- **Codex surface** — `.codex-plugin/`, `codex/`, and the Codex marketplace wiring are removed. v6 ships on Claude Code (and, via `.cursor-plugin/`, Cursor).
+- **Sub-agents** — the 27 specialists (`xlfg-task-divider`, `xlfg-verify-runner`, `xlfg-ux-reviewer`, …) don't exist. Their expertise is embedded in the phase skill bodies as lenses the main model adopts inline.
+- **v5 coordination layer** — no `spec.md`, no `workboard.md`, no `phase-state.json`, no `verification.md`, no `test-contract.md`, no ledger schema. The run lives in context; durable memory is the tracked `docs/xlfg/` archive.
+- **Stop and SubagentStop hooks** — gone. Only `PermissionRequest` `ExitPlanMode` auto-allow remains.
+- **Codex surface** — `.codex-plugin/`, `codex/`, and Codex marketplace wiring are removed. v6 ships on Claude Code (and, via `.cursor-plugin/`, Cursor).
 - **`/xlfg-audit`, `/xlfg-status`, `/xlfg-init`** — all were tied to the v5 file-state surface.
-- **`.xlfg/`** — v5 used it for the Stop hook's phase-state file. v6 has no phase-state, so no `.xlfg/`.
+- **`.xlfg/`** — v5 used it for the Stop hook's phase-state file. v6 has no phase-state.
 
 ## Installation
 
-```bash
+```text
 /plugin marketplace add flrngel/xlfg
 /plugin install xlfg-engineering@flrngel
 ```
 
-Then in any Claude Code session:
+Then:
 
 ```
 /xlfg add a retry policy to the webhook consumer with exponential backoff
@@ -51,21 +74,17 @@ Then in any Claude Code session:
 
 ## Running the audit locally
 
-The plugin self-audits via `scripts/audit_harness.py` — four deterministic checks (version sync, command surface, command frontmatter, forbidden-token sweep). Runs in CI on every PR.
-
 ```bash
 python3 plugins/xlfg-engineering/scripts/audit_harness.py
 ```
 
-`--json` for machine output.
+Five checks: version sync, command surface, command frontmatter, forbidden-token sweep (covers commands AND skill bodies), phase skill surface (9 expected skills with correct frontmatter). `--json` for machine output.
 
-## Why the v6 cut
+## Why this shape
 
-The v5 line carried 44 files of delegation scaffolding: specialist agents, phase skills, shared preambles, dispatch rules, file-protocol guards, and cross-runtime hooks. That made sense when weaker models needed externalized state to stay coherent across a long run.
+v5 had specialists + skills + dispatch packets + coordination files + hooks — 44 scaffolding files that were serialization overhead for weaker models. v6.0 nuked all of it. v6.1 restored the cross-session durable archive. v6.2 restores the skill split for context-budget discipline (phase bodies load just-in-time) while keeping the v6 bans on sub-agents, coordination files, and dispatch packets.
 
-Opus 4.7 has a 1M-token context and strong self-monitoring. The file protocol was paying serialization cost for a feature the model no longer needs. The discipline survives — 8 phases, proof before claim, scope discipline, completion barrier, no broken-window fixes, human-only blockers — but it survives as prose the model reads once at the start of the run, not as a graph of sub-agent dispatches.
-
-See `CHANGELOG.md` for the complete 6.0.0 migration notes.
+Net: strong reasoners get the phase guidance they need, when they need it, without holding 3000 words of unused phase text in the prompt for every invocation.
 
 ## License
 

@@ -1,9 +1,12 @@
-"""Test suite for xlfg v6.
+"""Test suite for xlfg v6.2.
 
-v6.0.0 is a philosophy release: two command bodies, one audit script, one
-hooks.json, two manifests. No sub-agents, no phase skills, no Codex surface,
-no file-based state, no ledger. The tests that follow exist to catch drift
-*back* toward that surface, not to reconstruct it.
+v6.2 shape: conductor + 9 phase skills. No sub-agents, no per-phase coordination
+files, no Codex surface, no ledger. The durable archive (docs/xlfg/current-state.md,
+runs/<RUN_ID>/run-summary.md, runs/<RUN_ID>/diagnosis.md) stays.
+
+These tests guard the architecture against drift in either direction:
+- Toward v5: re-adding sub-agents, dispatch headers, coordination files, Codex.
+- Toward v6.0 monolith: collapsing skills back into command bodies.
 """
 from __future__ import annotations
 
@@ -15,6 +18,36 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 PLUGIN = REPO / "plugins" / "xlfg-engineering"
+
+EXPECTED_SKILLS = (
+    "xlfg-recall-phase",
+    "xlfg-intent-phase",
+    "xlfg-context-phase",
+    "xlfg-plan-phase",
+    "xlfg-implement-phase",
+    "xlfg-verify-phase",
+    "xlfg-review-phase",
+    "xlfg-compound-phase",
+    "xlfg-debug-phase",
+)
+
+XLFG_PIPELINE = (
+    "xlfg-recall-phase",
+    "xlfg-intent-phase",
+    "xlfg-context-phase",
+    "xlfg-plan-phase",
+    "xlfg-implement-phase",
+    "xlfg-verify-phase",
+    "xlfg-review-phase",
+    "xlfg-compound-phase",
+)
+
+XLFG_DEBUG_PIPELINE = (
+    "xlfg-recall-phase",
+    "xlfg-intent-phase",
+    "xlfg-context-phase",
+    "xlfg-debug-phase",
+)
 
 
 def _frontmatter(text: str) -> dict[str, str]:
@@ -36,22 +69,27 @@ def _frontmatter(text: str) -> dict[str, str]:
     return fields
 
 
-class TestPluginShape(unittest.TestCase):
-    """The v6 plugin tree must be minimal and self-contained."""
+# ---------------------------------------------------------------------------
+# Plugin tree shape
+# ---------------------------------------------------------------------------
 
-    def test_plugin_tree_is_small(self) -> None:
+
+class TestPluginShape(unittest.TestCase):
+    """The v6.2 plugin tree has 2 commands, 9 skills, 1 audit script, plus meta."""
+
+    def test_plugin_tree_is_bounded(self) -> None:
         files = sorted(
             str(p.relative_to(PLUGIN))
             for p in PLUGIN.rglob("*")
             if p.is_file() and "__pycache__" not in p.parts
         )
-        # Allow no surprise directories. Any new file must be deliberate.
         allowed_prefixes = (
             ".claude-plugin/",
             ".cursor-plugin/",
             "commands/",
             "hooks/",
             "scripts/",
+            "skills/",
             "CHANGELOG.md",
             "CLAUDE.md",
             "README.md",
@@ -59,24 +97,18 @@ class TestPluginShape(unittest.TestCase):
         for f in files:
             self.assertTrue(
                 f.startswith(allowed_prefixes),
-                f"unexpected file in v6 plugin tree: {f}",
+                f"unexpected file in v6.2 plugin tree: {f}",
             )
 
-    def test_no_agents_or_skills_or_codex(self) -> None:
-        for banned in ("agents", "skills", "codex", ".codex-plugin"):
+    def test_no_agents_or_codex(self) -> None:
+        """Sub-agents and the Codex surface are gone. Phase skills stay."""
+        for banned in ("agents", "codex", ".codex-plugin"):
             self.assertFalse(
                 (PLUGIN / banned).exists(),
-                f"{banned}/ must not exist in v6 (subagent / phase-skill / codex surface removed)",
+                f"{banned}/ must not exist in v6 (sub-agent / Codex surface removed)",
             )
 
     def test_only_audit_harness_and_compat_shims_under_scripts(self) -> None:
-        """scripts/ ships the v6 audit + two transitional .mjs no-op shims.
-
-        The `.mjs` shims exist ONLY so cached v5.0.0 Claude Code sessions,
-        whose hooks.json still spawns `node .../phase-gate.mjs`, do not
-        keep erroring. See scripts/phase-gate.mjs for the full rationale.
-        Any other script name is a regression.
-        """
         scripts = sorted(p.name for p in (PLUGIN / "scripts").iterdir() if p.is_file())
         self.assertEqual(
             scripts,
@@ -84,14 +116,9 @@ class TestPluginShape(unittest.TestCase):
         )
 
     def test_mjs_shims_are_no_ops(self) -> None:
-        """The .mjs compat shims must not regrow logic. Enforce a byte cap
-        so nobody rebuilds the v5.0.0 Stop hook under the shim name.
-        """
         for name in ("phase-gate.mjs", "subagent-stop-guard.mjs"):
             path = PLUGIN / "scripts" / name
             self.assertTrue(path.exists(), f"missing compat shim: {name}")
-            # Cap at 1 KB — enough for the comment + the 4-line body, far
-            # too small to rebuild any real Stop hook logic.
             self.assertLess(
                 path.stat().st_size,
                 1024,
@@ -99,9 +126,12 @@ class TestPluginShape(unittest.TestCase):
             )
 
 
-class TestManifests(unittest.TestCase):
-    """Both manifests ship the same version string."""
+# ---------------------------------------------------------------------------
+# Manifests
+# ---------------------------------------------------------------------------
 
+
+class TestManifests(unittest.TestCase):
     def test_version_sync(self) -> None:
         paths = [
             PLUGIN / ".claude-plugin" / "plugin.json",
@@ -117,9 +147,12 @@ class TestManifests(unittest.TestCase):
         self.assertFalse((REPO / ".agents").exists())
 
 
-class TestCommands(unittest.TestCase):
-    """Exactly two public commands: xlfg and xlfg-debug."""
+# ---------------------------------------------------------------------------
+# Commands (conductors)
+# ---------------------------------------------------------------------------
 
+
+class TestCommands(unittest.TestCase):
     def test_exactly_two_commands(self) -> None:
         cmds = sorted(p.name for p in (PLUGIN / "commands").glob("*.md"))
         self.assertEqual(cmds, ["xlfg-debug.md", "xlfg.md"])
@@ -140,14 +173,60 @@ class TestCommands(unittest.TestCase):
         self.assertLessEqual(len(fm.get("description", "")), 220)
         self.assertIn("allowed-tools", fm)
 
-    def test_xlfg_debug_cannot_modify_existing_files(self) -> None:
-        """Diagnosis-only means the debug command cannot modify product source.
+    def test_xlfg_dispatches_eight_phase_skills(self) -> None:
+        """The /xlfg command must grant exactly the 8 SDLC phase skills and
+        name each in the body in the expected order."""
+        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        fm = _frontmatter(text)
+        tools = fm.get("allowed-tools", "")
+        for skill in XLFG_PIPELINE:
+            self.assertIn(
+                f"Skill(xlfg-engineering:{skill}",
+                tools,
+                f"xlfg command must grant Skill(xlfg-engineering:{skill} ...)",
+            )
+            self.assertIn(
+                f"xlfg-engineering:{skill}",
+                text,
+                f"xlfg command body must reference {skill} in the pipeline",
+            )
+        # Pipeline order: each skill's body-position must be monotonic in the
+        # expected order (no skipping, no reordering).
+        positions = [text.find(f"xlfg-engineering:{s}") for s in XLFG_PIPELINE]
+        self.assertEqual(
+            positions,
+            sorted(positions),
+            "xlfg command pipeline order does not match recall→intent→context→plan→implement→verify→review→compound",
+        )
 
-        `Edit` / `MultiEdit` must be absent (modifying existing files is the
-        blast radius we're protecting). `Write` is granted so the command can
-        create `docs/xlfg/runs/<RUN_ID>/diagnosis.md`, but the body must make
-        that the only sanctioned Write target.
-        """
+    def test_xlfg_does_not_grant_debug_skill(self) -> None:
+        """The debug phase is for /xlfg-debug only."""
+        fm = _frontmatter((PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8"))
+        tools = fm.get("allowed-tools", "")
+        self.assertNotIn("xlfg-engineering:xlfg-debug-phase", tools)
+
+    def test_xlfg_debug_dispatches_four_phase_skills(self) -> None:
+        text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
+        fm = _frontmatter(text)
+        tools = fm.get("allowed-tools", "")
+        for skill in XLFG_DEBUG_PIPELINE:
+            self.assertIn(
+                f"Skill(xlfg-engineering:{skill}",
+                tools,
+                f"xlfg-debug command must grant Skill(xlfg-engineering:{skill} ...)",
+            )
+            self.assertIn(
+                f"xlfg-engineering:{skill}",
+                text,
+                f"xlfg-debug body must reference {skill} in the pipeline",
+            )
+        # No SDLC-only skills (plan/implement/verify/review/compound) allowed on debug.
+        for skill in ("xlfg-plan-phase", "xlfg-implement-phase", "xlfg-verify-phase",
+                      "xlfg-review-phase", "xlfg-compound-phase"):
+            self.assertNotIn(skill, tools)
+
+    def test_xlfg_debug_cannot_modify_existing_files(self) -> None:
+        """Diagnosis-only: no Edit/MultiEdit; Write only for diagnosis.md."""
         text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
         fm = _frontmatter(text)
         tools = fm.get("allowed-tools", "")
@@ -158,23 +237,14 @@ class TestCommands(unittest.TestCase):
                 f"xlfg-debug must not grant {banned}: diagnosis-only contract",
             )
         self.assertIn("Write", tools, "xlfg-debug needs Write for diagnosis.md")
-        # The body must constrain Write to the diagnosis path.
         self.assertIn(
             "docs/xlfg/runs/<RUN_ID>/diagnosis.md",
             text,
             "xlfg-debug body must name the sanctioned Write path",
         )
 
-    def test_both_commands_cover_their_phases(self) -> None:
-        xlfg = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8").lower()
-        debug = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8").lower()
-        for phase in ("recall", "intent", "context", "plan", "implement", "verify", "review", "compound"):
-            self.assertIn(phase, xlfg, f"/xlfg body missing {phase} phase")
-        for phase in ("recall", "intent", "context", "debug"):
-            self.assertIn(phase, debug, f"/xlfg-debug body missing {phase} phase")
-
     def test_commands_do_not_reintroduce_dispatch_contract(self) -> None:
-        """v6 is inline philosophy, not dispatch headers."""
+        """v6 is conductor+skills, not sub-agent dispatch."""
         forbidden = (
             "PRIMARY_ARTIFACT",
             "OWNERSHIP_BOUNDARY",
@@ -182,26 +252,154 @@ class TestCommands(unittest.TestCase):
             "PRIOR_SIBLINGS",
             "RETURN_CONTRACT:",
             "DONE_CHECK:",
-            "xlfg-engineering:xlfg-",
         )
         for cmd in ("xlfg.md", "xlfg-debug.md"):
             text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
             for tok in forbidden:
                 self.assertNotIn(tok, text, f"{cmd}: reintroduced dispatch token {tok!r}")
 
-    def test_xlfg_is_not_a_dispatch_graph(self) -> None:
-        """The v6 /xlfg body must not spawn sub-skills or specialist agents."""
+    def test_commands_do_not_spawn_nested_agents(self) -> None:
+        """The conductor invokes skills, never sub-agents."""
+        for cmd in ("xlfg.md", "xlfg-debug.md"):
+            text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
+            fm = _frontmatter(text)
+            tools = fm.get("allowed-tools", "")
+            tool_names = [t.strip() for t in tools.split(",")]
+            for banned in ("Agent", "SendMessage"):
+                self.assertFalse(
+                    any(re.match(rf"^{banned}\b", t) for t in tool_names),
+                    f"{cmd}: {banned} granted — no nested delegation in v6",
+                )
+
+    def test_xlfg_body_disclaims_dotxlfg_directory(self) -> None:
         text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        self.assertIn("`.xlfg/` does not exist in v6", text)
+
+
+# ---------------------------------------------------------------------------
+# Phase skills
+# ---------------------------------------------------------------------------
+
+
+class TestSkills(unittest.TestCase):
+    def test_all_expected_skills_exist(self) -> None:
+        shipped = sorted(p.name for p in (PLUGIN / "skills").iterdir() if p.is_dir())
+        self.assertEqual(shipped, sorted(EXPECTED_SKILLS))
+
+    def test_every_skill_has_skill_md(self) -> None:
+        for name in EXPECTED_SKILLS:
+            path = PLUGIN / "skills" / name / "SKILL.md"
+            self.assertTrue(path.exists(), f"missing {path.relative_to(REPO)}")
+
+    def test_every_skill_frontmatter_is_hidden_and_well_described(self) -> None:
+        for name in EXPECTED_SKILLS:
+            text = (PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+            fm = _frontmatter(text)
+            self.assertEqual(
+                fm.get("user-invocable"),
+                "false",
+                f"skills/{name}: must be user-invocable: false",
+            )
+            desc = fm.get("description", "")
+            self.assertTrue(desc, f"skills/{name}: missing description")
+            self.assertLessEqual(
+                len(desc),
+                220,
+                f"skills/{name}: description {len(desc)} chars > 220 (context-budget discipline)",
+            )
+            # Skill file is a skill, not a command — no `name:` frontmatter.
+            self.assertNotIn(
+                "name",
+                fm,
+                f"skills/{name}: should not have `name:` frontmatter (skills are hidden)",
+            )
+
+    def test_no_skill_grants_nested_delegation(self) -> None:
+        """No Agent or SendMessage in any skill's allowed-tools.
+
+        v6 skills run in the conductor's own context. They do not spawn
+        sub-agents. If this test fails, the sub-agent architecture is
+        creeping back in.
+        """
+        for name in EXPECTED_SKILLS:
+            text = (PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+            fm = _frontmatter(text)
+            tools = fm.get("allowed-tools", "")
+            tool_names = [t.strip() for t in tools.split(",")]
+            for banned in ("Agent", "SendMessage"):
+                self.assertFalse(
+                    any(re.match(rf"^{banned}\b", t) for t in tool_names),
+                    f"skills/{name}: {banned} must not appear in allowed-tools",
+                )
+
+    def test_no_skill_references_deleted_v5_dispatch(self) -> None:
+        forbidden = (
+            "PRIMARY_ARTIFACT",
+            "OWNERSHIP_BOUNDARY",
+            "CONTEXT_DIGEST",
+            "PRIOR_SIBLINGS",
+            "RETURN_CONTRACT:",
+            "DONE_CHECK:",
+            "SubagentStop",
+        )
+        for name in EXPECTED_SKILLS:
+            text = (PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
+            for tok in forbidden:
+                self.assertNotIn(tok, text, f"skills/{name}: reintroduced v5 token {tok!r}")
+
+    def test_debug_skill_grants_write_and_names_sanctioned_path(self) -> None:
+        """The debug skill is the only skill that writes under docs/xlfg/runs/."""
+        text = (PLUGIN / "skills" / "xlfg-debug-phase" / "SKILL.md").read_text(encoding="utf-8")
         fm = _frontmatter(text)
-        tools = fm.get("allowed-tools", "")
-        self.assertNotIn("Skill(", tools)
-        self.assertNotIn("Agent", tools.split(","))
-        self.assertNotIn("SendMessage", tools)
+        self.assertIn("Write", fm.get("allowed-tools", ""))
+        self.assertNotIn("Edit", fm.get("allowed-tools", "").split(","))
+        self.assertNotIn("MultiEdit", fm.get("allowed-tools", ""))
+        self.assertIn("docs/xlfg/runs/<RUN_ID>/diagnosis.md", text)
+
+    def test_compound_skill_writes_run_summary(self) -> None:
+        text = (PLUGIN / "skills" / "xlfg-compound-phase" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("docs/xlfg/runs/<RUN_ID>/run-summary.md", text)
+        self.assertIn("docs/xlfg/current-state.md", text)
+
+    def test_recall_skill_reads_durable_archive(self) -> None:
+        text = (PLUGIN / "skills" / "xlfg-recall-phase" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("docs/xlfg/current-state.md", text)
+        self.assertIn("docs/xlfg/runs/", text)
+
+    def test_skill_bodies_cover_their_load_bearing_philosophy(self) -> None:
+        """Each skill must carry its own core concept(s).
+
+        These substrings are what make a skill a *skill* rather than a pasted
+        outline — drift detection against someone stripping bodies down to
+        one-liners.
+        """
+        expectations = {
+            "xlfg-recall-phase": ("librarian", "prior", "git log"),
+            "xlfg-intent-phase": ("falsifiable", "three", "blocker"),
+            "xlfg-context-phase": ("cartographer", "harness", "whole repo"),
+            "xlfg-plan-phase": ("fast_check", "smoke_check", "ship_check", "readiness"),
+            "xlfg-implement-phase": ("Edit", "failure-mode", "out-of-scope"),
+            "xlfg-verify-phase": ("GREEN", "RED", "FAILED"),
+            "xlfg-review-phase": ("Architecture", "Security", "Performance", "UX", "APPROVE"),
+            "xlfg-compound-phase": ("run-summary.md", "current-state.md", "Durable lesson"),
+            "xlfg-debug-phase": ("Reproduce", "hypothesis", "Mechanism", "fake fixes"),
+        }
+        for skill, needles in expectations.items():
+            text = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
+            for needle in needles:
+                self.assertIn(
+                    needle,
+                    text,
+                    f"skills/{skill}: missing load-bearing concept {needle!r}",
+                )
+
+
+# ---------------------------------------------------------------------------
+# Hooks
+# ---------------------------------------------------------------------------
 
 
 class TestHooks(unittest.TestCase):
-    """v6 hooks.json ships only the ExitPlanMode auto-allow."""
-
     def test_hooks_json_is_minimal(self) -> None:
         hooks = json.loads((PLUGIN / "hooks" / "hooks.json").read_text(encoding="utf-8"))
         names = sorted(hooks.get("hooks", {}).keys())
@@ -214,9 +412,12 @@ class TestHooks(unittest.TestCase):
         self.assertNotIn("SubagentStop", names)
 
 
-class TestAuditHarness(unittest.TestCase):
-    """The audit harness must pass against its own repo."""
+# ---------------------------------------------------------------------------
+# Audit harness
+# ---------------------------------------------------------------------------
 
+
+class TestAuditHarness(unittest.TestCase):
     def _run(self, args: list[str] | None = None) -> tuple[int, str, str]:
         proc = subprocess.run(
             ["python3", str(PLUGIN / "scripts" / "audit_harness.py"), *(args or [])],
@@ -238,86 +439,38 @@ class TestAuditHarness(unittest.TestCase):
         self.assertIn("plugin", data)
         self.assertIn("results", data)
         ids = [r["id"] for r in data["results"]]
-        self.assertEqual(ids, [1, 2, 3, 4])
+        self.assertEqual(ids, [1, 2, 3, 4, 5])
         for r in data["results"]:
             for key in ("name", "pass", "score", "note"):
                 self.assertIn(key, r)
 
 
-class TestPhilosophyStaysIntact(unittest.TestCase):
-    """Load-bearing philosophy tokens must remain in the v6 command bodies.
+# ---------------------------------------------------------------------------
+# Conductor-level discipline
+# ---------------------------------------------------------------------------
 
-    These assertions are the canary for anyone tempted to prune the guide down
-    to a one-liner: the specific discipline names (proof before claim,
-    completion barrier, scope discipline, no broken-window fixes, human-only
-    blockers) are what separate /xlfg from "just do the task."
-    """
 
-    def test_xlfg_keeps_load_bearing_philosophy(self) -> None:
-        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8").lower()
-        for needle in (
-            "proof before claim",
-            "completion barrier",
-            "scope discipline",
-            "human-only blocker",
-            "repo truth first",
-            "one autonomous run",
-            "smallest honest",
-            "residual risk",
-            "falsifiable",
-        ):
-            self.assertIn(needle, text, f"/xlfg dropped load-bearing concept: {needle}")
-
-    def test_xlfg_debug_keeps_diagnosis_philosophy(self) -> None:
-        text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8").lower()
-        for needle in (
-            "no source edits",
-            "root",
-            "reproduction",
-            "hypothesis",
-            "mechanism",
-            "fake fixes rejected",
-            "residual unknowns",
-        ):
-            self.assertIn(needle, text, f"/xlfg-debug dropped load-bearing concept: {needle}")
-
-    def test_xlfg_phase_loopback_cap(self) -> None:
+class TestConductorDiscipline(unittest.TestCase):
+    def test_xlfg_names_loopback_cap_and_rules(self) -> None:
         text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
         self.assertIn("2", text)
         self.assertIn("loopback", text.lower())
+        # The explicit rules for when loopbacks do and do not count.
+        lower = text.lower()
+        self.assertIn("verify red", lower)
+        self.assertIn("review must-fix", lower)
+        self.assertIn("approve-with-notes", lower)
 
-    def test_xlfg_wires_durable_archive(self) -> None:
-        """Every /xlfg run must produce a durable archive future runs can recall.
-
-        The command body must name the read paths (current-state.md, runs/)
-        in recall and the write path (run-summary.md) in compound.
-        """
+    def test_xlfg_conductor_wires_durable_archive(self) -> None:
         text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
         self.assertIn("docs/xlfg/current-state.md", text)
         self.assertIn("docs/xlfg/runs/<RUN_ID>/run-summary.md", text)
         self.assertIn("RUN_ID", text)
-        # The template keywords the compound phase writes.
-        lower = text.lower()
-        self.assertIn("what changed", lower)
-        self.assertIn("proof", lower)
-        self.assertIn("residual risk", lower)
-        self.assertIn("durable lesson", lower)
 
-    def test_xlfg_debug_wires_durable_diagnosis(self) -> None:
-        """Every /xlfg-debug run must write its diagnosis to disk."""
+    def test_xlfg_debug_conductor_wires_diagnosis_archive(self) -> None:
         text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
-        self.assertIn("docs/xlfg/current-state.md", text)
         self.assertIn("docs/xlfg/runs/<RUN_ID>/diagnosis.md", text)
         self.assertIn("RUN_ID", text)
-
-    def test_xlfg_body_disclaims_dotxlfg_directory(self) -> None:
-        """The /xlfg body must explicitly tell the model not to use `.xlfg/`.
-
-        A substring ban would catch that disclaimer too, so instead assert the
-        disclaimer is present — drift back to `.xlfg/` will be obvious in review.
-        """
-        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
-        self.assertIn("`.xlfg/` does not exist in v6", text)
 
 
 if __name__ == "__main__":  # pragma: no cover

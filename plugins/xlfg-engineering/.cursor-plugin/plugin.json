@@ -1,7 +1,7 @@
 {
   "name": "xlfg-engineering",
-  "version": "6.1.0",
-  "description": "Autonomous proof-first SDLC guide for Opus-class models. Two inline commands (/xlfg, /xlfg-debug) — no sub-agents, no per-phase artifacts.",
+  "version": "6.2.0",
+  "description": "Autonomous proof-first SDLC guide for Opus-class models. Two conductor commands dispatching 9 hidden phase skills — no sub-agents.",
   "author": {
     "name": "xlfg",
     "email": "",

@@ -1,3 +1,49 @@
+## 6.2.0 — conductor + phase skills
+
+v6.0.0 made the command bodies monolithic (~3000 words each), loaded in full at every invocation. v5 had split phases into hidden skills that loaded just-in-time; the context-budget win of that architecture is real, and v6.2.0 brings it back — without the v5 sub-agent baggage.
+
+### Added
+
+- **9 phase skills** under `plugins/xlfg-engineering/skills/xlfg-*-phase/SKILL.md`:
+  - `xlfg-recall-phase` — deterministic recall over git history, durable archive, lexical repo scan
+  - `xlfg-intent-phase` — resolve ambiguity, name blockers, split bundled asks
+  - `xlfg-context-phase` — gather repo + runtime facts, bounded reads
+  - `xlfg-plan-phase` — solution choice, task split, test contract, risk pass
+  - `xlfg-implement-phase` — edit-not-rewrite, tests-alongside-source, no out-of-scope patches
+  - `xlfg-verify-phase` — run declared proof, classify GREEN / RED / FAILED
+  - `xlfg-review-phase` — architecture / security / performance / UX second opinion
+  - `xlfg-compound-phase` — write `run-summary.md`, consider promoting to `current-state.md`
+  - `xlfg-debug-phase` — scientific debugging, write `diagnosis.md`, no source edits
+- Each skill is hidden (`user-invocable: false`), carries its own `allowed-tools`, and stays bounded in scope.
+- `audit_harness.py` gains a 5th check — `_check_skill_surface` — validating the 9 skills exist with correct frontmatter.
+- 9 new tests in `TestSkills` guard the skill contracts; `TestCommands` gains pipeline-order assertions.
+
+### Changed
+
+- `commands/xlfg.md` shrinks from ~3000 words to ~600: frontmatter grants 8 `Skill(xlfg-engineering:xlfg-*-phase *)` entries, body carries the operating contract + startup + batch pipeline + loopback rules + completion summary, no phase bodies inline.
+- `commands/xlfg-debug.md` shrinks to ~500 words with 4 skill grants.
+- `audit_harness.py` removes `xlfg-engineering:xlfg-` from the forbidden-token list (it's now the intended dispatch pattern) and extends the forbidden-token sweep to skill bodies too (so dispatch-contract drift is caught wherever it appears).
+- Test suite: 23 → 32 tests. `TestSkills` class added. `test_no_agents_or_skills_or_codex` split into `test_no_agents_or_codex` (skills/ is back).
+
+### Unchanged
+
+- No sub-agents, no `agents/` directory, no nested delegation. The test suite asserts no skill grants `Agent` or `SendMessage`.
+- No dispatch headers in any command or skill (`PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:` all remain forbidden).
+- No v5 coordination files (`spec.md`, `workboard.md`, `phase-state.json`, etc.).
+- No `.xlfg/` directory.
+- No Stop or SubagentStop hooks.
+- No Codex surface.
+- The durable archive (`docs/xlfg/current-state.md`, `docs/xlfg/runs/<RUN_ID>/run-summary.md`, `docs/xlfg/runs/<RUN_ID>/diagnosis.md`) is identical to v6.1.0. The compound skill writes run-summary; the debug skill writes diagnosis.
+
+### Migration from 6.1.0
+
+- Public entry surface is unchanged: `/xlfg` and `/xlfg-debug` still take `$ARGUMENTS` and do the same thing. Users notice no difference.
+- The internal architecture changed: phase bodies now live in separate SKILL.md files. If you had custom edits to the v6.0/6.1 monolithic command bodies, port them into the matching skill file.
+
+### Why
+
+Claude Code loads slash-command bodies on every invocation; it loads Skill bodies only when the `Skill` tool fires. Keeping 3000 words of phase guidance in the command means every `/xlfg` invocation pays that token cost up front, even for trivial runs. Splitting the phases moves 95% of the content behind just-in-time loading. The model reading phase 3 context has only the context skill body loaded, not all 8 phases at once.
+
 ## 6.1.0 — restore the durable archive
 
 v6.0.0 overcorrected. Removing the sub-agent coordination layer (`spec.md`, `workboard.md`, `phase-state.json`) was right — strong reasoners hold that in context. But the same commit also deleted the **cross-run durable memory** (`docs/xlfg/current-state.md` and `docs/xlfg/runs/<RUN_ID>/`), which was a separate concern: the model's context does not span sessions. With those gone, the compound phase was ceremonial (a lesson with nowhere to land), recall was blind to prior runs, and every `/xlfg-debug` session evaporated its own diagnosis.
