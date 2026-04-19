@@ -1,3 +1,88 @@
+## 6.5.1 — prune redundant specialist grants from conductor frontmatter
+
+v6.5.1 is a scope-discipline tidying patch. The two conductor commands (`/xlfg`, `/xlfg-debug`) carried `Skill(xlfg-engineering:xlfg-<specialist> *)` grants for every specialist lens skill — 27 on `/xlfg`, 11 on `/xlfg-debug` — inherited from the v6.3.0 specialist rollout. Neither conductor ever loads a specialist directly: specialists are loaded from within phase skills and phase agents, each of which holds its own narrow specialist grants. The conductor grants were dead weight that padded the `allowed-tools` frontmatter by ~30 lines and created a drift risk (future agents reading `CLAUDE.md` could reintroduce grants aligned with stale prose).
+
+### Changed
+
+- `commands/xlfg.md`: removed 27 `Skill(xlfg-engineering:xlfg-<specialist> *)` entries from `allowed-tools`. Kept `Agent`, the 4 phase-skill grants (intent, plan, implement, compound), and the base toolset.
+- `commands/xlfg-debug.md`: removed 11 `Skill(xlfg-engineering:xlfg-<specialist> *)` entries from `allowed-tools`. Kept `Agent`, the 2 phase-skill grants (intent, debug), and the base toolset.
+- `CLAUDE.md` §Entry model: rewrote the bullet that documented conductor specialist grants to describe the new shape — conductors do not grant specialists; only phase skills and phase agents do.
+
+### Added
+
+- `test_conductor_does_not_grant_specialists_directly` in `tests/test_xlfg_v6.py`: iterates `EXPECTED_SPECIALIST_SKILLS` and asserts absence on both conductors. Prevents the redundancy from creeping back in.
+
+### Not changed
+
+- Specialist skill directories, phase-skill specialist grants, phase-agent `tools:` grants, skill "Optional specialist skills" body sections, `EXPECTED_SPECIALIST_SKILLS` tuples, `SANCTIONED_AGENTS` whitelist, audit harness, pipeline order, loopback rules, commit policy.
+
+Patch-level because no public entry surface or runtime dependency surface changes — only frontmatter tidying and one prose fix.
+
+## 6.5.0 — delegate exploration-heavy phases to plugin-shipped agents
+
+v6.5 migrates 4 exploration-heavy phases (recall, context, verify, review) from in-context `Skill` dispatch to plugin-shipped `Agent` dispatch under `plugins/xlfg-engineering/agents/`. The conductors now dispatch a mix: `/xlfg` runs 4 skills + 4 agents in canonical order; `/xlfg-debug` runs 2 skills + 2 agents. Pipeline order, loopback rules (cap 2 for `/xlfg`, 1 for `/xlfg-debug`), v6.3.2 end-of-run commit step, and v6.4.1 no-commit-on-debug symmetry are all unchanged.
+
+### Why this exists
+
+v6.0 killed sub-agents because the v5 dispatch-contract tax (`PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `RETURN_CONTRACT`) cost more than isolation bought. v6.2–v6.4 proved the skill-only pattern works for decision-driving phases but left token discipline on the table for exploration-heavy phases: recall's git-log sweeps, context's file fan-out, verify's raw test output, and review's diff reads all accumulated in the conductor context even though the conductor only needed each phase's *conclusion*.
+
+v6.5 carves out 4 phase-agents, each carrying a plain-prose `## Return format` section that replaces the v5 dispatch-packet machinery. The agent's tool-call log stays in *its* context; the conductor receives only the structured synthesis. No `PRIMARY_ARTIFACT` packet, no `CONTEXT_DIGEST` — the same forbidden-token sweep that caught v5 regressions (now extended over agent bodies too) applies.
+
+### Why v6.3.0's durable lesson still holds
+
+v6.3.0's run summary said: *"specialist expertise belongs in skills that load on-demand, not in sub-agents with dispatch packets ... the v6 insight 'strong models hold a run in context' does not forbid focused lenses; it forbids serialization overhead for context that doesn't need to cross process boundaries."* That lesson applies to **specialists** — which sit on shared context with their parent. It does not apply to **phases** whose job is to generate their own context from scratch (recall scans git history; context fans out over the repo; verify runs tests; review reads a diff). Phases have a natural signal/log boundary; specialists do not. v6.5 is a carve-out, not a reversal: 4 phase-agents admitted, specialists remain skills.
+
+### Added
+
+- `plugins/xlfg-engineering/agents/xlfg-recall.md` — phase agent. Returns `RECALL RESULT` synthesis (prior runs consulted, git highlights, load-bearing truths).
+- `plugins/xlfg-engineering/agents/xlfg-context.md` — phase agent. Returns `CONTEXT MAP` (files, proof commands, constraints, implied requirements, unknowns).
+- `plugins/xlfg-engineering/agents/xlfg-verify.md` — phase agent. Returns `VERIFY RESULT: GREEN | RED | FAILED` with ≤15 lines of evidence and a next-action line.
+- `plugins/xlfg-engineering/agents/xlfg-review.md` — phase agent. Returns `REVIEW RESULT: APPROVE | APPROVE-WITH-NOTES | MUST-FIX` with the chosen lens and specific findings.
+- `SANCTIONED_AGENTS` whitelist in `scripts/audit_harness.py` and `tests/test_xlfg_v6.py` enumerating the 4 admitted agents. Any future expansion requires justifying the token-discipline win.
+- Audit harness check #6 (`phase agent surface`): exists / frontmatter / no-nested-Agent / Return format section, 28 assertions.
+- New `TestAgents` class in `tests/test_xlfg_v6.py`: sanctioned-agents-exist, agent-frontmatter, agents-do-not-grant-nested-agents, agents-do-not-reintroduce-dispatch-contract, every-agent-carries-return-format, agent-bodies-cover-philosophy, recall-agent-reads-archive, agent-body-and-tools-stay-in-sync.
+- `test_xlfg_init_does_not_grant_agent` narrows the scaffold's tool-ban: conductors may grant `Agent` in v6.5; `/xlfg-init` may not.
+
+### Changed
+
+- `commands/xlfg.md`: 4 of 8 pipeline dispatches flip from `Skill` to `Agent`. `allowed-tools` drops 4 phase-skill grants (recall, context, verify, review) and adds `Agent`; 4 kept phase-skill grants + 27 specialist grants unchanged. New §"Briefing agents" explains how to brief each agent dispatch with a self-contained prompt.
+- `commands/xlfg-debug.md`: 2 of 4 pipeline dispatches flip to `Agent` (recall, context). `allowed-tools` drops recall+context Skill grants, adds `Agent`. `Edit`/`MultiEdit` stay absent; `Write` stays narrowly for `diagnosis.md`. New §"Briefing agents" added. v6.4.1's no-commit substring bans preserved (heading "Artifact policy (no writes beyond diagnosis)", summary bullet 5 "No writes beyond diagnosis").
+- `scripts/audit_harness.py`: `EXPECTED_PHASE_SKILLS` shrinks from 9 to 5 (intent, plan, implement, compound, debug); new `SANCTIONED_AGENTS` constant; new `_check_agent_surface` function; `_check_forbidden_tokens` extended to sweep agent bodies; title line updated to v6.5.
+- `tests/test_xlfg_v6.py`: `EXPECTED_PHASE_SKILLS` shrinks; `XLFG_PIPELINE` and `XLFG_DEBUG_PIPELINE` now tuples of `(mechanism, name)` pairs. 10 tests narrowed or rewritten (notably `test_no_agents_or_codex` → `test_no_unsanctioned_agents_or_codex`, `test_xlfg_dispatches_eight_phase_skills` → `test_xlfg_dispatches_four_skills_and_four_agents`). `_body()` helper added so body-order assertions skip the frontmatter block (agent names can be substrings of specialist names like `xlfg-verify` ⊂ `xlfg-verify-runner`).
+- `plugins/xlfg-engineering/CLAUDE.md`: "What this plugin is (v6.4+)" → v6.5+; new §"Why v6.5 split phases into skills + agents"; "Four things that look similar but aren't" → "Five things..." with phase agents as the new category; "What NOT to reintroduce" rewritten to guard drift in both directions (back to v5 sprawl; back to v6.4 pre-agents). Read-order list updated.
+
+### Removed
+
+- `skills/xlfg-recall-phase/` — body moved into `agents/xlfg-recall.md` plus Return format.
+- `skills/xlfg-context-phase/` — body moved into `agents/xlfg-context.md` plus Return format.
+- `skills/xlfg-verify-phase/` — body moved into `agents/xlfg-verify.md` plus Return format.
+- `skills/xlfg-review-phase/` — body moved into `agents/xlfg-review.md` plus Return format.
+
+### Unchanged
+
+- `/xlfg-init` — scaffold behavior, frontmatter, tests. Still grants no `Skill(...)` or `Agent`.
+- The 27 specialist lens skills — bodies, frontmatter, sync-lint, 400-word ceiling.
+- `/xlfg`'s v6.3.2 end-of-run commit step, loopback cap of 2, RUN_ID prescription, completion summary template.
+- `/xlfg-debug`'s product-freeze contract (`Edit`/`MultiEdit` absent), no-commit symmetry, `diagnosis.md` as sole sanctioned Write, loopback cap of 1.
+- `docs/xlfg/` durable archive conventions (current-state.md, runs/<RUN_ID>/{run-summary,diagnosis}.md).
+- Hook registrations (`PermissionRequest` + `ExitPlanMode` auto-allow only; no Stop, no SubagentStop).
+
+### Proof
+
+- fast_check: `python3 -m unittest tests.test_xlfg_v6 -v` — PASSED (48/48)
+- smoke_check: `python3 plugins/xlfg-engineering/scripts/audit_harness.py` — PASSED (6/6 checks, version sync + command surface + command frontmatter + forbidden-token sweep + 128 phase-skill assertions + 28 phase-agent assertions)
+- ship_check: `python3 -m unittest discover -v`
+
+### Residual risk
+
+- Runtime agent dispatch is not exercised by the test suite. The suite validates frontmatter, pipeline references, and the Return-format contract on the agent file side; it cannot verify that Claude Code's `Agent` tool resolves `subagent_type: "xlfg-recall"` to `plugins/xlfg-engineering/agents/xlfg-recall.md` at invocation time. Plugin-shipped agents worked in v4/v5 under this same path; if the resolution contract has changed since, the first real `/xlfg` invocation will surface it.
+- Specialist skills loaded from inside an agent's sub-context is also unverified at runtime. The agent's `tools:` frontmatter grants the specialists, and the sync-lint guards drift between the grants and the body's "Optional specialist skills" section. If runtime resolution of `Skill(xlfg-engineering:xlfg-<specialist> *)` fails across the agent boundary, the agent will still complete its pass inline (less specialist-polished but functionally intact).
+- The CLAUDE.md carve-out rationale is prose; its discipline depends on future contributors reading it. `SANCTIONED_AGENTS` expansion is the mechanical gate, but the rationale "specialists stay as skills, phases with heavy exploration may become agents" is the soft guardrail.
+
+### Durable lesson
+
+v6.3.0's lesson and v6.5's shape together give a two-sided rule: **agents are warranted when the phase generates its own context from scratch and the conductor only needs the conclusion; skills are warranted when the work sits on shared context with its loader.** Specialists fail the first criterion. Phases with heavy exploration pass it. Future architectural calls should apply the two-sided rule rather than treating agent-vs-skill as a single global choice.
+
 ## 6.4.1 — sync `/xlfg-debug` prose with v6 rules and philosophy
 
 Prose-only refresh of `commands/xlfg-debug.md`. The conductor's frontmatter (pipeline grants, hooks, allowed-tools) was already v6.3-correct; the body lagged on three axes relative to `/xlfg`:

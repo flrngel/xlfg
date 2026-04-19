@@ -4,9 +4,9 @@ An autonomous proof-first SDLC guide for Claude Code, designed for Opus-class mo
 
 ## Status
 
-**v6.4.1** is the conductor+skills architecture with on-demand specialist lenses, plus a minimal per-project scaffold command. Two conductor commands (`/xlfg`, `/xlfg-debug`) each dispatch a pipeline of hidden phase skills. 27 specialist lens skills load on-demand for focused expertise (security, root-cause, test-strategist, etc.). A third command (`/xlfg-init`) restores the v3.3-era scaffold role in a v6-shaped form — it patches a project's `.gitignore` and seeds `docs/xlfg/runs/` once, then stays out of the way. No sub-agents, no nested delegation, no v5 coordination files, no Codex surface. The durable archive under `docs/xlfg/` (current-state + per-run summaries/diagnoses) stays.
+**v6.5.1** splits the pipeline into **phase skills** (decision-driving, in-context) and **phase agents** (exploration-heavy, delegated). `/xlfg` dispatches 4 skills (intent, plan, implement, compound) + 4 agents (recall, context, verify, review) in canonical order; `/xlfg-debug` dispatches 2 skills (intent, debug) + 2 agents (recall, context). Each agent returns a distilled synthesis via a mandatory `## Return format` section instead of accumulating its tool-call log in the conductor. 27 specialist lens skills load on-demand for focused expertise — specialists stay as skills, not agents, because they sit on shared context with their parent. `/xlfg-init` remains the per-project scaffold (patches `.gitignore`, seeds `docs/xlfg/runs/`). The durable archive under `docs/xlfg/` (current-state + per-run summaries/diagnoses) stays.
 
-See `plugins/xlfg-engineering/CHANGELOG.md` for the full evolution from v5 to v6.4.
+See `plugins/xlfg-engineering/CHANGELOG.md` for the full evolution from v5 to v6.5.
 
 ## What you get
 

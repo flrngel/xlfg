@@ -1,9 +1,9 @@
 ---
 name: xlfg
-description: Autonomous proof-first SDLC run. Dispatches 8 hidden phase skills in order — recall, intent, context, plan, implement, verify, review, compound.
+description: Autonomous proof-first SDLC run. Dispatches 4 phase skills (intent, plan, implement, compound) and 4 phase agents (recall, context, verify, review) in order.
 argument-hint: "[feature, bugfix, investigation, or delivery request]"
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch, TaskCreate, TaskUpdate, TaskList, Skill(xlfg-engineering:xlfg-recall-phase *), Skill(xlfg-engineering:xlfg-intent-phase *), Skill(xlfg-engineering:xlfg-context-phase *), Skill(xlfg-engineering:xlfg-plan-phase *), Skill(xlfg-engineering:xlfg-implement-phase *), Skill(xlfg-engineering:xlfg-verify-phase *), Skill(xlfg-engineering:xlfg-review-phase *), Skill(xlfg-engineering:xlfg-compound-phase *), Skill(xlfg-engineering:xlfg-why-analyst *), Skill(xlfg-engineering:xlfg-query-refiner *), Skill(xlfg-engineering:xlfg-spec-author *), Skill(xlfg-engineering:xlfg-brainstorm *), Skill(xlfg-engineering:xlfg-repo-mapper *), Skill(xlfg-engineering:xlfg-harness-profiler *), Skill(xlfg-engineering:xlfg-env-doctor *), Skill(xlfg-engineering:xlfg-researcher *), Skill(xlfg-engineering:xlfg-context-adjacent-investigator *), Skill(xlfg-engineering:xlfg-context-constraints-investigator *), Skill(xlfg-engineering:xlfg-context-unknowns-investigator *), Skill(xlfg-engineering:xlfg-solution-architect *), Skill(xlfg-engineering:xlfg-root-cause-analyst *), Skill(xlfg-engineering:xlfg-test-strategist *), Skill(xlfg-engineering:xlfg-task-divider *), Skill(xlfg-engineering:xlfg-risk-assessor *), Skill(xlfg-engineering:xlfg-ui-designer *), Skill(xlfg-engineering:xlfg-test-readiness-checker *), Skill(xlfg-engineering:xlfg-task-implementer *), Skill(xlfg-engineering:xlfg-test-implementer *), Skill(xlfg-engineering:xlfg-task-checker *), Skill(xlfg-engineering:xlfg-verify-runner *), Skill(xlfg-engineering:xlfg-verify-reducer *), Skill(xlfg-engineering:xlfg-architecture-reviewer *), Skill(xlfg-engineering:xlfg-security-reviewer *), Skill(xlfg-engineering:xlfg-performance-reviewer *), Skill(xlfg-engineering:xlfg-ux-reviewer *)
+allowed-tools: Read, Grep, Glob, LS, Bash, Edit, MultiEdit, Write, WebSearch, WebFetch, TaskCreate, TaskUpdate, TaskList, Agent, Skill(xlfg-engineering:xlfg-intent-phase *), Skill(xlfg-engineering:xlfg-plan-phase *), Skill(xlfg-engineering:xlfg-implement-phase *), Skill(xlfg-engineering:xlfg-compound-phase *)
 effort: high
 hooks:
   PermissionRequest:
@@ -20,15 +20,20 @@ Use this when the user wants a serious engineering run with PM, UX, engineering,
 
 INPUT: `$ARGUMENTS`
 
-Treat this invocation as **one autonomous run** split across 8 phases. You are the conductor. Each phase is a separate skill that loads just-in-time — you invoke it with the `Skill` tool, the skill's body fills your context for that phase, and when it returns you move to the next one. Do not try to hold all 8 phase bodies in context simultaneously; that is exactly what the skill split is designed to prevent.
+Treat this invocation as **one autonomous run** split across 8 phases. You are the conductor. The pipeline mixes two dispatch mechanisms:
+
+- **Phase skills** (intent, plan, implement, compound) load just-in-time via the `Skill` tool and run in your own context. They drive decisions; you need their full reasoning to brief the next step.
+- **Phase agents** (recall, context, verify, review) dispatch via the `Agent` tool and run in their own sub-contexts. They explore heavily and return a distilled synthesis via a mandatory `## Return format` section. You receive the conclusion, not the tool-call log.
+
+Do not try to hold every phase body in context simultaneously — that's exactly what this split is designed to prevent.
 
 ## What xlfg is (and isn't) in this version
 
-xlfg v6.2 is a **conductor-plus-phase-skills architecture**. The 8 phases below are discrete skills under `plugins/xlfg-engineering/skills/xlfg-*-phase/`. This conductor dispatches them in order. There are **no sub-agents** — the skills run in your main context, not in delegated sub-contexts. There is **no v5 coordination layer** — no `spec.md`, `workboard.md`, `phase-state.json`, `verification.md`, or `test-contract.md` files. The run lives in your context and in the real repo.
+xlfg v6.5 is a **conductor-plus-phase-skills-and-agents architecture**. The 4 decision-driving phases are skills under `plugins/xlfg-engineering/skills/xlfg-*-phase/`; the 4 exploration-heavy phases are agents under `plugins/xlfg-engineering/agents/`. This conductor dispatches both in one canonical pipeline order. There is **no v5 coordination layer** — no `spec.md`, `workboard.md`, `phase-state.json`, `verification.md`, or `test-contract.md` files. The run lives in your context plus the 4 agent sub-contexts, and in the real repo.
 
-There is, however, a **minimal durable archive** so a future session can recall what past runs did:
+The durable archive convention stays:
 
-- `docs/xlfg/current-state.md` — optional, tracked, one-page living summary of the project's load-bearing truths. Read in the recall phase. Updated sparingly in compound when a run earns promotion.
+- `docs/xlfg/current-state.md` — optional, tracked, one-page living summary of the project's load-bearing truths. Read by the recall phase-agent. Updated sparingly by the compound skill when a run earns promotion.
 - `docs/xlfg/runs/<RUN_ID>/run-summary.md` — written by the compound skill at the end of every run. One file per run. Grep-able months later.
 
 `.xlfg/` does not exist in v6. Everything durable lives under `docs/xlfg/` and is committed.
@@ -47,43 +52,64 @@ Before dispatching phase 1, establish the run identity and wire the task-pane br
 2. **Harness task bridge (optional but recommended).** Emit one `TaskCreate` per phase so the Claude Code task pane mirrors the pipeline. Use these exact subjects: `xlfg: recall`, `xlfg: intent`, `xlfg: context`, `xlfg: plan`, `xlfg: implement`, `xlfg: verify`, `xlfg: review`, `xlfg: compound`. As each phase returns successfully, call `TaskUpdate` to mark the matching task completed.
 3. **The run directory is created lazily.** The compound skill will `mkdir -p docs/xlfg/runs/<RUN_ID>/` before writing `run-summary.md`. Do not preseed it.
 
-## Batch skill pipeline
+## Batch pipeline
 
-Invoke these 8 hidden skills in this exact order, passing `RUN_ID` as the argument each time:
+Dispatch these 8 phases in this exact order. The mechanism differs per phase:
 
-1. `xlfg-engineering:xlfg-recall-phase`
-2. `xlfg-engineering:xlfg-intent-phase`
-3. `xlfg-engineering:xlfg-context-phase`
-4. `xlfg-engineering:xlfg-plan-phase`
-5. `xlfg-engineering:xlfg-implement-phase`
-6. `xlfg-engineering:xlfg-verify-phase`
-7. `xlfg-engineering:xlfg-review-phase`
-8. `xlfg-engineering:xlfg-compound-phase`
+1. **Agent: `xlfg-recall`** — dispatch via the `Agent` tool with `subagent_type: "xlfg-recall"`.
+2. **Skill: `xlfg-engineering:xlfg-intent-phase`** — load via the `Skill` tool.
+3. **Agent: `xlfg-context`** — dispatch via the `Agent` tool with `subagent_type: "xlfg-context"`.
+4. **Skill: `xlfg-engineering:xlfg-plan-phase`** — load via the `Skill` tool.
+5. **Skill: `xlfg-engineering:xlfg-implement-phase`** — load via the `Skill` tool.
+6. **Agent: `xlfg-verify`** — dispatch via the `Agent` tool with `subagent_type: "xlfg-verify"`.
+7. **Agent: `xlfg-review`** — dispatch via the `Agent` tool with `subagent_type: "xlfg-review"`.
+8. **Skill: `xlfg-engineering:xlfg-compound-phase`** — load via the `Skill` tool.
 
-Use the `Skill` tool to load each phase just-in-time. Do NOT inline phase instructions from memory — read the actual skill body when you dispatch it. The phase skill's output is returned to your context; summarize it into your own working notes, then dispatch the next phase.
+Skill phases load just-in-time from their `SKILL.md` body — do NOT inline skill instructions from memory. Agent phases run in their own sub-contexts; you cannot load their bodies into your own context. Brief each agent with a self-contained prompt (see §Briefing agents) and read only its `## Return format` block from the returned message.
+
+## Briefing agents
+
+Each of the 4 agent dispatches needs a hand-written brief. Do not paste `$ARGUMENTS` raw — synthesize from what you already know. A good brief includes:
+
+- `RUN_ID`
+- The user's resolved ask (after intent, for context/verify/review; the raw ask for recall)
+- The prior-phase synthesis the agent actually needs (recall's output for context; plan's proof contract for verify; implement's file list + verify's evidence for review)
+- Any loopback reason, if this is a re-dispatch
+
+Example for `xlfg-context` dispatch (schematic — adapt to the real run):
+
+```
+Agent(
+  subagent_type: "xlfg-context",
+  description: "Context phase",
+  prompt: "RUN_ID: <id>\nUser ask (resolved): <intent synthesis>\nRecall synthesis: <recall result>\n\nGather the context needed to plan a change that satisfies the above. Focus surfaces on what the plan will need to touch, not the whole repo.\n\nReturn in the CONTEXT MAP format declared in your agent body."
+)
+```
+
+You read the agent's final message, which must match its declared Return format. Summarize into your own working notes and dispatch the next phase.
 
 ## Operating contract
 
-- **One run, no handoffs.** Do not ask the user to invoke any internal skill or re-run a phase. You own the whole run.
+- **One run, no handoffs.** Do not ask the user to invoke any internal skill, agent, or re-run a phase. You own the whole run.
 - **Human-only blockers only.** Ask the user only for things you cannot ground from the repo or current research: missing secrets, destructive external approvals, true product ambiguity that changes correctness. If the intent skill returns with `needs-user-answer`, stop the pipeline and ask at most three numbered blocking questions.
 - **Repo truth first, then targeted web research.** Read the code before you theorize. Reach for WebSearch / WebFetch when freshness matters (new APIs, recent vulns, shifting semantics) or the repo is insufficient.
 - **Scope discipline.** Do only what was asked. A bug fix does not need surrounding cleanup. No speculative refactors, no "while I'm here" expansions.
 - **No broken-window fixes.** Do not suppress errors, widen retries to green, mute tests, hand-wave "env issue", or special-case a failing example. Find the root cause.
-- **Proof before claim.** You have not shipped anything until you ran the proof and it came back green. The verify skill's GREEN classification is the only thing that qualifies.
+- **Proof before claim.** You have not shipped anything until verify came back GREEN. The verify agent's GREEN classification is the only thing that qualifies.
 - **Trust Opus-class reasoning, but trust proof more.** The test suite, the live run, and the real repo are the final arbiters.
 
 ## Loopback rules
 
 If a downstream phase rejects its predecessor, loop back explicitly:
 
-- **Verify RED → Implement → Verify.** The verify skill returns RED with an actionable fix; dispatch the implement skill again, then re-dispatch verify. This counts as **+1 loopback**.
-- **Review MUST-FIX → Implement → Verify → Review.** Same shape, triggered by review. **+1 loopback.**
+- **Verify RED → Implement → Verify.** The verify agent returns RED with an actionable fix; dispatch the implement skill again, then re-dispatch the verify agent. This counts as **+1 loopback**.
+- **Review MUST-FIX → Implement → Verify → Review.** Same shape, triggered by the review agent. **+1 loopback.**
 - **Verify exposes a diagnosis that needs a replan → Plan → Implement → Verify.** The replan happens inside the cycle; this is still **+1 loopback**, not two.
 
 Loopbacks that do **not** count:
 - Plan-phase repair after the plan skill's own readiness gate fails. Unlimited repairs within the plan phase itself.
-- `APPROVE-WITH-NOTES` from the review skill (inline tiny fixes + `fast_check` re-run).
-- Verify skill classified FAILED (harness broke) rather than RED (behavior broke). Repair the harness, then re-dispatch verify.
+- `APPROVE-WITH-NOTES` from the review agent (inline tiny fixes + `fast_check` re-run).
+- Verify agent classified FAILED (harness broke) rather than RED (behavior broke). Repair the harness, then re-dispatch verify.
 
 **Cap: 2 loopbacks.** After the second loopback, stop and escalate to the user with a summary of what failed and why. Do not hand the loop back to the user before the cap is hit.
 
@@ -110,7 +136,7 @@ This step is the v6.3.2 repair for a regression where v6 runs finished with edit
 Once the commit is done (or correctly skipped), finish the run with a concise summary. Prose the user can skim in under 30 seconds:
 
 1. **What changed.** 1–2 sentences naming the files touched and the behavior delivered.
-2. **Proof.** The exact command(s) the verify skill ran and the result.
+2. **Proof.** The exact command(s) the verify agent ran and the result.
 3. **Commit.** The short SHA and subject line, or "no product changes to commit — investigation-only run".
 4. **Residual risk.** What you did not test, what might still be wrong, and what you'd check next if you had another hour.
 5. **Follow-ups (optional).** Broken windows you spotted but did not fix, or objective groups deferred.
