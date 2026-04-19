@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""xlfg audit-harness (v6) — deterministic self-check of the xlfg plugin.
+"""xlfg audit-harness (v6.5) — deterministic self-check of the xlfg plugin.
 
-v6.0.0 removed sub-agents, phase skills, the Codex surface, and per-phase
-file artifacts. The audit is correspondingly smaller: four checks, each a
-simple file read / frontmatter parse / forbidden-token sweep.
+v6.5 migrated 4 exploration-heavy phases (recall, context, verify, review)
+from in-context Skill dispatch to plugin-shipped Agent dispatch so the
+conductor receives a distilled synthesis instead of each phase's tool-call
+log. The audit surface expands to six checks: version sync, command surface,
+command frontmatter, forbidden dispatch tokens, phase-skill surface, and
+phase-agent surface.
 
 Usage:
   audit_harness.py                 # auto-detects plugin root
@@ -21,24 +24,20 @@ from pathlib import Path
 
 PUBLIC_COMMANDS = ("xlfg.md", "xlfg-debug.md", "xlfg-init.md")
 
-# The 9 phase skills the conductors dispatch. Shared ones (recall/intent/context)
-# are consumed by both `/xlfg` and `/xlfg-debug`.
+# Phase skills that stay in the conductor's context (decision-heavy).
+# recall/context/verify/review moved to agents in v6.5.
 EXPECTED_PHASE_SKILLS = (
-    "xlfg-recall-phase",
     "xlfg-intent-phase",
-    "xlfg-context-phase",
     "xlfg-plan-phase",
     "xlfg-implement-phase",
-    "xlfg-verify-phase",
-    "xlfg-review-phase",
     "xlfg-compound-phase",
     "xlfg-debug-phase",
 )
 
 # v6.3 restored the v5 specialist expertise as hidden skills that phase skills
-# can load on-demand. These are optional lenses — the phase skill decides
-# whether a given specialist is worth loading for the work at hand. They stay
-# hidden (user-invocable: false) and run in the conductor's own context.
+# (and, in v6.5, phase agents) can load on-demand. They stay hidden
+# (user-invocable: false) and run in the conductor's own context when loaded
+# from a skill, and in the agent's context when loaded from an agent.
 EXPECTED_SPECIALIST_SKILLS = (
     "xlfg-brainstorm",
     "xlfg-context-adjacent-investigator",
@@ -71,14 +70,22 @@ EXPECTED_SPECIALIST_SKILLS = (
 
 EXPECTED_SKILLS = EXPECTED_PHASE_SKILLS + EXPECTED_SPECIALIST_SKILLS
 
-# Tokens that indicate the v5 sub-agent dispatch contract is creeping back into
-# the runtime prompt. v6.2 keeps phase skills (see EXPECTED_SKILLS) but does
-# NOT have sub-agents, dispatch packets, or per-phase coordination files.
-#
-# Note: `xlfg-engineering:xlfg-` is now the intended pattern (the conductor
-# frontmatter lists each skill this way), so it is NOT forbidden. The SubagentStop
-# hook / subagent-stop-guard / ledger-append tokens are forbidden because those
-# tools were deleted in v6.0.
+# v6.5 whitelist of plugin-shipped phase agents. This is the entire set of
+# agent files that may exist under plugins/xlfg-engineering/agents/. Any new
+# agent requires expanding this tuple with a justification naming the token-
+# discipline win that motivates it — the v6.3.0 agents ban still holds for
+# specialists (which stay skills), and agents are only warranted where the
+# phase generates its own context from scratch.
+SANCTIONED_AGENTS = (
+    "xlfg-recall",
+    "xlfg-context",
+    "xlfg-verify",
+    "xlfg-review",
+)
+
+# Tokens that indicate the v5 sub-agent dispatch contract is creeping back
+# into the runtime prompt. v6.5 keeps phase skills + agents (see above) but
+# does NOT have v5-style dispatch packets or per-phase coordination files.
 FORBIDDEN_RUNTIME_TOKENS = (
     "PRIMARY_ARTIFACT",
     "OWNERSHIP_BOUNDARY",
@@ -270,8 +277,8 @@ def _check_forbidden_tokens(plugin_root: Path) -> dict[str, object]:
 
     Any leak of old dispatch-packet tokens (PRIMARY_ARTIFACT, OWNERSHIP_BOUNDARY,
     etc.) or references to deleted v5 tooling (SubagentStop, subagent-stop-guard,
-    ledger-append) into either a command body or a skill body means a regression
-    is sneaking in.
+    ledger-append) into a command body, skill body, or agent body means a
+    regression is sneaking in.
     """
     failures: list[str] = []
     targets: list[tuple[str, Path]] = []
@@ -280,6 +287,10 @@ def _check_forbidden_tokens(plugin_root: Path) -> dict[str, object]:
     for skill_name in EXPECTED_SKILLS:
         targets.append(
             (f"skills/{skill_name}/SKILL.md", plugin_root / "skills" / skill_name / "SKILL.md")
+        )
+    for agent_name in SANCTIONED_AGENTS:
+        targets.append(
+            (f"agents/{agent_name}.md", plugin_root / "agents" / f"{agent_name}.md")
         )
     for label, path in targets:
         try:
@@ -305,13 +316,13 @@ def _check_forbidden_tokens(plugin_root: Path) -> dict[str, object]:
 
 
 def _check_skill_surface(plugin_root: Path) -> dict[str, object]:
-    """v6.3 ships 9 phase skills + 27 specialist lens skills.
+    """v6.5 ships 5 phase skills + 27 specialist lens skills (32 total).
 
     Each skill must:
       - live at skills/<name>/SKILL.md
       - have frontmatter with `user-invocable: false` (hidden)
       - have a description (≤220 chars for context-budget discipline)
-      - NOT grant `Agent` or `SendMessage` (no nested delegation in v6)
+      - NOT grant `Agent` or `SendMessage` (one level of delegation only)
     """
     failures: list[str] = []
     assertions = 0
@@ -382,9 +393,115 @@ def _check_skill_surface(plugin_root: Path) -> dict[str, object]:
     }
 
 
+def _check_agent_surface(plugin_root: Path) -> dict[str, object]:
+    """v6.5 ships exactly 4 sanctioned phase-agents under agents/.
+
+    Each agent must:
+      - live at agents/<name>.md (bare file, no subdirectory)
+      - have frontmatter with `name:` matching the file stem
+      - have a description (≤220 chars)
+      - have a `tools:` frontmatter entry
+      - NOT grant `Agent` or `SendMessage` (one level of delegation only)
+      - carry a `## Return format` section (structured output contract)
+
+    Any file under agents/ with a stem outside SANCTIONED_AGENTS is a
+    regression and fails the check.
+    """
+    failures: list[str] = []
+    assertions = 0
+    passes = 0
+    agents_dir = plugin_root / "agents"
+
+    # Bonus: catch unexpected agent files / subdirectories.
+    if agents_dir.exists():
+        for child in agents_dir.iterdir():
+            assertions += 1
+            if child.is_dir():
+                failures.append(f"agents/{child.name}/ subdirectory — v5-style layout regression")
+                continue
+            if child.suffix != ".md":
+                failures.append(f"agents/{child.name}: non-Markdown file")
+                continue
+            if child.stem not in SANCTIONED_AGENTS:
+                failures.append(
+                    f"unsanctioned agent file: agents/{child.name} "
+                    f"(expand SANCTIONED_AGENTS if intentional)"
+                )
+                continue
+            passes += 1
+
+    for agent_name in SANCTIONED_AGENTS:
+        agent_path = agents_dir / f"{agent_name}.md"
+        assertions += 1
+        if not agent_path.exists():
+            failures.append(f"missing agent: agents/{agent_name}.md")
+            continue
+        passes += 1
+        text = _read_text(agent_path)
+        fm = _frontmatter(text)
+        name = fm.get("name", "")
+        desc = fm.get("description", "")
+        tools = fm.get("tools", "")
+
+        assertions += 1
+        if name == agent_name:
+            passes += 1
+        else:
+            failures.append(
+                f"agents/{agent_name}.md: frontmatter `name:` must equal {agent_name!r} (got {name!r})"
+            )
+        assertions += 1
+        if desc and len(desc) <= 220:
+            passes += 1
+        else:
+            failures.append(
+                f"agents/{agent_name}.md: description missing or > 220 chars (len={len(desc)})"
+            )
+        assertions += 1
+        if tools:
+            passes += 1
+        else:
+            failures.append(f"agents/{agent_name}.md: missing `tools:` frontmatter")
+        assertions += 1
+        tool_list = [t.strip() for t in tools.split(",")]
+        has_agent = any(re.match(r"^Agent\b", t) for t in tool_list)
+        has_send_message = any(re.match(r"^SendMessage\b", t) for t in tool_list)
+        if not has_agent and not has_send_message:
+            passes += 1
+        else:
+            failures.append(
+                f"agents/{agent_name}.md: nested-delegation tool leaked (Agent/SendMessage in tools)"
+            )
+        assertions += 1
+        if "## Return format" in text:
+            passes += 1
+        else:
+            failures.append(
+                f"agents/{agent_name}.md: missing `## Return format` section"
+            )
+    score = passes / assertions if assertions else 1
+    return {
+        "id": 6,
+        "name": "phase agent surface",
+        "pass": not failures,
+        "score": score,
+        "note": (
+            f"{passes}/{assertions} assertions pass"
+            if not failures
+            else f"{passes}/{assertions} assertions pass; {len(failures)} failure(s)"
+        ),
+        "detail": {
+            "failures": failures,
+            "expected": list(SANCTIONED_AGENTS),
+            "assertions": assertions,
+            "passes": passes,
+        },
+    }
+
+
 def _fmt_markdown(results: list[dict[str, object]], plugin_root: Path) -> str:
     lines: list[str] = []
-    lines.append("# xlfg audit-harness (v6)")
+    lines.append("# xlfg audit-harness (v6.5)")
     lines.append("")
     lines.append(f"Plugin: `{plugin_root}`")
     lines.append("")
@@ -441,6 +558,7 @@ def main(argv: list[str]) -> int:
         _check_command_frontmatter(plugin_root),
         _check_forbidden_tokens(plugin_root),
         _check_skill_surface(plugin_root),
+        _check_agent_surface(plugin_root),
     ]
 
     if args.get("json"):

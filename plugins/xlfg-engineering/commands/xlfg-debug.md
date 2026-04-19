@@ -1,9 +1,9 @@
 ---
 name: xlfg-debug
-description: Autonomous diagnosis run. Dispatches 4 hidden phase skills — recall, intent, context, debug — to find the deep root without changing source code.
+description: Autonomous diagnosis run. Dispatches 2 phase skills (intent, debug) and 2 phase agents (recall, context) to find the deep root without editing source.
 argument-hint: "[bug report, prompt failure, misleading behavior, or diagnosis request]"
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, LS, Bash, Write, WebSearch, WebFetch, TaskCreate, TaskUpdate, TaskList, Skill(xlfg-engineering:xlfg-recall-phase *), Skill(xlfg-engineering:xlfg-intent-phase *), Skill(xlfg-engineering:xlfg-context-phase *), Skill(xlfg-engineering:xlfg-debug-phase *), Skill(xlfg-engineering:xlfg-why-analyst *), Skill(xlfg-engineering:xlfg-query-refiner *), Skill(xlfg-engineering:xlfg-repo-mapper *), Skill(xlfg-engineering:xlfg-harness-profiler *), Skill(xlfg-engineering:xlfg-env-doctor *), Skill(xlfg-engineering:xlfg-researcher *), Skill(xlfg-engineering:xlfg-context-adjacent-investigator *), Skill(xlfg-engineering:xlfg-context-constraints-investigator *), Skill(xlfg-engineering:xlfg-context-unknowns-investigator *), Skill(xlfg-engineering:xlfg-root-cause-analyst *), Skill(xlfg-engineering:xlfg-verify-runner *)
+allowed-tools: Read, Grep, Glob, LS, Bash, Write, WebSearch, WebFetch, TaskCreate, TaskUpdate, TaskList, Agent, Skill(xlfg-engineering:xlfg-intent-phase *), Skill(xlfg-engineering:xlfg-debug-phase *), Skill(xlfg-engineering:xlfg-why-analyst *), Skill(xlfg-engineering:xlfg-query-refiner *), Skill(xlfg-engineering:xlfg-repo-mapper *), Skill(xlfg-engineering:xlfg-harness-profiler *), Skill(xlfg-engineering:xlfg-env-doctor *), Skill(xlfg-engineering:xlfg-researcher *), Skill(xlfg-engineering:xlfg-context-adjacent-investigator *), Skill(xlfg-engineering:xlfg-context-constraints-investigator *), Skill(xlfg-engineering:xlfg-context-unknowns-investigator *), Skill(xlfg-engineering:xlfg-root-cause-analyst *), Skill(xlfg-engineering:xlfg-verify-runner *)
 effort: high
 hooks:
   PermissionRequest:
@@ -20,19 +20,22 @@ Use this when the user wants a serious debugging run that finds the **deep root 
 
 INPUT: `$ARGUMENTS`
 
-Treat this invocation as **one autonomous diagnosis run** split across 4 phases. You are the conductor. Each phase is a separate skill that loads just-in-time via the `Skill` tool.
+Treat this invocation as **one autonomous diagnosis run** split across 4 phases. You are the conductor. The pipeline mixes two dispatch mechanisms:
+
+- **Phase skills** (intent, debug) load just-in-time via the `Skill` tool and run in your own context. They drive the diagnosis reasoning.
+- **Phase agents** (recall, context) dispatch via the `Agent` tool and run in their own sub-contexts. They explore heavily and return a distilled synthesis via a mandatory `## Return format` section.
 
 Allowed-tools **intentionally excludes `Edit` and `MultiEdit`**. You cannot modify product source, tests, fixtures, migrations, or configs. `Write` is granted, but its **only sanctioned use** is the debug skill creating `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Writing to any other path is a contract violation.
 
 ## What `/xlfg-debug` is (and isn't) in this version
 
-This is `/xlfg` with the implement / verify / review / compound phases replaced by a single debug phase, and the product frozen. You are not shipping. You are explaining — and writing that explanation to disk so it survives the session.
+This is `/xlfg` with the plan / implement / verify / review / compound phases removed, leaving the diagnosis-relevant pipeline recall → intent → context → debug. The product stays frozen. You are not shipping — you are explaining, and writing that explanation to disk so it survives the session.
 
-xlfg v6.4 is a **conductor-plus-phase-skills architecture**. The 4 phases below are discrete skills under `plugins/xlfg-engineering/skills/xlfg-*-phase/`. This conductor dispatches them in order. There are **no sub-agents** — skills run in your main context, not in delegated sub-contexts. There is **no v5 coordination layer** — no `spec.md`, `workboard.md`, `phase-state.json`, or `verification.md` files. The run lives in your context and in the real repo.
+xlfg v6.5 is a **conductor-plus-phase-skills-and-agents architecture**. The 2 skill phases live under `plugins/xlfg-engineering/skills/xlfg-*-phase/`; the 2 agent phases live under `plugins/xlfg-engineering/agents/`. This conductor dispatches them in order. There is **no v5 coordination layer** — no `spec.md`, `workboard.md`, `phase-state.json`, or `verification.md` files. The run lives in your context plus the 2 agent sub-contexts, and in the real repo.
 
 The durable archive is minimal and debug-specific:
 
-- `docs/xlfg/current-state.md` — optional, tracked, one-page living summary of the project's load-bearing truths. Read in the recall phase. Never written by a debug run.
+- `docs/xlfg/current-state.md` — optional, tracked, one-page living summary of the project's load-bearing truths. Read by the recall phase-agent. Never written by a debug run.
 - `docs/xlfg/runs/<RUN_ID>/diagnosis.md` — written by the debug skill at the end of every run. One file per run. Grep-able months later and surfaced by future recall passes.
 
 `.xlfg/` does not exist in v6. Nothing in a debug run is written outside the sanctioned `diagnosis.md` path.
@@ -60,38 +63,48 @@ Before dispatching phase 1:
 2. **Harness task bridge (optional).** Emit one `TaskCreate` per phase: `xlfg-debug: recall`, `xlfg-debug: intent`, `xlfg-debug: context`, `xlfg-debug: debug`. Update as each phase returns.
 3. The run directory is created lazily by the debug skill when it writes `diagnosis.md`.
 
-## Batch skill pipeline
+## Batch pipeline
 
-Invoke these 4 hidden skills in this exact order, passing `RUN_ID` as the argument each time:
+Dispatch these 4 phases in this exact order. The mechanism differs per phase:
 
-1. `xlfg-engineering:xlfg-recall-phase`
-2. `xlfg-engineering:xlfg-intent-phase`
-3. `xlfg-engineering:xlfg-context-phase`
-4. `xlfg-engineering:xlfg-debug-phase`
+1. **Agent: `xlfg-recall`** — dispatch via the `Agent` tool with `subagent_type: "xlfg-recall"`.
+2. **Skill: `xlfg-engineering:xlfg-intent-phase`** — load via the `Skill` tool.
+3. **Agent: `xlfg-context`** — dispatch via the `Agent` tool with `subagent_type: "xlfg-context"`.
+4. **Skill: `xlfg-engineering:xlfg-debug-phase`** — load via the `Skill` tool.
 
-Use the `Skill` tool to load each phase just-in-time.
+Skill phases load just-in-time from their `SKILL.md` body. Agent phases run in their own sub-contexts; brief each agent with a self-contained prompt (see §Briefing agents) and read only its `## Return format` block from the returned message.
+
+## Briefing agents
+
+Each agent dispatch needs a hand-written brief. Do not paste `$ARGUMENTS` raw — synthesize from what you already know.
+
+For `xlfg-recall` (first phase): brief includes RUN_ID and the raw user ask. No prior phase synthesis to attach.
+
+For `xlfg-context` (after intent): brief includes RUN_ID, the intent-phase synthesis (resolved bug claim in the falsifiable "when X, system should Y, actually does Z, observed at boundary B" shape), and the recall synthesis. Emphasize the debug-specific framing — smallest repro, suspect path, determinism question.
+
+You read each agent's final message, which must match its declared Return format. Summarize into your own working notes and dispatch the next phase.
 
 ## Operating contract
 
 - **One run, no handoffs.** You own the whole investigation.
 - **No source edits.** Do not change product code, tests, fixtures, migrations, or configs. The tool-level guard is in `allowed-tools`; the discipline is also a prompt-level contract. If you catch yourself wanting to `Edit`, you're in `/xlfg`, not `/xlfg-debug`.
 - **Reject gimmicks.** Muting errors, widening retries, changing a test to pass, special-casing one example, hand-waving "env issue", declaring "works on the happy path" while the causal chain is unknown — these are not diagnoses.
-- **Smallest honest reproduction first.** The context and debug skills will push you to simplify. Follow them.
+- **Smallest honest reproduction first.** The context agent and debug skill will push you to simplify. Follow them.
 - **Falsifiable hypothesis log.** Each hypothesis either survives evidence or dies cleanly. Do not hold contradictory hypotheses silently.
 - **Repo truth first.** Read before you theorize. Web research when the repo is silent and freshness matters.
 - **Prompt/agent debugging is still debugging.** If the bug is in a prompt or tool contract, the prompt, tool spec, context inputs, evaluation bar, and false-success trap are all part of the system under test.
 
 ## Loopback rule
 
-If the debug skill lands on a promising hypothesis but evidence is too thin (you need a different repro, a cleaner log, a tighter boundary), dispatch the context skill again, then re-dispatch the debug skill.
+If the debug skill lands on a promising hypothesis but evidence is too thin (you need a different repro, a cleaner log, a tighter boundary), re-dispatch the context agent, then re-enter the debug skill.
 
 **Cap: 1 loopback.** After the second context→debug cycle, stop and surface the exact missing evidence to the user.
 
-## Artifact policy (no commit, ever)
+## Artifact policy (no writes beyond diagnosis)
 
-A debug run produces exactly one artifact: `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. That path is gitignored by the canonical v6 runs block (seeded by `/xlfg-init`), so there is nothing to stage. Do not `git add`, do not stage anything, do not create a commit. If tracked product changes appear in `git status` at the end of a debug run, a phase skill has violated the no-source-edits contract — report the mismatch to the user and stop; do not paper over it with a commit.
+A debug run produces exactly one artifact: `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. That path is gitignored by the canonical v6 runs block (seeded by `/xlfg-init`), so there is nothing to stage. Do not `git add`, do not stage anything, do not create a commit. If tracked product changes appear in `git status` at the end of a debug run, a phase has violated the no-source-edits contract — report the mismatch to the user and stop; do not paper over it.
 
-This is the intended symmetry with `/xlfg`'s commit step: `/xlfg` owns committing product changes, `/xlfg-debug` owns writing a diagnosis and nothing else.
+This is the intended symmetry with `/xlfg`: `/xlfg` owns committing product changes, `/xlfg-debug` owns writing a diagnosis and nothing else.
 
 ## Completion summary (end-of-run template)
 
@@ -101,7 +114,7 @@ The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written by t
 2. **Strongest evidence.** The concrete artifact (log line, test output, captured stdout) that makes the mechanism load-bearing, in one sentence.
 3. **Likely repair surface.** File / function / boundary the fix will touch, in one sentence. Do not open it in this run.
 4. **Residual unknowns.** What you did not resolve and what you'd check next if you had another hour — or "none worth naming".
-5. **No commit.** State explicitly: "investigation-only run — no product changes, nothing to stage." If that line is wrong, something upstream violated the no-source-edits contract and you should say so instead.
+5. **No writes beyond diagnosis.** State explicitly: "investigation-only run — no product changes, nothing to stage." If that line is wrong, something upstream violated the no-source-edits contract and you should say so instead.
 6. **Run archive.** The path `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
 7. **Suggested next step.** Usually "open `/xlfg` to ship the fix" or "run `<experiment>` to confirm before fixing".
 

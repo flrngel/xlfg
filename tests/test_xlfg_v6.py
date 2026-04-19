@@ -1,12 +1,28 @@
-"""Test suite for xlfg v6.2.
+"""Test suite for xlfg v6.5.
 
-v6.2 shape: conductor + 9 phase skills. No sub-agents, no per-phase coordination
-files, no Codex surface, no ledger. The durable archive (docs/xlfg/current-state.md,
-runs/<RUN_ID>/run-summary.md, runs/<RUN_ID>/diagnosis.md) stays.
+v6.5 shape: the /xlfg conductor dispatches 4 phase skills + 4 phase agents;
+/xlfg-debug dispatches 2 skills + 2 agents. Exploration-heavy phases (recall,
+context, verify, review) live as plugin-shipped agents under
+`plugins/xlfg-engineering/agents/` so their tool-call logs stay in their own
+sub-contexts and the conductor receives only each phase's distilled synthesis
+via an explicit Return-format section. Decision-heavy phases (intent, plan,
+implement, compound) stay as skills in the conductor's own context. The debug
+phase stays as a skill.
+
+This is a narrow carve-out to the v6.3.0 agents ban: the 4 whitelisted
+phase-agents in SANCTIONED_AGENTS are the only agents that may exist. The
+v6.3.0 durable lesson still holds for specialists — 27 specialist lens skills
+remain *skills*, not agents, because they sit on shared context with their
+parent and agent serialization would be wasteful. Agents are only warranted
+where the phase generates its own context from scratch and the conductor
+needs only the conclusion.
 
 These tests guard the architecture against drift in either direction:
-- Toward v5: re-adding sub-agents, dispatch headers, coordination files, Codex.
-- Toward v6.0 monolith: collapsing skills back into command bodies.
+- Toward v5: agents beyond the whitelist, dispatch headers, coordination
+  files, Codex surface, nested delegation.
+- Toward v6.0 monolith: collapsing skills/agents back into command bodies.
+- Toward v6.4 pre-agents: re-skill-ifying the 4 phases whose logs motivated
+  the v6.5 split.
 """
 from __future__ import annotations
 
@@ -19,22 +35,19 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 PLUGIN = REPO / "plugins" / "xlfg-engineering"
 
+# Phase skills that stay in the conductor's context (decision-heavy, low
+# log volume). The conductor loads these via Skill(xlfg-engineering:...).
 EXPECTED_PHASE_SKILLS = (
-    "xlfg-recall-phase",
     "xlfg-intent-phase",
-    "xlfg-context-phase",
     "xlfg-plan-phase",
     "xlfg-implement-phase",
-    "xlfg-verify-phase",
-    "xlfg-review-phase",
     "xlfg-compound-phase",
     "xlfg-debug-phase",
 )
 
-# v6.3 restored the v5 specialists as hidden on-demand lens skills. Phase
-# skills list these and load them via the `Skill` tool only when the task
-# calls for that specific expertise. They share the hidden-skill discipline
-# of phase skills but do not appear in conductor pipelines.
+# v6.3 restored the v5 specialists as hidden on-demand lens skills. v6.5
+# keeps that decision: specialist expertise stays as skills, not agents.
+# Phase skills AND agents load specialists via the Skill tool on-demand.
 EXPECTED_SPECIALIST_SKILLS = (
     "xlfg-brainstorm",
     "xlfg-context-adjacent-investigator",
@@ -67,22 +80,37 @@ EXPECTED_SPECIALIST_SKILLS = (
 
 EXPECTED_SKILLS = EXPECTED_PHASE_SKILLS + EXPECTED_SPECIALIST_SKILLS
 
+# v6.5 re-admits sub-agents for exploration-heavy phases only. Each agent
+# carries its phase body plus an explicit "## Return format" section so the
+# conductor receives a distilled synthesis, not the phase's tool-call log.
+# Any new agent requires adding the name here with a justification naming
+# the token-discipline win that motivates it. Specialists remain skills.
+SANCTIONED_AGENTS = (
+    "xlfg-recall",
+    "xlfg-context",
+    "xlfg-verify",
+    "xlfg-review",
+)
+
+# The /xlfg pipeline in dispatch order. Each entry is (mechanism, name).
+# "skill" → dispatched via Skill(xlfg-engineering:<name> ...).
+# "agent" → dispatched via Agent(subagent_type: "<name>", ...).
 XLFG_PIPELINE = (
-    "xlfg-recall-phase",
-    "xlfg-intent-phase",
-    "xlfg-context-phase",
-    "xlfg-plan-phase",
-    "xlfg-implement-phase",
-    "xlfg-verify-phase",
-    "xlfg-review-phase",
-    "xlfg-compound-phase",
+    ("agent", "xlfg-recall"),
+    ("skill", "xlfg-intent-phase"),
+    ("agent", "xlfg-context"),
+    ("skill", "xlfg-plan-phase"),
+    ("skill", "xlfg-implement-phase"),
+    ("agent", "xlfg-verify"),
+    ("agent", "xlfg-review"),
+    ("skill", "xlfg-compound-phase"),
 )
 
 XLFG_DEBUG_PIPELINE = (
-    "xlfg-recall-phase",
-    "xlfg-intent-phase",
-    "xlfg-context-phase",
-    "xlfg-debug-phase",
+    ("agent", "xlfg-recall"),
+    ("skill", "xlfg-intent-phase"),
+    ("agent", "xlfg-context"),
+    ("skill", "xlfg-debug-phase"),
 )
 
 
@@ -105,13 +133,28 @@ def _frontmatter(text: str) -> dict[str, str]:
     return fields
 
 
+def _body(text: str) -> str:
+    """Return body after frontmatter. Agent names can be substrings of
+    specialist skill names (xlfg-verify ⊂ xlfg-verify-runner), so body-order
+    assertions must skip the allowed-tools block in the frontmatter.
+    """
+    lines = text.split("\n")
+    if not lines or lines[0].strip() != "---":
+        return text
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            return "\n".join(lines[i + 1:])
+    return text
+
+
 # ---------------------------------------------------------------------------
 # Plugin tree shape
 # ---------------------------------------------------------------------------
 
 
 class TestPluginShape(unittest.TestCase):
-    """The v6.4 plugin tree has 3 commands, 9 + 27 skills, 1 audit script, plus meta."""
+    """The v6.5 plugin tree has 3 commands, 5 phase skills + 27 specialist
+    skills, 4 sanctioned agents, 1 audit script, plus meta."""
 
     def test_plugin_tree_is_bounded(self) -> None:
         files = sorted(
@@ -122,6 +165,7 @@ class TestPluginShape(unittest.TestCase):
         allowed_prefixes = (
             ".claude-plugin/",
             ".cursor-plugin/",
+            "agents/",
             "commands/",
             "hooks/",
             "scripts/",
@@ -133,15 +177,39 @@ class TestPluginShape(unittest.TestCase):
         for f in files:
             self.assertTrue(
                 f.startswith(allowed_prefixes),
-                f"unexpected file in v6.2 plugin tree: {f}",
+                f"unexpected file in v6.5 plugin tree: {f}",
             )
 
-    def test_no_agents_or_codex(self) -> None:
-        """Sub-agents and the Codex surface are gone. Phase skills stay."""
-        for banned in ("agents", "codex", ".codex-plugin"):
+    def test_no_unsanctioned_agents_or_codex(self) -> None:
+        """v6.5 permits exactly 4 whitelisted phase-agents under `agents/`.
+
+        The v6.3.0 durable lesson ("specialist expertise belongs in skills
+        that load on-demand, not sub-agents") still holds for specialists.
+        v6.5 carves out 4 phase-agents because their exploration logs have a
+        clean signal/noise boundary that agent delegation preserves. Any
+        agent beyond the whitelist is a regression. Codex stays banned.
+        """
+        agents_dir = PLUGIN / "agents"
+        if agents_dir.exists():
+            extras = sorted(
+                p.name for p in agents_dir.iterdir()
+                if p.is_file() and p.suffix == ".md" and p.stem not in SANCTIONED_AGENTS
+            )
+            self.assertFalse(
+                extras,
+                f"unsanctioned agent file(s): {extras} — "
+                "expand SANCTIONED_AGENTS with justification if intentional",
+            )
+            # No subdirectories — v5 had agents/_shared/, agents/planning/, etc.
+            for child in agents_dir.iterdir():
+                self.assertFalse(
+                    child.is_dir(),
+                    f"agents/{child.name}/ subdirectory — v5-style layout regression",
+                )
+        for banned in ("codex", ".codex-plugin"):
             self.assertFalse(
                 (PLUGIN / banned).exists(),
-                f"{banned}/ must not exist in v6 (sub-agent / Codex surface removed)",
+                f"{banned}/ must not exist (Codex surface removed in v6.0)",
             )
 
     def test_only_audit_harness_and_compat_shims_under_scripts(self) -> None:
@@ -263,30 +331,51 @@ class TestCommands(unittest.TestCase):
             "xlfg-init must not recreate the v5 `.xlfg/` directory",
         )
 
-    def test_xlfg_dispatches_eight_phase_skills(self) -> None:
-        """The /xlfg command must grant exactly the 8 SDLC phase skills and
-        name each in the body in the expected order."""
+    def test_xlfg_dispatches_four_skills_and_four_agents(self) -> None:
+        """The /xlfg command must grant the 4 skill-backed phases, must
+        include `Agent` in its allowed-tools (for the 4 agent-backed phases),
+        and must reference every pipeline step in canonical order in its body.
+        """
         text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
         fm = _frontmatter(text)
         tools = fm.get("allowed-tools", "")
-        for skill in XLFG_PIPELINE:
-            self.assertIn(
-                f"Skill(xlfg-engineering:{skill}",
-                tools,
-                f"xlfg command must grant Skill(xlfg-engineering:{skill} ...)",
+
+        # Skill grants for the 4 skill-backed phases must exist.
+        for mechanism, name in XLFG_PIPELINE:
+            if mechanism == "skill":
+                self.assertIn(
+                    f"Skill(xlfg-engineering:{name}",
+                    tools,
+                    f"xlfg command must grant Skill(xlfg-engineering:{name} ...)",
+                )
+
+        # Agent tool must be granted (for the 4 phase-agent dispatches).
+        tool_names = [t.strip() for t in tools.split(",")]
+        self.assertTrue(
+            any(re.match(r"^Agent\b", t) for t in tool_names),
+            "xlfg command must grant Agent in allowed-tools "
+            "for the 4 phase-agent dispatches",
+        )
+
+        # Body must reference each pipeline step. Skills by namespaced name
+        # (distinct), agents by backtick-delimited name (to avoid matching
+        # substrings of specialist names like xlfg-verify-runner in grants).
+        # First occurrence in the body (post-frontmatter) defines order.
+        body = _body(text)
+        positions: list[int] = []
+        for mechanism, name in XLFG_PIPELINE:
+            needle = f"xlfg-engineering:{name}" if mechanism == "skill" else f"`{name}`"
+            pos = body.find(needle)
+            self.assertNotEqual(
+                pos, -1,
+                f"xlfg command body must reference {needle} ({mechanism})",
             )
-            self.assertIn(
-                f"xlfg-engineering:{skill}",
-                text,
-                f"xlfg command body must reference {skill} in the pipeline",
-            )
-        # Pipeline order: each skill's body-position must be monotonic in the
-        # expected order (no skipping, no reordering).
-        positions = [text.find(f"xlfg-engineering:{s}") for s in XLFG_PIPELINE]
+            positions.append(pos)
         self.assertEqual(
             positions,
             sorted(positions),
-            "xlfg command pipeline order does not match recall→intent→context→plan→implement→verify→review→compound",
+            "xlfg command pipeline order drift: expected "
+            "recall→intent→context→plan→implement→verify→review→compound",
         )
 
     def test_xlfg_does_not_grant_debug_skill(self) -> None:
@@ -295,25 +384,65 @@ class TestCommands(unittest.TestCase):
         tools = fm.get("allowed-tools", "")
         self.assertNotIn("xlfg-engineering:xlfg-debug-phase", tools)
 
-    def test_xlfg_debug_dispatches_four_phase_skills(self) -> None:
+    def test_xlfg_debug_dispatches_two_skills_and_two_agents(self) -> None:
+        """The /xlfg-debug command dispatches 2 skills (intent, debug) and
+        2 agents (recall, context) in canonical diagnosis order.
+        """
         text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
         fm = _frontmatter(text)
         tools = fm.get("allowed-tools", "")
-        for skill in XLFG_DEBUG_PIPELINE:
-            self.assertIn(
-                f"Skill(xlfg-engineering:{skill}",
-                tools,
-                f"xlfg-debug command must grant Skill(xlfg-engineering:{skill} ...)",
-            )
-            self.assertIn(
-                f"xlfg-engineering:{skill}",
+
+        for mechanism, name in XLFG_DEBUG_PIPELINE:
+            if mechanism == "skill":
+                self.assertIn(
+                    f"Skill(xlfg-engineering:{name}",
+                    tools,
+                    f"xlfg-debug command must grant Skill(xlfg-engineering:{name} ...)",
+                )
+
+        tool_names = [t.strip() for t in tools.split(",")]
+        self.assertTrue(
+            any(re.match(r"^Agent\b", t) for t in tool_names),
+            "xlfg-debug command must grant Agent for recall+context phase agents",
+        )
+
+        # No SDLC-only skills on debug — check full text since these are
+        # distinct enough that substring collisions aren't a concern.
+        for forbidden in (
+            "xlfg-plan-phase",
+            "xlfg-implement-phase",
+            "xlfg-compound-phase",
+        ):
+            self.assertNotIn(
+                forbidden,
                 text,
-                f"xlfg-debug body must reference {skill} in the pipeline",
+                f"xlfg-debug must not reference {forbidden} — SDLC-only",
             )
-        # No SDLC-only skills (plan/implement/verify/review/compound) allowed on debug.
-        for skill in ("xlfg-plan-phase", "xlfg-implement-phase", "xlfg-verify-phase",
-                      "xlfg-review-phase", "xlfg-compound-phase"):
-            self.assertNotIn(skill, tools)
+        # For SDLC-only agents, use backtick-delimited needles so specialist
+        # grants like xlfg-verify-runner in frontmatter don't cause false hits.
+        for forbidden_agent in ("`xlfg-verify`", "`xlfg-review`"):
+            self.assertNotIn(
+                forbidden_agent,
+                text,
+                f"xlfg-debug must not dispatch {forbidden_agent} — SDLC-only agent",
+            )
+
+        # Body order: recall → intent → context → debug
+        body = _body(text)
+        positions: list[int] = []
+        for mechanism, name in XLFG_DEBUG_PIPELINE:
+            needle = f"xlfg-engineering:{name}" if mechanism == "skill" else f"`{name}`"
+            pos = body.find(needle)
+            self.assertNotEqual(
+                pos, -1,
+                f"xlfg-debug body must reference {needle} ({mechanism})",
+            )
+            positions.append(pos)
+        self.assertEqual(
+            positions,
+            sorted(positions),
+            "xlfg-debug pipeline order drift: expected recall→intent→context→debug",
+        )
 
     def test_xlfg_debug_cannot_modify_existing_files(self) -> None:
         """Diagnosis-only: no Edit/MultiEdit; Write only for diagnosis.md."""
@@ -334,7 +463,7 @@ class TestCommands(unittest.TestCase):
         )
 
     def test_commands_do_not_reintroduce_dispatch_contract(self) -> None:
-        """v6 is conductor+skills, not sub-agent dispatch."""
+        """v6 is conductor+skills/agents, not v5 sub-agent dispatch packets."""
         forbidden = (
             "PRIMARY_ARTIFACT",
             "OWNERSHIP_BOUNDARY",
@@ -348,18 +477,20 @@ class TestCommands(unittest.TestCase):
             for tok in forbidden:
                 self.assertNotIn(tok, text, f"{cmd}: reintroduced dispatch token {tok!r}")
 
-    def test_commands_do_not_spawn_nested_agents(self) -> None:
-        """The conductor invokes skills, never sub-agents."""
-        for cmd in ("xlfg.md", "xlfg-debug.md", "xlfg-init.md"):
-            text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
-            fm = _frontmatter(text)
-            tools = fm.get("allowed-tools", "")
-            tool_names = [t.strip() for t in tools.split(",")]
-            for banned in ("Agent", "SendMessage"):
-                self.assertFalse(
-                    any(re.match(rf"^{banned}\b", t) for t in tool_names),
-                    f"{cmd}: {banned} granted — no nested delegation in v6",
-                )
+    def test_xlfg_init_does_not_grant_agent(self) -> None:
+        """/xlfg-init is a scaffold, not a conductor. v6.5 permits Agent in
+        the two conductors (/xlfg, /xlfg-debug) for the 4 sanctioned phase-
+        agents; /xlfg-init must not dispatch anything.
+        """
+        text = (PLUGIN / "commands" / "xlfg-init.md").read_text(encoding="utf-8")
+        fm = _frontmatter(text)
+        tools = fm.get("allowed-tools", "")
+        tool_names = [t.strip() for t in tools.split(",")]
+        for banned in ("Agent", "SendMessage"):
+            self.assertFalse(
+                any(re.match(rf"^{banned}\b", t) for t in tool_names),
+                f"xlfg-init.md: {banned} granted — scaffold must not dispatch",
+            )
 
     def test_xlfg_body_disclaims_dotxlfg_directory(self) -> None:
         text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
@@ -407,9 +538,10 @@ class TestSkills(unittest.TestCase):
     def test_no_skill_grants_nested_delegation(self) -> None:
         """No Agent or SendMessage in any skill's allowed-tools.
 
-        v6 skills run in the conductor's own context. They do not spawn
-        sub-agents. If this test fails, the sub-agent architecture is
-        creeping back in.
+        v6.5 permits Agent in the conductors for the 4 sanctioned phase-
+        agents, but skills stay in-context: they must not re-dispatch agents.
+        One level of delegation only (conductor → phase-agent). If this test
+        fails, the sub-agent architecture is creeping back into skills.
         """
         for name in EXPECTED_SKILLS:
             text = (PLUGIN / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
@@ -451,27 +583,17 @@ class TestSkills(unittest.TestCase):
         self.assertIn("docs/xlfg/runs/<RUN_ID>/run-summary.md", text)
         self.assertIn("docs/xlfg/current-state.md", text)
 
-    def test_recall_skill_reads_durable_archive(self) -> None:
-        text = (PLUGIN / "skills" / "xlfg-recall-phase" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("docs/xlfg/current-state.md", text)
-        self.assertIn("docs/xlfg/runs/", text)
-
     def test_skill_bodies_cover_their_load_bearing_philosophy(self) -> None:
-        """Each phase skill must carry its own core concept(s).
+        """Each remaining phase skill must carry its own core concept(s).
 
-        These substrings are what make a skill a *skill* rather than a pasted
-        outline — drift detection against someone stripping bodies down to
-        one-liners. Scoped to phase skills; specialist skills have their own
-        shape test below.
+        Phase agents (recall/context/verify/review) are guarded by the
+        analogous test in TestAgents; this test covers the 5 phase skills
+        that stay in-context.
         """
         expectations = {
-            "xlfg-recall-phase": ("librarian", "prior", "git log"),
             "xlfg-intent-phase": ("falsifiable", "three", "blocker"),
-            "xlfg-context-phase": ("cartographer", "harness", "whole repo"),
             "xlfg-plan-phase": ("fast_check", "smoke_check", "ship_check", "readiness"),
             "xlfg-implement-phase": ("Edit", "failure-mode", "out-of-scope"),
-            "xlfg-verify-phase": ("GREEN", "RED", "FAILED"),
-            "xlfg-review-phase": ("Architecture", "Security", "Performance", "UX", "APPROVE"),
             "xlfg-compound-phase": ("run-summary.md", "current-state.md", "Durable lesson"),
             "xlfg-debug-phase": ("Reproduce", "hypothesis", "Mechanism", "fake fixes"),
         }
@@ -487,9 +609,6 @@ class TestSkills(unittest.TestCase):
     def test_specialist_skills_carry_five_section_shape(self) -> None:
         """v6.3 specialist skills follow the same 5-section template as phase
         skills (Purpose, Lens, How to work it, Done signal, Stop-traps).
-
-        This catches drift toward one-liner stubs or v5 packet-contract
-        scaffolding creeping back in.
         """
         required_sections = ("## Purpose", "## Lens", "## How to work it", "## Done signal", "## Stop-traps")
         for name in EXPECTED_SPECIALIST_SKILLS:
@@ -502,17 +621,15 @@ class TestSkills(unittest.TestCase):
                 )
 
     def test_phase_skills_advertise_specialists(self) -> None:
-        """The 7 non-trivial phase skills must name which specialist skills are
-        loadable from them. Recall and compound are deterministic/terminal and
-        don't need specialist injection.
+        """The 4 non-trivial phase skills must name which specialists are
+        loadable from them. Compound is terminal and does not need specialists;
+        context/verify/review moved to agents with their own advertise-section
+        guards.
         """
         phase_to_specialists = {
             "xlfg-intent-phase": ("xlfg-why-analyst",),
-            "xlfg-context-phase": ("xlfg-repo-mapper",),
             "xlfg-plan-phase": ("xlfg-solution-architect",),
             "xlfg-implement-phase": ("xlfg-task-implementer",),
-            "xlfg-verify-phase": ("xlfg-verify-runner",),
-            "xlfg-review-phase": ("xlfg-security-reviewer",),
             "xlfg-debug-phase": ("xlfg-root-cause-analyst",),
         }
         for phase, expected_mentions in phase_to_specialists.items():
@@ -527,18 +644,13 @@ class TestSkills(unittest.TestCase):
     def test_phase_skills_body_and_allowed_tools_stay_in_sync(self) -> None:
         """Drift lint: the specialists named in a phase skill's "Optional
         specialist skills" body section must match the specialists granted in
-        its `allowed-tools` frontmatter exactly.
-
-        This catches the failure mode where a future edit adds a specialist
-        bullet to the body but forgets the matching Skill grant (or vice versa).
+        its `allowed-tools` frontmatter exactly. The analogous test for agents
+        lives in TestAgents.
         """
         phases_with_specialists = (
             "xlfg-intent-phase",
-            "xlfg-context-phase",
             "xlfg-plan-phase",
             "xlfg-implement-phase",
-            "xlfg-verify-phase",
-            "xlfg-review-phase",
             "xlfg-debug-phase",
         )
         specialist_name_re = re.compile(r"xlfg-engineering:(xlfg-[\w-]+)")
@@ -593,6 +705,170 @@ class TestSkills(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Phase agents (v6.5 carve-out)
+# ---------------------------------------------------------------------------
+
+
+class TestAgents(unittest.TestCase):
+    """v6.5 sanctioned-agent surface.
+
+    The 4 whitelisted phase-agents live under `plugins/xlfg-engineering/
+    agents/` and carry the phase body + explicit Return-format section. The
+    conductor dispatches them via the Agent tool; they themselves may load
+    specialist skills via the Skill tool but never re-dispatch agents.
+    """
+
+    def _agent_path(self, name: str) -> Path:
+        return PLUGIN / "agents" / f"{name}.md"
+
+    def test_sanctioned_agents_exist(self) -> None:
+        agents_dir = PLUGIN / "agents"
+        self.assertTrue(
+            agents_dir.exists(),
+            "plugins/xlfg-engineering/agents/ missing — v6.5 requires it",
+        )
+        shipped = sorted(
+            p.stem for p in agents_dir.iterdir()
+            if p.is_file() and p.suffix == ".md"
+        )
+        self.assertEqual(
+            shipped, sorted(SANCTIONED_AGENTS),
+            f"agent surface drift: shipped={shipped} expected={sorted(SANCTIONED_AGENTS)}",
+        )
+
+    def test_agent_frontmatter(self) -> None:
+        for name in SANCTIONED_AGENTS:
+            text = self._agent_path(name).read_text(encoding="utf-8")
+            fm = _frontmatter(text)
+            self.assertEqual(
+                fm.get("name"), name,
+                f"agents/{name}.md: frontmatter `name:` must equal file stem",
+            )
+            desc = fm.get("description", "")
+            self.assertTrue(desc, f"agents/{name}.md: missing description")
+            self.assertLessEqual(
+                len(desc), 220,
+                f"agents/{name}.md: description {len(desc)} chars > 220 "
+                "(context-budget discipline)",
+            )
+            tools = fm.get("tools", "")
+            self.assertTrue(
+                tools, f"agents/{name}.md: missing `tools:` frontmatter",
+            )
+
+    def test_agents_do_not_grant_nested_agents(self) -> None:
+        """One level of delegation only. Agents never re-dispatch agents."""
+        for name in SANCTIONED_AGENTS:
+            fm = _frontmatter(self._agent_path(name).read_text(encoding="utf-8"))
+            tools = fm.get("tools", "")
+            tool_names = [t.strip() for t in tools.split(",")]
+            for banned in ("Agent", "SendMessage"):
+                self.assertFalse(
+                    any(re.match(rf"^{banned}\b", t) for t in tool_names),
+                    f"agents/{name}.md: {banned} must not appear in tools "
+                    "(one level of delegation only)",
+                )
+
+    def test_agents_do_not_reintroduce_dispatch_contract(self) -> None:
+        """v6.5 agents carry plain prose Return-format templates, not v5
+        dispatch packets. The forbidden-token sweep covers agent bodies too.
+        """
+        forbidden = (
+            "PRIMARY_ARTIFACT",
+            "OWNERSHIP_BOUNDARY",
+            "CONTEXT_DIGEST",
+            "PRIOR_SIBLINGS",
+            "RETURN_CONTRACT:",
+            "DONE_CHECK:",
+            "SubagentStop",
+        )
+        for name in SANCTIONED_AGENTS:
+            text = self._agent_path(name).read_text(encoding="utf-8")
+            for tok in forbidden:
+                self.assertNotIn(
+                    tok, text,
+                    f"agents/{name}.md: v5 dispatch token {tok!r} leaked",
+                )
+
+    def test_every_agent_carries_return_format(self) -> None:
+        """Each phase-agent must carry an explicit `## Return format` section.
+
+        The whole reason a phase is an agent is that the conductor receives a
+        distilled synthesis instead of the phase's tool-call log. The Return
+        format is the contract between agent and conductor — if it's missing,
+        the conductor has no structured output to parse.
+        """
+        for name in SANCTIONED_AGENTS:
+            text = self._agent_path(name).read_text(encoding="utf-8")
+            self.assertIn(
+                "## Return format", text,
+                f"agents/{name}.md: missing `## Return format` section",
+            )
+
+    def test_agent_bodies_cover_their_load_bearing_philosophy(self) -> None:
+        """Each agent carries its phase's core concept(s).
+
+        Drift detection: if someone strips an agent body down to a one-liner,
+        the phase philosophy is lost. Same shape as the phase-skills
+        philosophy test in TestSkills.
+        """
+        expectations = {
+            "xlfg-recall": ("librarian", "prior", "git log"),
+            "xlfg-context": ("cartographer", "harness", "whole repo"),
+            "xlfg-verify": ("GREEN", "RED", "FAILED"),
+            "xlfg-review": ("Architecture", "Security", "Performance", "UX", "APPROVE"),
+        }
+        for agent, needles in expectations.items():
+            text = self._agent_path(agent).read_text(encoding="utf-8")
+            for needle in needles:
+                self.assertIn(
+                    needle, text,
+                    f"agents/{agent}.md: missing load-bearing concept {needle!r}",
+                )
+
+    def test_recall_agent_reads_durable_archive(self) -> None:
+        """The recall agent prescribes reading the xlfg durable archive."""
+        text = self._agent_path("xlfg-recall").read_text(encoding="utf-8")
+        self.assertIn("docs/xlfg/current-state.md", text)
+        self.assertIn("docs/xlfg/runs/", text)
+
+    def test_agent_body_and_tools_stay_in_sync(self) -> None:
+        """Drift lint: specialists advertised in an agent's "Optional specialist
+        skills" body section must match the specialists granted in the agent's
+        `tools:` frontmatter. Mirrors the same check for phase skills.
+
+        recall is intentionally excluded — it has no specialists to advertise.
+        """
+        agents_with_specialists = ("xlfg-context", "xlfg-verify", "xlfg-review")
+        specialist_name_re = re.compile(r"xlfg-engineering:(xlfg-[\w-]+)")
+        for agent in agents_with_specialists:
+            text = self._agent_path(agent).read_text(encoding="utf-8")
+            fm = _frontmatter(text)
+            tools = fm.get("tools", "")
+            granted = {
+                name for name in specialist_name_re.findall(tools)
+                if name in EXPECTED_SPECIALIST_SKILLS
+            }
+            body_start = text.find("## Optional specialist skills")
+            self.assertGreater(
+                body_start, -1,
+                f"agents/{agent}.md: missing '## Optional specialist skills' section",
+            )
+            next_section = text.find("\n## ", body_start + 1)
+            body_section = text[body_start:next_section] if next_section != -1 else text[body_start:]
+            advertised = {
+                name for name in specialist_name_re.findall(body_section)
+                if name in EXPECTED_SPECIALIST_SKILLS
+            }
+            self.assertEqual(
+                granted, advertised,
+                f"agents/{agent}.md: drift between tools and body.\n"
+                f"  in tools only: {sorted(granted - advertised)}\n"
+                f"  in body only: {sorted(advertised - granted)}",
+            )
+
+
+# ---------------------------------------------------------------------------
 # Hooks
 # ---------------------------------------------------------------------------
 
@@ -637,7 +913,7 @@ class TestAuditHarness(unittest.TestCase):
         self.assertIn("plugin", data)
         self.assertIn("results", data)
         ids = [r["id"] for r in data["results"]]
-        self.assertEqual(ids, [1, 2, 3, 4, 5])
+        self.assertEqual(ids, [1, 2, 3, 4, 5, 6])
         for r in data["results"]:
             for key in ("name", "pass", "score", "note"):
                 self.assertIn(key, r)
@@ -653,7 +929,6 @@ class TestConductorDiscipline(unittest.TestCase):
         text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
         self.assertIn("2", text)
         self.assertIn("loopback", text.lower())
-        # The explicit rules for when loopbacks do and do not count.
         lower = text.lower()
         self.assertIn("verify red", lower)
         self.assertIn("review must-fix", lower)
@@ -673,77 +948,43 @@ class TestConductorDiscipline(unittest.TestCase):
     def test_xlfg_conductor_prescribes_end_of_run_commit(self) -> None:
         """`/xlfg` runs must commit tracked product changes at end-of-run.
 
-        v6 runs often finished with edits unstaged because the Completion summary
-        template read as terminal ("write run-archive path → stop") and no phase
-        owned committing. Pre-April-2026 runs got away with it because the run
-        dir was tracked and Claude committed everything; once `docs/xlfg/runs/`
-        was gitignored (commit cb0a7b7, 2026-04-13) the cue disappeared.
-
-        The fix: a mandatory commit step in the conductor body, between
-        `xlfg-compound-phase` returning and the user-facing summary.
+        The commit step is a mandatory section in the conductor body, between
+        compound returning and the user-facing summary. Introduced in v6.3.2
+        and unchanged in v6.5.
         """
         text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
         lower = text.lower()
 
-        # The commit step must actually exist under a recognizable heading.
         self.assertIn(
             "end-of-run commit",
             lower,
-            "xlfg.md: missing `End-of-run commit` section — v6.3.2 regression fix",
+            "xlfg.md: missing `End-of-run commit` section",
         )
-
-        # It must prescribe inspecting git state before deciding.
         self.assertIn(
             "git status --porcelain",
             text,
-            "xlfg.md: commit step must read `git status --porcelain`, "
-            "not assume what has changed",
+            "xlfg.md: commit step must read `git status --porcelain`",
         )
-
-        # It must forbid the dangerous shortcut.
         self.assertIn(
             "`git add -A`",
             text,
-            "xlfg.md: commit step must explicitly forbid `git add -A` — "
-            "staging must be per-path to honor the run-artifact exclusion",
+            "xlfg.md: commit step must explicitly forbid `git add -A`",
         )
-
-        # It must keep the user's feedback memory as a written-down rule in the
-        # command body (the memory file alone is not enough; the command must
-        # carry the invariant so new contexts honor it without the memory).
-        self.assertIn(
-            "docs/xlfg/runs/",
-            text,
-        )
-        self.assertIn(
-            ".xlfg/",
-            text,
-        )
-
-        # It must name Conventional Commits so the style isn't left to guesswork.
+        self.assertIn("docs/xlfg/runs/", text)
+        self.assertIn(".xlfg/", text)
         self.assertIn(
             "conventional commits",
             lower,
             "xlfg.md: commit step must prescribe Conventional Commits style",
         )
-
-        # And it must flow the commit SHA into the Completion summary so the
-        # user can find the commit without chasing `git log`.
         self.assertIn(
             "**Commit.**",
             text,
-            "xlfg.md: Completion summary template must surface the commit "
-            "(SHA + subject) as its own item",
+            "xlfg.md: Completion summary template must surface the commit",
         )
 
     def test_xlfg_debug_conductor_does_not_prescribe_commit(self) -> None:
-        """`/xlfg-debug` is product-frozen (no Edit/MultiEdit in allowed-tools).
-
-        It writes only `diagnosis.md` under the gitignored run dir, so a commit
-        step would at best be a no-op and at worst stage something it shouldn't.
-        Asserts the commit language from v6.3.2 did not bleed into the debug
-        conductor.
-        """
+        """`/xlfg-debug` is product-frozen and must not prescribe a commit."""
         text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
         lower = text.lower()
         self.assertNotIn("end-of-run commit", lower)
@@ -751,27 +992,19 @@ class TestConductorDiscipline(unittest.TestCase):
         self.assertNotIn("conventional commits", lower)
 
     def test_conductors_prescribe_real_clock_for_run_id(self) -> None:
-        """RUN_ID must come from the system clock via `date`, not model guesswork.
-
-        Pre-v3.0.0 xlfg had a Python `datetime.now()` call for this. When the CLI
-        was removed, the deterministic clock call went with it and v3–v6.2 all
-        just told the model to "compute" the timestamp, which is model guesswork.
-        The conductor MUST prescribe the shell call so RUN_ID reflects real time.
-        """
+        """RUN_ID must come from the system clock via `date`, not model guesswork."""
         for cmd in ("xlfg.md", "xlfg-debug.md"):
             text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
             self.assertIn(
                 "date +%Y%m%d-%H%M%S",
                 text,
-                f"{cmd}: must prescribe `date +%Y%m%d-%H%M%S` for RUN_ID — "
-                "the model cannot invent real timestamps reliably",
+                f"{cmd}: must prescribe `date +%Y%m%d-%H%M%S` for RUN_ID",
             )
-            # And the body must name the source of truth explicitly — "do not invent".
             lower = text.lower()
             self.assertIn(
                 "do not invent",
                 lower,
-                f"{cmd}: startup body must explicitly forbid inventing the timestamp",
+                f"{cmd}: startup body must forbid inventing the timestamp",
             )
 
 

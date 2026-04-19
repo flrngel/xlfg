@@ -1,43 +1,55 @@
-# xlfg-engineering (v6.4)
+# xlfg-engineering (v6.5)
 
 An autonomous proof-first SDLC guide for Claude Code, designed for Opus-class models.
 
 ## What you get
 
-Two conductor commands that dispatch pipelines of hidden phase skills just-in-time, plus one small scaffold command that bootstraps a project to use them.
+Two conductor commands that dispatch pipelines of hidden phase skills **and** plugin-shipped phase agents, plus one small scaffold command that bootstraps a project to use them.
 
-- `/xlfg "<request>"` — dispatches 8 phase skills in order: recall → intent → context → plan → implement → verify → review → compound. Each skill loads when invoked, does its phase work in the main model's context, and returns. After compound, the conductor commits tracked product changes as one Conventional Commits-style commit (skipped cleanly on investigation-only runs; `docs/xlfg/runs/**` and `.xlfg/**` never staged). Ends by writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` and optionally updating `docs/xlfg/current-state.md`.
-- `/xlfg-debug "<request>"` — dispatches 4 phase skills: recall → intent → context → debug. Diagnosis-only: `allowed-tools` excludes `Edit` and `MultiEdit`, so product source cannot be modified. Ends by writing `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
+- `/xlfg "<request>"` — dispatches 8 phases in order: **recall** (agent) → intent (skill) → **context** (agent) → plan (skill) → implement (skill) → **verify** (agent) → **review** (agent) → compound (skill). Skill phases load just-in-time and run in the conductor's own context; agent phases run in their own sub-contexts and return a distilled synthesis. After compound, the conductor commits tracked product changes as one Conventional Commits-style commit (skipped cleanly on investigation-only runs; `docs/xlfg/runs/**` and `.xlfg/**` never staged). Ends by writing `docs/xlfg/runs/<RUN_ID>/run-summary.md` and optionally updating `docs/xlfg/current-state.md`.
+- `/xlfg-debug "<request>"` — dispatches 4 phases: **recall** (agent) → intent (skill) → **context** (agent) → debug (skill). Diagnosis-only: `allowed-tools` excludes `Edit` and `MultiEdit`, so product source cannot be modified. Ends by writing `docs/xlfg/runs/<RUN_ID>/diagnosis.md`.
 - `/xlfg-init` — one-shot, idempotent project scaffold. Patches the CWD's `.gitignore` with the canonical v6 runs block and creates `docs/xlfg/runs/.gitkeep` + `README.md`. Not a conductor. Run once after installing the plugin in a new project; safe to re-run.
 
-The phases are `plugins/xlfg-engineering/skills/xlfg-<name>-phase/SKILL.md` — 9 files total. Three of them (recall, intent, context) are shared by both conductors.
+**Phase skills** (5 files) live at `plugins/xlfg-engineering/skills/xlfg-<phase>-phase/SKILL.md`: intent, plan, implement, compound (for `/xlfg`) and debug (for `/xlfg-debug`). They load via the `Skill` tool when their phase fires.
 
-Alongside the phase skills, v6.3 ships **27 specialist lens skills** under `plugins/xlfg-engineering/skills/xlfg-<name>/SKILL.md` (no `-phase` suffix). These are hidden (`user-invocable: false`), carry the same 5-section template as phase skills, and exist so a phase skill can load a focused lens on-demand — `xlfg-security-reviewer` during review, `xlfg-root-cause-analyst` during debug, and so on. They are *skills*, not sub-agents: they run in the conductor's own context, not in a delegated sub-context. The 7 non-trivial phase skills (intent, context, plan, implement, verify, review, debug) each list the specialists loadable from them.
+**Phase agents** (4 files) live at `plugins/xlfg-engineering/agents/xlfg-<name>.md`: recall, context, verify, review. Each carries its phase body plus a mandatory `## Return format` section. They dispatch via the `Agent` tool with `subagent_type: "xlfg-<name>"`.
+
+**Specialist lens skills** (27 files) live at `plugins/xlfg-engineering/skills/xlfg-<name>/SKILL.md` (no `-phase` suffix) — `xlfg-security-reviewer`, `xlfg-root-cause-analyst`, `xlfg-test-strategist`, and so on. They are hidden (`user-invocable: false`), carry the same 5-section template, and exist so a phase skill *or* a phase agent can load a focused lens on-demand. Specialists remain *skills*, not agents: they sit on shared context with their loader, so agent serialization would be wasteful. The 4 phase skills that use specialists and the 3 phase agents that use specialists each list the ones they can load.
 
 ## Architecture
 
 ```
 commands/
-  xlfg.md          ← conductor (~600 words): frontmatter + pipeline + loopback rules
-  xlfg-debug.md    ← conductor (~500 words): frontmatter + pipeline + no-source-edits contract
-  xlfg-init.md     ← scaffold (~120 words): idempotent .gitignore + runs-dir bootstrap for user's project
+  xlfg.md          ← conductor: frontmatter + 8-phase pipeline + loopback rules + end-of-run commit
+  xlfg-debug.md    ← conductor: frontmatter + 4-phase pipeline + no-source-edits contract
+  xlfg-init.md     ← scaffold: idempotent .gitignore + runs-dir bootstrap for user's project
+agents/
+  xlfg-recall.md   ← phase agent (shared by /xlfg and /xlfg-debug)
+  xlfg-context.md  ← phase agent (shared)
+  xlfg-verify.md   ← phase agent (/xlfg only)
+  xlfg-review.md   ← phase agent (/xlfg only)
 skills/
-  xlfg-recall-phase/SKILL.md      ← shared (used by /xlfg and /xlfg-debug)
-  xlfg-intent-phase/SKILL.md      ← shared
-  xlfg-context-phase/SKILL.md     ← shared
-  xlfg-plan-phase/SKILL.md        ← /xlfg only
-  xlfg-implement-phase/SKILL.md   ← /xlfg only
-  xlfg-verify-phase/SKILL.md      ← /xlfg only
-  xlfg-review-phase/SKILL.md      ← /xlfg only
-  xlfg-compound-phase/SKILL.md    ← /xlfg only
-  xlfg-debug-phase/SKILL.md       ← /xlfg-debug only
+  xlfg-intent-phase/SKILL.md      ← phase skill (shared)
+  xlfg-plan-phase/SKILL.md        ← phase skill (/xlfg only)
+  xlfg-implement-phase/SKILL.md   ← phase skill (/xlfg only)
+  xlfg-compound-phase/SKILL.md    ← phase skill (/xlfg only)
+  xlfg-debug-phase/SKILL.md       ← phase skill (/xlfg-debug only)
+  xlfg-<specialist>/SKILL.md      ← 27 specialist lens skills (load on-demand from phases)
 scripts/
-  audit_harness.py  ← CI self-audit (5 checks)
+  audit_harness.py  ← CI self-audit (6 checks)
 hooks/
   hooks.json        ← ExitPlanMode auto-allow only
 ```
 
-Skills run in the conductor's own context — no sub-agents, no nested delegation. The test suite enforces this: no `Agent` or `SendMessage` in any command or skill's `allowed-tools`.
+One level of delegation only: conductors dispatch phase skills + phase agents; phase skills and phase agents may load specialist skills; nothing re-dispatches agents. The test suite enforces this: `Agent`/`SendMessage` are forbidden in any skill or agent's tool grants; `/xlfg-init` cannot grant `Agent` either.
+
+## Why v6.5 mixes skills and agents
+
+Earlier v6 versions kept every phase as a skill for context-budget discipline — phase bodies loaded just-in-time instead of sitting in the command prompt. That worked for decision-driving phases (intent, plan, implement, compound, debug) but left token discipline on the table for exploration-heavy phases: recall's git-log sweeps, context's file fan-out, verify's raw test output, and review's diff reads all accumulated in the conductor context even though the conductor only needed each phase's *conclusion*.
+
+v6.5's carve-out is narrow: exactly 4 phase-agents, each with a plain-prose `## Return format` section that replaces the v5 dispatch-packet machinery (`PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, etc. remain forbidden — the forbidden-token sweep now covers agent bodies too). The agent's tool-call log stays in *its* context; the conductor gets the synthesis.
+
+**Why specialists stayed as skills.** v6.3.0's durable lesson said *"specialist expertise belongs in skills that load on-demand, not in sub-agents with dispatch packets."* That lesson still holds: specialists apply a focused lens to content the parent already has — they sit on **shared context**, so moving them to agents would re-serialize that overlap for no token win. Phases are the opposite: they **generate** their own context from scratch (scanning history, reading files, running tests). The signal/log gap is large and one-way, which is exactly where agent delegation pays off.
 
 ## The durable archive under `docs/xlfg/`
 
@@ -51,16 +63,16 @@ Opus-class models hold one run in context, but context doesn't span sessions. Th
 
 There is no `.xlfg/` directory in v6.
 
-## What's not in v6
+## What's not in v6.5
 
 If you're migrating from v5 or earlier:
 
-- **Sub-agents** — there are no sub-agents. The 27 specialists (`xlfg-task-divider`, `xlfg-verify-runner`, `xlfg-ux-reviewer`, …) exist in v6.3 as **hidden skills**, not as dispatched sub-contexts. Phase skills load them on-demand via the `Skill` tool.
-- **v5 coordination layer** — no `spec.md`, no `workboard.md`, no `phase-state.json`, no `verification.md`, no `test-contract.md`, no ledger schema. The run lives in context; durable memory is the tracked `docs/xlfg/` archive.
+- **Unbounded sub-agents** — v6.5 permits exactly 4 whitelisted phase-agents (the `SANCTIONED_AGENTS` tuple in the audit harness and test suite). Any new agent requires expanding that whitelist with a justification. The 27 specialist-lens files exist as hidden **skills**, not agents.
+- **v5 coordination layer** — no `spec.md`, no `workboard.md`, no `phase-state.json`, no `verification.md`, no `test-contract.md`, no ledger schema. The run lives in the conductor's context plus 4 agent sub-contexts; durable memory is the tracked `docs/xlfg/` archive.
+- **Dispatch-packet contract** — `PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `PRIOR_SIBLINGS`, `RETURN_CONTRACT:`, `DONE_CHECK:`, `SubagentStop` are all forbidden tokens. Agents return plain-prose structured output.
 - **Stop and SubagentStop hooks** — gone. Only `PermissionRequest` `ExitPlanMode` auto-allow remains.
 - **Codex surface** — `.codex-plugin/`, `codex/`, and Codex marketplace wiring are removed. v6 ships on Claude Code (and, via `.cursor-plugin/`, Cursor).
 - **`/xlfg-audit`, `/xlfg-status`** — both were tied to the v5 file-state surface and stay gone.
-- **`/xlfg-init`** — the v3.3 form (which scaffolded `.xlfg/`, `docs/xlfg/knowledge/`, `docs/xlfg/migrations/`, etc.) is gone. v6.4 restores `/xlfg-init` in a far smaller shape: just the `.gitignore` patch and the runs-dir `.gitkeep`/`README.md` pair. No v5 directories, no knowledge files.
 - **`.xlfg/`** — v5 used it for the Stop hook's phase-state file. v6 has no phase-state.
 
 ## Installation
@@ -89,13 +101,7 @@ That patches your `.gitignore` and seeds `docs/xlfg/runs/` with a `.gitkeep` and
 python3 plugins/xlfg-engineering/scripts/audit_harness.py
 ```
 
-Five checks: version sync, command surface, command frontmatter, forbidden-token sweep (covers commands AND skill bodies), skill surface (9 phase skills + 27 specialist skills with correct frontmatter). `--json` for machine output.
-
-## Why this shape
-
-v5 had specialists + skills + dispatch packets + coordination files + hooks — 44 scaffolding files that were serialization overhead for weaker models. v6.0 nuked all of it. v6.1 restored the cross-session durable archive. v6.2 restored the skill split for context-budget discipline (phase bodies load just-in-time). v6.3 restores the specialist expertise as **on-demand hidden skills** — a phase skill can reach for a focused lens (security, root-cause, test-strategist, …) when the work calls for it, without paying the token cost of every lens in every run.
-
-Net: strong reasoners get the phase guidance *and* the specialist lens they need, when they need it, without holding thousands of words of unused text in the prompt for every invocation. Bans on sub-agents, dispatch packets, and coordination files stay in force.
+Six checks: version sync, command surface, command frontmatter, forbidden-token sweep (covers commands, skill bodies, **and** agent bodies), skill surface (5 phase skills + 27 specialist skills), agent surface (4 sanctioned phase agents with correct frontmatter + Return format). `--json` for machine output.
 
 ## License
 

@@ -1,6 +1,20 @@
 # Next agent context
 
-## Current state (6.4.1)
+## Current state (6.5.0)
+
+v6.5.0 splits the pipeline into two dispatch mechanisms: decision-driving phases stay as **skills** loading into the conductor's context (`Skill(xlfg-engineering:xlfg-<phase>-phase *)`), while exploration-heavy phases become plugin-shipped **agents** under `plugins/xlfg-engineering/agents/` dispatched via the `Agent` tool. `/xlfg` runs 4 skills (intent, plan, implement, compound) + 4 agents (recall, context, verify, review) in canonical order; `/xlfg-debug` runs 2 skills (intent, debug) + 2 agents (recall, context). Pipeline order, loopback cap (2 for `/xlfg`, 1 for `/xlfg-debug`), v6.3.2 end-of-run commit step, and v6.4.1 no-commit-on-debug symmetry are unchanged.
+
+The motivating problem was that recall's git-log sweeps, context's file fan-out, verify's raw test output, and review's diff reads all accumulated in the conductor's context even though the conductor only needed each phase's conclusion. v6.5 fixes that: each agent's tool-call log stays in *its* context, and the conductor reads only the distilled synthesis declared in a mandatory `## Return format` section. Plain prose, no v5 dispatch-packet machinery — `PRIMARY_ARTIFACT`, `OWNERSHIP_BOUNDARY`, `CONTEXT_DIGEST`, `RETURN_CONTRACT:`, `DONE_CHECK:`, `SubagentStop` remain forbidden tokens, and the sweep now covers agent bodies too.
+
+The carve-out is **narrow by design**. The `SANCTIONED_AGENTS` whitelist in `scripts/audit_harness.py` and `tests/test_xlfg_v6.py` enumerates exactly 4 admitted agents — `xlfg-recall`, `xlfg-context`, `xlfg-verify`, `xlfg-review`. Any new agent requires expanding that tuple with a justification naming the token-discipline win. The v6.3.0 durable lesson still holds for **specialists**: all 27 specialist lens skills stay as skills, not agents, because specialists apply a focused lens to content their parent already has (shared context), and agent serialization would be wasteful. v6.5 is a carve-out, not a reversal.
+
+Test surface expanded: 41 → 48 tests. New `TestAgents` class with 8 tests covering the whitelist, frontmatter, no-nested-Agent, Return-format presence, load-bearing-philosophy drift, recall-archive prescription, and body/tools sync-lint (mirroring the phase-skill sync-lint). Old tests rewritten: `test_no_agents_or_codex` → `test_no_unsanctioned_agents_or_codex` (narrowed to permit the whitelist); `test_xlfg_dispatches_eight_phase_skills` → `test_xlfg_dispatches_four_skills_and_four_agents`; `test_xlfg_debug_dispatches_four_phase_skills` → `test_xlfg_debug_dispatches_two_skills_and_two_agents`. `_body()` helper added so order-of-dispatch assertions search post-frontmatter (agent names can be substrings of specialist skill names — `xlfg-verify` ⊂ `xlfg-verify-runner`). Audit harness gained check #6 (`phase agent surface`, 28 assertions) alongside the existing 5 checks.
+
+Version bumped 6.4.1 → 6.5.0 in both manifests. Minor bump because the runtime dependency surface changed (plugin-shipped agents added) without the public entry surface changing — users invoke `/xlfg` and `/xlfg-debug` exactly as before.
+
+Residual risk: runtime agent dispatch is not exercised by the test suite. The suite validates that the frontmatter says `name: xlfg-recall` and that the conductor body references `` `xlfg-recall` ``, but it cannot prove Claude Code's `Agent` tool resolves `subagent_type: "xlfg-recall"` to `plugins/xlfg-engineering/agents/xlfg-recall.md` at invocation time. v4/v5 used this same path successfully; if the resolution contract has shifted, the first real `/xlfg` invocation will surface it. Similarly, specialist skills loaded via `Skill` from inside an agent sub-context is unverified at runtime — the `tools:` grants are correct, but cross-context namespace resolution is not test-covered.
+
+## Previous state (6.4.1)
 
 v6.4.1 is a prose-only refresh of `commands/xlfg-debug.md` to bring the conductor body in line with v6's self-framing and the v6.3.2 commit-policy split. The conductor's frontmatter was already v6.3-correct (pipeline grants, ExitPlanMode hook, specialist skill grants, `date`-based RUN_ID prescription); the body lagged in three places relative to `commands/xlfg.md`: architectural self-description, an explicit no-commit policy, and the shape of the end-of-run summary.
 
