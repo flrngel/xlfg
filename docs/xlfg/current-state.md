@@ -19,7 +19,7 @@ xlfg is an autonomous proof-first SDLC plugin for Claude Code, designed for Opus
 - Agent names are substrings of specialist names (`xlfg-verify` ⊂ `xlfg-verify-runner`). Tests that check "conductor body references agent X" use backtick-delimited needles (`` `xlfg-verify` ``) and search the body post-frontmatter via the `_body()` helper, to avoid false hits in allowed-tools grants.
 - Monolithic phase bodies (v6.0 shape) cost tokens on every invocation. Do not inline specialist expertise into phase bodies. Load specialists via `Skill` on-demand instead.
 - `.xlfg/` is explicitly not a directory in v6+. Writing to it is a regression.
-- The conductors' `allowed-tools` is long and load-bearing. Adding a new specialist means updating both conductor grants (if it should be reachable from the conductor) and the relevant phase skill's or agent's grants, plus both `EXPECTED_SPECIALIST_SKILLS` lists.
+- The conductors do **not** grant specialist lens skills (6.5.1 removed the redundancy). Specialists load from within phase skills and phase agents, each of which holds its own narrow specialist grants. Adding a new specialist means updating both `EXPECTED_SPECIALIST_SKILLS` tuples (audit harness + test file) plus the relevant phase skill's `allowed-tools` or phase agent's `tools:` frontmatter — never the conductor's. `test_conductor_does_not_grant_specialists_directly` guards the rule.
 
 ## Active constraints
 

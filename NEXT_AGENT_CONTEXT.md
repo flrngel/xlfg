@@ -1,6 +1,16 @@
 # Next agent context
 
-## Current state (6.5.0)
+## Current state (6.5.1)
+
+v6.5.1 is a scope-discipline tidying patch on top of v6.5.0. The two conductor commands (`/xlfg`, `/xlfg-debug`) previously granted every specialist lens skill in their `allowed-tools` frontmatter — 27 on `/xlfg`, 11 on `/xlfg-debug` — inherited from the v6.3.0 specialist rollout and carried through v6.5.0 for parity. Neither conductor ever loads a specialist directly: specialists load from within phase skills and phase agents, each of which holds its own narrow specialist grants (verified by `test_phase_skills_body_and_allowed_tools_stay_in_sync` and `test_agent_body_and_tools_stay_in_sync`). The conductor grants were dead weight that padded the frontmatter by ~30 lines and — worse — `CLAUDE.md` §Entry model documented the redundancy, meaning any future agent reading the dev rules would happily regrow the grants after a hypothetical cleanup. v6.5.1 cuts the grants and fixes the prose together.
+
+A new regression test, `test_conductor_does_not_grant_specialists_directly`, iterates `EXPECTED_SPECIALIST_SKILLS` and asserts absence on both conductors. It covers intent contract bullets 1 and 2 (zero specialist grants on each conductor); bullets 3 (phase-skill + `Agent` grants preserved) and 4 (regression test present) are covered by the pre-existing `test_xlfg_dispatches_four_skills_and_four_agents` and `test_xlfg_debug_dispatches_two_skills_and_two_agents`. Test surface: 48 → 49 tests.
+
+Nothing else changed. Specialist skill directories are untouched. Phase skills and phase agents keep their specialist grants. The `SANCTIONED_AGENTS` whitelist, the `EXPECTED_SPECIALIST_SKILLS` tuple in both the audit harness and the test file, and the audit harness itself are all unchanged. Pipeline order, loopback cap (2 for `/xlfg`, 1 for `/xlfg-debug`), the v6.3.2 end-of-run commit step, and v6.4.1 no-commit-on-debug symmetry are unchanged.
+
+Version bumped 6.5.0 → 6.5.1 in both manifests. Patch-level because no public entry surface or runtime dependency surface changes — only frontmatter tidying and one prose fix.
+
+## Previous state (6.5.0)
 
 v6.5.0 splits the pipeline into two dispatch mechanisms: decision-driving phases stay as **skills** loading into the conductor's context (`Skill(xlfg-engineering:xlfg-<phase>-phase *)`), while exploration-heavy phases become plugin-shipped **agents** under `plugins/xlfg-engineering/agents/` dispatched via the `Agent` tool. `/xlfg` runs 4 skills (intent, plan, implement, compound) + 4 agents (recall, context, verify, review) in canonical order; `/xlfg-debug` runs 2 skills (intent, debug) + 2 agents (recall, context). Pipeline order, loopback cap (2 for `/xlfg`, 1 for `/xlfg-debug`), v6.3.2 end-of-run commit step, and v6.4.1 no-commit-on-debug symmetry are unchanged.
 

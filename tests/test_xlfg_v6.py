@@ -384,6 +384,23 @@ class TestCommands(unittest.TestCase):
         tools = fm.get("allowed-tools", "")
         self.assertNotIn("xlfg-engineering:xlfg-debug-phase", tools)
 
+    def test_conductor_does_not_grant_specialists_directly(self) -> None:
+        """Conductors dispatch phase skills and phase agents; specialists
+        load from those loaders' own grants, not from the conductor's.
+        Granting specialists on the conductor is dead weight that regrew
+        the frontmatter by ~30 lines pre-v6.5.1.
+        """
+        for cmd in ("xlfg.md", "xlfg-debug.md"):
+            fm = _frontmatter((PLUGIN / "commands" / cmd).read_text(encoding="utf-8"))
+            tools = fm.get("allowed-tools", "")
+            for specialist in EXPECTED_SPECIALIST_SKILLS:
+                self.assertNotIn(
+                    f"Skill(xlfg-engineering:{specialist}",
+                    tools,
+                    f"{cmd}: conductor must not grant specialist "
+                    f"{specialist!r} — specialists load from phase skills/agents",
+                )
+
     def test_xlfg_debug_dispatches_two_skills_and_two_agents(self) -> None:
         """The /xlfg-debug command dispatches 2 skills (intent, debug) and
         2 agents (recall, context) in canonical diagnosis order.

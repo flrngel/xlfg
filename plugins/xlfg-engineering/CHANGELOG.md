@@ -1,3 +1,23 @@
+## 6.5.1 — prune redundant specialist grants from conductor frontmatter
+
+v6.5.1 is a scope-discipline tidying patch. The two conductor commands (`/xlfg`, `/xlfg-debug`) carried `Skill(xlfg-engineering:xlfg-<specialist> *)` grants for every specialist lens skill — 27 on `/xlfg`, 11 on `/xlfg-debug` — inherited from the v6.3.0 specialist rollout. Neither conductor ever loads a specialist directly: specialists are loaded from within phase skills and phase agents, each of which holds its own narrow specialist grants. The conductor grants were dead weight that padded the `allowed-tools` frontmatter by ~30 lines and created a drift risk (future agents reading `CLAUDE.md` could reintroduce grants aligned with stale prose).
+
+### Changed
+
+- `commands/xlfg.md`: removed 27 `Skill(xlfg-engineering:xlfg-<specialist> *)` entries from `allowed-tools`. Kept `Agent`, the 4 phase-skill grants (intent, plan, implement, compound), and the base toolset.
+- `commands/xlfg-debug.md`: removed 11 `Skill(xlfg-engineering:xlfg-<specialist> *)` entries from `allowed-tools`. Kept `Agent`, the 2 phase-skill grants (intent, debug), and the base toolset.
+- `CLAUDE.md` §Entry model: rewrote the bullet that documented conductor specialist grants to describe the new shape — conductors do not grant specialists; only phase skills and phase agents do.
+
+### Added
+
+- `test_conductor_does_not_grant_specialists_directly` in `tests/test_xlfg_v6.py`: iterates `EXPECTED_SPECIALIST_SKILLS` and asserts absence on both conductors. Prevents the redundancy from creeping back in.
+
+### Not changed
+
+- Specialist skill directories, phase-skill specialist grants, phase-agent `tools:` grants, skill "Optional specialist skills" body sections, `EXPECTED_SPECIALIST_SKILLS` tuples, `SANCTIONED_AGENTS` whitelist, audit harness, pipeline order, loopback rules, commit policy.
+
+Patch-level because no public entry surface or runtime dependency surface changes — only frontmatter tidying and one prose fix.
+
 ## 6.5.0 — delegate exploration-heavy phases to plugin-shipped agents
 
 v6.5 migrates 4 exploration-heavy phases (recall, context, verify, review) from in-context `Skill` dispatch to plugin-shipped `Agent` dispatch under `plugins/xlfg-engineering/agents/`. The conductors now dispatch a mix: `/xlfg` runs 4 skills + 4 agents in canonical order; `/xlfg-debug` runs 2 skills + 2 agents. Pipeline order, loopback rules (cap 2 for `/xlfg`, 1 for `/xlfg-debug`), v6.3.2 end-of-run commit step, and v6.4.1 no-commit-on-debug symmetry are all unchanged.
