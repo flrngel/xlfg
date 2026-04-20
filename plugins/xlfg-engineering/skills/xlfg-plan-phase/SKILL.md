@@ -36,6 +36,8 @@ You have:
 - a test contract that covers every correctness-critical bullet from intent,
 - a named rollback path if the change is risky.
 
+This is a handoff cue to the conductor, not an end-of-run marker. Do not end the turn on "Plan is READY." — the conductor's very next action is dispatching the implement phase in the same turn.
+
 ## Stop-traps
 
 - Deferring the test contract to "after I code." That's a coding plan, not an engineering plan. Write proof first.

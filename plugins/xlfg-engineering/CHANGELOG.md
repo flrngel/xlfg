@@ -1,3 +1,24 @@
+## 6.5.2 — conductors forbid mid-run turn endings between phases
+
+v6.5.2 is a prompt-only regression fix. When a phase (skill or agent) returned, the conductor frequently ended its turn on a natural transition sentence ("Plan is READY. Proceeding to implement.") instead of dispatching the next phase in the same turn. v4 had a `Stop` hook (`phase-gate.mjs`) that refused turn-ending until all phases were marked complete; v6.0 removed that hook under the premise Opus 4.7 would self-pace across phase boundaries. It doesn't always — phase `## Done signal` and `## Return format` sections read as natural completion milestones. This patch plugs the gap with prompt discipline instead of bringing the hook back.
+
+### Changed
+
+- `commands/xlfg.md`: added `## Between phases` section and rewrote the `## Operating contract` first bullet to `**One run, one conductor turn.**`. The new rules: (a) after any phase returns, the very next tool call is the next dispatch — not a progress note or user-facing confirmation; (b) valid mid-run turn boundaries are exactly three (`needs-user-answer` from intent, loopback cap hit, phase 8 compound returned); (c) the "Proceeding to implement" / "Moving to review" anti-pattern is called out by name.
+- `commands/xlfg-debug.md`: same treatment, scoped to the 4-phase pipeline (recall → intent → context → debug).
+- `skills/xlfg-intent-phase/SKILL.md`, `skills/xlfg-plan-phase/SKILL.md`, `skills/xlfg-implement-phase/SKILL.md`: each `## Done signal` section now ends with a one-line reminder that the done signal is a handoff cue to the conductor, not an end-of-run marker. Skills load into the conductor's own context, so the reinforcement is visible at the exact moment the conductor is deciding whether to end the turn. Agents run in their own sub-contexts and the conductor only reads their `## Return format` block — the conductor-side `## Between phases` section already covers the agent-return case, so no agent bodies were touched.
+- `CHANGELOG.md`, `README.md` (plugin + repo), `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `NEXT_AGENT_CONTEXT.md`: version bump to 6.5.2.
+
+### Added
+
+- `test_conductors_forbid_mid_run_turn_endings` in `tests/test_xlfg_v6.py`: asserts both conductors carry a `Between phases` section, the `one run, one conductor turn` rule, an explicit prohibition on ending the turn between phases, and the `"Proceeding"` anti-pattern call-out.
+
+### Not changed
+
+- Pipeline order, phase count, loopback rules, end-of-run commit step, hooks (`Stop` is still absent — fix is prompt-only, consistent with v6.0 philosophy), agent bodies, specialist skills, audit harness, manifests.
+
+Patch-level because no public entry surface or runtime dependency surface changes — only prompt additions to conductors and three skills.
+
 ## 6.5.1 — prune redundant specialist grants from conductor frontmatter
 
 v6.5.1 is a scope-discipline tidying patch. The two conductor commands (`/xlfg`, `/xlfg-debug`) carried `Skill(xlfg-engineering:xlfg-<specialist> *)` grants for every specialist lens skill — 27 on `/xlfg`, 11 on `/xlfg-debug` — inherited from the v6.3.0 specialist rollout. Neither conductor ever loads a specialist directly: specialists are loaded from within phase skills and phase agents, each of which holds its own narrow specialist grants. The conductor grants were dead weight that padded the `allowed-tools` frontmatter by ~30 lines and created a drift risk (future agents reading `CLAUDE.md` could reintroduce grants aligned with stale prose).

@@ -84,9 +84,25 @@ For `xlfg-context` (after intent): brief includes RUN_ID, the intent-phase synth
 
 You read each agent's final message, which must match its declared Return format. Summarize into your own working notes and dispatch the next phase.
 
+## Between phases
+
+After any phase (skill or agent) returns, your very next tool call is the dispatch for the next phase in the pipeline. Not a progress note, not a user-facing confirmation, not a pause for review — the next `Skill` or `Agent` call, in the same turn.
+
+A phase's `## Done signal` (skills) or `## Return format` (agents) means *that phase* finished its work and handed you its conclusion. It does not mean the run ended. The run ends only after phase 4 (debug skill) has written `diagnosis.md` and you've written the completion-summary pointer.
+
+The only valid mid-run turn boundaries are:
+
+- The intent skill returns with `needs-user-answer` → ask at most three blocking questions and stop.
+- Loopback cap hit (1, see below) → escalate.
+- Phase 4 (debug) returned → write the completion-summary pointer. This is the sole end-of-run exit.
+
+**Anti-pattern to avoid:** outputting a natural-sounding transition like *"Recall done, moving to intent."*, *"Intent resolved, gathering context."*, or *"Context map in hand, entering debug."* and then ending the turn. "Proceeding", "moving", "next up" describe your *next action* — that action must be the tool call you just described, not an end-of-turn. If you wrote a transition sentence, the very next thing you emit must be the dispatch.
+
+Do not wait for the user to say "continue", "ok", or anything else to resume between phases. The user invoked `/xlfg-debug` once; that is your authorization for the whole run.
+
 ## Operating contract
 
-- **One run, no handoffs.** You own the whole investigation.
+- **One run, one conductor turn.** All 4 dispatches + the completion-summary pointer happen in a single continuous conductor turn. Do not end your turn between phases. You own the whole investigation.
 - **No source edits.** Do not change product code, tests, fixtures, migrations, or configs. The tool-level guard is in `allowed-tools`; the discipline is also a prompt-level contract. If you catch yourself wanting to `Edit`, you're in `/xlfg`, not `/xlfg-debug`.
 - **Reject gimmicks.** Muting errors, widening retries, changing a test to pass, special-casing one example, hand-waving "env issue", declaring "works on the happy path" while the causal chain is unknown — these are not diagnoses.
 - **Smallest honest reproduction first.** The context agent and debug skill will push you to simplify. Follow them.

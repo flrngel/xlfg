@@ -29,6 +29,8 @@ You are a product manager and a why-analyst. Separate what the user typed from w
 - For `/xlfg`: you can state the contract of what you're about to do in 3–6 bullet points, and each bullet is falsifiable (either satisfied or not).
 - For `/xlfg-debug`: you can state the bug as a one-paragraph falsifiable claim: *"when condition X, the system should Y, but actually does Z, observed at boundary B."*
 
+This is a handoff cue to the conductor, not an end-of-run marker. After stating the contract (or the falsifiable bug claim), the conductor's very next action is dispatching the context phase — not pausing or summarizing for the user.
+
 ## Stop-traps
 
 - Treating a stylistic preference as a blocker (don't stall the run).
