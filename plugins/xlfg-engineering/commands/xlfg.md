@@ -88,9 +88,25 @@ Agent(
 
 You read the agent's final message, which must match its declared Return format. Summarize into your own working notes and dispatch the next phase.
 
+## Between phases
+
+After any phase (skill or agent) returns, your very next tool call is the dispatch for the next phase in the pipeline. Not a progress note, not a user-facing confirmation, not a pause for review — the next `Skill` or `Agent` call, in the same turn.
+
+A phase's `## Done signal` (skills) or `## Return format` (agents) means *that phase* finished its work and handed you its conclusion. It does not mean the run ended. The run ends only after phase 8 (compound) returns and you've executed the end-of-run commit step and written the completion summary.
+
+The only valid mid-run turn boundaries are:
+
+- The intent skill returns with `needs-user-answer` → ask at most three blocking questions and stop.
+- Loopback cap hit → escalate to the user with a summary of what failed.
+- Phase 8 (compound) returned → run the end-of-run commit step, then write the completion summary. This is the sole end-of-run exit.
+
+**Anti-pattern to avoid:** outputting a natural-sounding transition like *"Plan is READY. Proceeding to implement."*, *"Context gathered, moving to plan."*, *"Verify GREEN, moving to review."*, or *"Review APPROVE, moving to compound."* and then ending the turn. "Proceeding", "moving", "next up" all describe your *next action* — that action must be the tool call you just described, not an end-of-turn. If you wrote a transition sentence, the very next thing you emit must be the dispatch. Better still: dispatch without the transition sentence.
+
+Do not wait for the user to say "continue", "ok", or anything else to resume between phases. The user invoked `/xlfg` once; that is your authorization for the whole run.
+
 ## Operating contract
 
-- **One run, no handoffs.** Do not ask the user to invoke any internal skill, agent, or re-run a phase. You own the whole run.
+- **One run, one conductor turn.** All 8 dispatches + the end-of-run commit + the completion summary happen in a single continuous conductor turn. Do not end your turn between phases. Do not ask the user to invoke any internal skill, agent, or re-run a phase. You own the whole run.
 - **Human-only blockers only.** Ask the user only for things you cannot ground from the repo or current research: missing secrets, destructive external approvals, true product ambiguity that changes correctness. If the intent skill returns with `needs-user-answer`, stop the pipeline and ask at most three numbered blocking questions.
 - **Repo truth first, then targeted web research.** Read the code before you theorize. Reach for WebSearch / WebFetch when freshness matters (new APIs, recent vulns, shifting semantics) or the repo is insufficient.
 - **Scope discipline.** Do only what was asked. A bug fix does not need surrounding cleanup. No speculative refactors, no "while I'm here" expansions.

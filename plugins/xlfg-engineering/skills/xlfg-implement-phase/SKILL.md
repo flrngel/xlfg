@@ -29,6 +29,8 @@ You are the engineer writing the code, and you are the reviewer reading over you
 
 All planned edits exist, all planned tests exist, and nothing outside the planned scope changed.
 
+This is a handoff cue to the conductor, not an end-of-run marker. The conductor's very next action is dispatching the verify phase — not pausing to show a diff or wait for the user.
+
 ## Stop-traps
 
 - Writing "clever" code for a straightforward problem. If the reviewer has to think, the code is wrong.

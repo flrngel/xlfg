@@ -1008,6 +1008,42 @@ class TestConductorDiscipline(unittest.TestCase):
         self.assertNotIn("git status --porcelain", text)
         self.assertNotIn("conventional commits", lower)
 
+    def test_conductors_forbid_mid_run_turn_endings(self) -> None:
+        """v6.5.2 regression guard. Both conductors must explicitly forbid
+        ending the turn between phases.
+
+        v4 had a `Stop` hook that enforced this from the harness. v6.0 removed
+        the hook; v6.5.2 replaces it with prose discipline — the conductor
+        carries a `## Between phases` section, the `one run, one conductor
+        turn` rule, an explicit `do not end your turn` prohibition, and a
+        named `Proceeding` anti-pattern call-out.
+        """
+        for cmd in ("xlfg.md", "xlfg-debug.md"):
+            text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
+            lower = text.lower()
+            self.assertIn(
+                "## between phases",
+                lower,
+                f"{cmd}: missing `## Between phases` section",
+            )
+            self.assertIn(
+                "one run, one conductor turn",
+                lower,
+                f"{cmd}: missing `One run, one conductor turn` rule",
+            )
+            self.assertIn(
+                "do not end your turn",
+                lower,
+                f"{cmd}: must explicitly forbid ending the conductor turn "
+                "between phases",
+            )
+            self.assertIn(
+                "proceeding",
+                lower,
+                f"{cmd}: must call out the `Proceeding to ...` anti-pattern "
+                "by name",
+            )
+
     def test_conductors_prescribe_real_clock_for_run_id(self) -> None:
         """RUN_ID must come from the system clock via `date`, not model guesswork."""
         for cmd in ("xlfg.md", "xlfg-debug.md"):
