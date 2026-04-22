@@ -75,6 +75,10 @@ Hard constraints (not in the request):
   - <bullet>
 Open unknowns (ranked by cost-if-wrong):
   - <bullet>
+Debug findings (only for /xlfg-debug runs; omit for /xlfg runs):
+  - Smallest reproducer: <one command / input pair, or "n/a — not yet found">
+  - Suspect path: <file:line → file:line>
+  - Determinism class: deterministic | rate-dep | timing | seed | env
 ```
 
-If a section has nothing for this task, say so explicitly (`none worth naming`) rather than leaving it blank.
+If a section (other than conditional blocks marked "only for …" / "omit for …") has nothing for this task, say so explicitly (`none worth naming`) rather than leaving it blank. Conditional blocks should simply be omitted when the run doesn't match the condition.

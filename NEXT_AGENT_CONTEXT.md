@@ -1,6 +1,23 @@
 # Next agent context
 
-## Current state (6.5.2)
+## Current state (6.5.3)
+
+v6.5.3 is a prompt-only patch on top of v6.5.2 that closes eight contract-leak issues in `/xlfg-debug` documented in the pre-run audit at `.agent-testing/specs/xlfg-debug-issues.md`. The shared pattern across the findings: safety-relevant rules expressed as prose discipline with no execution-level verification. v6.0's philosophy cut removed enforcement hooks and bet on Opus-4.7 self-discipline; that bet paid off for pipeline flow (patched in v6.5.2) but leaked on contract boundaries that need a single command check — git state, Write-path restriction, completion-summary integrity, loopback-cap wording, template coverage, skill-dispatch args, stale design notes.
+
+The fixes (Objectives A–H in the brief):
+
+- **A. No-source-edits verification.** `commands/xlfg-debug.md` now has a `## No-source-edits check` section between `## Artifact policy` and `## Completion summary` that runs `git status --porcelain` via `Bash`, reads the output directly, and branches on empty-vs-non-empty. Mirrors `/xlfg`'s end-of-run-commit discipline, minus the commit. The Completion summary's "No writes beyond diagnosis" line now cites `verified via git status --porcelain` instead of asserting the contract by prose alone.
+- **B. Completion summary internal consistency.** Items 6–7 ("Run archive", "Suggested next step") demoted to a `> Footer` blockquote below the numbered list. The numbered list drops to 5 items — fits the 4–6 sentence budget honestly. The load-bearing "No writes beyond diagnosis" line stays inside the core.
+- **C. Write-path restriction.** The conductor's Operating contract gains a "One sanctioned Write path" bullet naming `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. The debug-phase skill's `## How to work it` gains a symmetric opener. Both surfaces are re-read by the model under pressure.
+- **D. Loopback cap disambiguation.** The previous "Cap: 1 loopback. After the second cycle stop" wording was ambiguous (cycle 1 = first run or first loopback?). Rewritten to match `/xlfg`'s counter style: "at most one additional time (total: 2 context-debug cycles)". The `(1, see below)` parenthetical in `## Between phases` flipped to `(2, see below)`.
+- **E. Template coverage.** The `diagnosis.md` template gains a `## Reproduction` section between `## Ask` and `## Mechanism` — slot for commands, inputs, and determinism class. The `xlfg-context` agent's Return format gains a conditional Debug findings block (smallest reproducer, suspect path, determinism class).
+- **F. Skill-dispatch args.** New paragraph in `## Briefing agents` specifying that Skill dispatches (`xlfg-intent-phase`, `xlfg-debug-phase`) must pass `args: "<RUN_ID>"`; loopbacks re-pass the same RUN_ID so `diagnosis.md` lands at the original path.
+- **G. Stale design-notes retired.** `docs/xlfg-debug-design-notes.md` rewrites `## Single source of truth` and `## New artifacts introduced by the command` to cite only `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Residual prose mentions of `spec.md`, `debug-report.md`, `repro-notes.md`, `probe-log.md`, `history-findings.md` removed. A `v6.5.3 update` banner at the top names what was wrong.
+- **H. Regression tests.** Four new tests in `tests/test_xlfg_v6.py` pin the above contracts. Existing `test_xlfg_debug_conductor_does_not_prescribe_commit` narrowed: `git status --porcelain` is now required (covered by the new verification test), so the ban collapses to `end-of-run commit` and `conventional commits`. Test surface: 50 → 54.
+
+Nothing else changed. Pipeline order (recall → intent → context → debug), phase count, loopback *shape*, `/xlfg`'s end-of-run commit step, no-commit-on-debug symmetry, audit harness (6 checks), hooks (`Stop`/`SubagentStop` remain absent — fix is prompt-only), `SANCTIONED_AGENTS`, `EXPECTED_PHASE_SKILLS`, `EXPECTED_SPECIALIST_SKILLS`, specialist skill bodies, `xlfg-verify-runner`, `xlfg-root-cause-analyst`, and every non-debug skill are all unchanged. Version bumped 6.5.2 → 6.5.3 in both manifests. Patch-level because no public entry surface or runtime dependency surface changes — only prompt additions to two files, a template slot, an agent return-format extension, one doc rewrite, and four new regression tests.
+
+## Previous state (6.5.2)
 
 v6.5.2 is a prompt-only regression fix on top of v6.5.1. The symptom: when a phase (skill or agent) returned, the conductor frequently ended its turn on a natural transition sentence ("Plan is READY. Proceeding to implement.") instead of dispatching the next phase in the same turn. Confirmed at plan → implement; the same shape of risk applies at every boundary except phase 8, because every phase skill carries a `## Done signal` and every phase agent carries a `## Return format` that reads as a natural milestone.
 
@@ -13,6 +30,7 @@ A new regression test, `test_conductors_forbid_mid_run_turn_endings`, asserts bo
 Nothing else changed. Pipeline order, phase count, loopback rules, end-of-run commit step, hooks (`Stop` remains absent — fix is prompt-only), agent bodies, specialist skills, audit harness, `SANCTIONED_AGENTS`, and `EXPECTED_SPECIALIST_SKILLS` are all unchanged. Version bumped 6.5.1 → 6.5.2 in both manifests. Patch-level because no public entry surface or runtime dependency surface changes — only prompt additions to two conductors and three skills.
 
 ## Previous state (6.5.1)
+
 
 v6.5.1 is a scope-discipline tidying patch on top of v6.5.0. The two conductor commands (`/xlfg`, `/xlfg-debug`) previously granted every specialist lens skill in their `allowed-tools` frontmatter — 27 on `/xlfg`, 11 on `/xlfg-debug` — inherited from the v6.3.0 specialist rollout and carried through v6.5.0 for parity. Neither conductor ever loads a specialist directly: specialists load from within phase skills and phase agents, each of which holds its own narrow specialist grants (verified by `test_phase_skills_body_and_allowed_tools_stay_in_sync` and `test_agent_body_and_tools_stay_in_sync`). The conductor grants were dead weight that padded the frontmatter by ~30 lines and — worse — `CLAUDE.md` §Entry model documented the redundancy, meaning any future agent reading the dev rules would happily regrow the grants after a hypothetical cleanup. v6.5.1 cuts the grants and fixes the prose together.
 

@@ -1,5 +1,7 @@
 # /xlfg-debug design notes
 
+> **v6.5.3 update (2026-04):** The durable diagnosis artifact is `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Earlier drafts of this document referenced a separate `spec.md`, `debug-report.md`, `repro-notes.md`, `probe-log.md`, and `history-findings.md` — none of those exist in v6. The "Single source of truth" and "New artifacts introduced by the command" sections below have been corrected to cite only `diagnosis.md`.
+
 ## Why a separate command exists
 
 `/xlfg` is for full delivery: intent, plan, implementation, proof, review, and compounding.
@@ -23,7 +25,7 @@
    - Reuse `recall -> intent -> context`, then stop at a dedicated `debug` phase instead of flowing into plan/implement/verify/review.
 
 3. **Single source of truth**
-   - Keep the durable run state in `spec.md`, then finish with a dedicated `debug-report.md`.
+   - The run's durable artifact is `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. That is the only file a debug run writes — no separate coordination file, no ledger, no per-phase scratch.
 
 4. **Smallest honest reproducer first**
    - A big failing suite is not the diagnosis.
@@ -74,7 +76,7 @@ The debug phase insists on repo mapping, bounded context, and causal structure b
 
 ### Operator surfaces and state visibility
 
-The explicit `debug-report.md`, workboard clarity, and no-silent-success posture match lessons visible in operator-facing projects such as:
+The explicit diagnosis artifact, workboard clarity, and no-silent-success posture match lessons visible in operator-facing projects such as:
 
 - `cherry-studio`
 - `AionUi`
@@ -109,10 +111,7 @@ The debug phase encodes a compact version of scientific debugging:
 
 ## New artifacts introduced by the command
 
-- `debug-report.md` — final diagnosis artifact
-- optional `repro-notes.md`
-- optional `probe-log.md`
-- optional `history-findings.md`
+- `docs/xlfg/runs/<RUN_ID>/diagnosis.md` — the only file written by a `/xlfg-debug` run. Surfaced by future recall passes. No sibling artifacts.
 
 ## Why this stays add-only
 
