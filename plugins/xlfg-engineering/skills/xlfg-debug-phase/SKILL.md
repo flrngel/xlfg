@@ -104,6 +104,8 @@ The sanctioned Write path is `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Before any 
 - tell which file to open to fix it,
 - and know what you didn't check.
 
+This is a handoff cue to the conductor, not an end-of-run marker. The debug phase is the last *phase* but not the last *step* — the conductor's very next actions are verifying the no-source-edits contract (`git status --porcelain`) and writing the completion-summary pointer. Do not end the turn on the diagnosis write.
+
 ## Stop-traps
 
 - Declaring a root cause from one passing reproduction of a hypothesis. That's confirming a hypothesis, not eliminating its rivals.

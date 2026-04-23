@@ -1,4 +1,4 @@
-# xlfg-engineering (v6.5.3)
+# xlfg-engineering (v6.5.4)
 
 An autonomous proof-first SDLC guide for Claude Code, designed for Opus-class models.
 

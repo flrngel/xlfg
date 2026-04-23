@@ -79,6 +79,8 @@ Read this first when entering this repo with xlfg.
 
 `docs/xlfg/runs/<RUN_ID>/run-summary.md` exists and is complete. If you updated `current-state.md`, you can hand it to a teammate who wasn't on this run and they would act differently next time because of it.
 
+This is a handoff cue to the conductor, not an end-of-run marker. Compound is the last *phase* but not the last *step* — the conductor's very next actions are the end-of-run commit (stage product paths, conventional commit) and the completion summary. Do not end the turn on the run-summary write.
+
 ## Stop-traps
 
 - Skipping the run-summary write because "the chat already has it." Chat evaporates; disk doesn't.

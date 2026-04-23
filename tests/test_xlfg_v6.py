@@ -1049,6 +1049,52 @@ class TestConductorDiscipline(unittest.TestCase):
                 "by name",
             )
 
+    def test_phase_bodies_carry_handoff_cue(self) -> None:
+        """v6.5.4 regression guard. Every phase body — the 5 phase skills and
+        the 4 phase agents — must carry the `handoff cue, not an end-of-run
+        marker` reminder inline at its return point.
+
+        v6.5.2 planted this reminder on 3 of 5 phase skills (intent, plan,
+        implement) and deliberately skipped the 4 phase agents and the 2
+        terminal skills (compound, debug-phase) on the rationale that the
+        conductor's `## Between phases` section was sufficient. v6.5.4
+        falsifies that rationale: the conductor's between-phases section is
+        read *before* a phase dispatches, but the decision whether to end
+        the turn happens *after* the phase returns, inside the phase body
+        whose terminal block (fenced Return format for agents, bullet-list
+        Stop-traps or Optional-specialists for terminal skills) reads as a
+        natural end-of-turn milestone. Extending the reminder symmetrically
+        to all 9 phase bodies lands the cue at the exact decision point;
+        this test pins that symmetry so the next drift is loud.
+        """
+        phase_bodies = [
+            PLUGIN / "skills" / "xlfg-intent-phase" / "SKILL.md",
+            PLUGIN / "skills" / "xlfg-plan-phase" / "SKILL.md",
+            PLUGIN / "skills" / "xlfg-implement-phase" / "SKILL.md",
+            PLUGIN / "skills" / "xlfg-compound-phase" / "SKILL.md",
+            PLUGIN / "skills" / "xlfg-debug-phase" / "SKILL.md",
+            PLUGIN / "agents" / "xlfg-recall.md",
+            PLUGIN / "agents" / "xlfg-context.md",
+            PLUGIN / "agents" / "xlfg-verify.md",
+            PLUGIN / "agents" / "xlfg-review.md",
+        ]
+        for path in phase_bodies:
+            lower = path.read_text(encoding="utf-8").lower()
+            rel = path.relative_to(PLUGIN)
+            self.assertIn(
+                "handoff cue",
+                lower,
+                f"{rel}: must carry the `handoff cue` reminder inline at its "
+                "return point so the reinforcement is visible at the exact "
+                "moment the conductor decides whether to end the turn.",
+            )
+            self.assertIn(
+                "not an end-of-run marker",
+                lower,
+                f"{rel}: must spell out `not an end-of-run marker` so the "
+                "phase-return block is not read as a turn-close milestone.",
+            )
+
     def test_conductors_prescribe_real_clock_for_run_id(self) -> None:
         """RUN_ID must come from the system clock via `date`, not model guesswork."""
         for cmd in ("xlfg.md", "xlfg-debug.md"):
