@@ -63,3 +63,5 @@ Rationale: <one sentence — why the chosen lens was the right one, and what you
 ```
 
 If APPROVE, state the rationale anyway — specifically what you checked under the chosen lens. "Nothing wrong" is not a review.
+
+This is a handoff cue to the conductor, not an end-of-run marker. After you emit REVIEW RESULT, the conductor's very next action is dispatching the compound phase (on APPROVE or APPROVE-WITH-NOTES) or looping back to implement (on MUST-FIX) — not pausing or summarizing for the user.

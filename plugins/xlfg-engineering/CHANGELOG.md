@@ -1,3 +1,50 @@
+## 6.5.4 — extend the mid-run-turn-endings guard symmetrically to all phase bodies
+
+v6.5.4 is a prompt-only patch that closes a gap v6.5.2 left open. v6.5.2 planted a "handoff cue to the conductor, not an end-of-run marker" reminder inline on 3 of the 5 phase skills (intent, plan, implement) and deliberately skipped the 4 phase agents (recall, context, verify, review) and the 2 terminal skills (compound, debug-phase) on the rationale that the conductor's `## Between phases` section covered the agent-return case. The conductor's between-phases section is read *before* dispatch, but the decision whether to end the turn happens *after* the phase returns, inside the phase body the model just finished emitting. The 6 bodies the patch skipped all end on a structurally-terminal block — fenced `## Return format` for the 4 agents, bullet-list `## Stop-traps` for `xlfg-compound-phase`, bullet-list `## Optional specialist skills` for `xlfg-debug-phase` — with no post-amble reminder, which the model reads as a natural turn-close milestone.
+
+### Changed
+
+- `agents/xlfg-recall.md`, `agents/xlfg-context.md`, `agents/xlfg-verify.md`, `agents/xlfg-review.md`: each Return format now closes with a one-line reminder that the return is a handoff cue to the conductor, not an end-of-run marker, and names the conductor's next dispatch. `xlfg-recall` → intent. `xlfg-context` → next phase skill (plan for `/xlfg`, debug for `/xlfg-debug`). `xlfg-verify` → branching dispatch (review on GREEN, implement on RED, harness repair on FAILED). `xlfg-review` → branching dispatch (compound on APPROVE or APPROVE-WITH-NOTES, implement on MUST-FIX).
+- `skills/xlfg-compound-phase/SKILL.md`, `skills/xlfg-debug-phase/SKILL.md`: each `## Done signal` now carries the same reminder, framed as "last *phase* but not last *step*" — compound names the conductor's end-of-run commit + completion summary as the next actions, debug-phase names the `git status --porcelain` no-source-edits check + completion-summary pointer. Neither skill writes beyond its sanctioned artifact; the reminder is prose-only.
+- `CHANGELOG.md`, `README.md` (plugin + repo), `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `NEXT_AGENT_CONTEXT.md`: version bump to 6.5.4 and test-count refresh (54 → 55).
+
+### Added
+
+- `test_phase_bodies_carry_handoff_cue` in `tests/test_xlfg_v6.py`: iterates all 9 phase bodies (5 phase skills + 4 phase agents) and asserts each contains both `handoff cue` and `not an end-of-run marker`. Pins the symmetry v6.5.2 partially introduced so the next drift is loud. Sibling to `test_conductors_forbid_mid_run_turn_endings` (which still covers the conductor-side discipline unchanged).
+
+### Not changed
+
+- Conductor bodies (`commands/xlfg.md`, `commands/xlfg-debug.md`). The `## Between phases` sections, `One run, one conductor turn.` rule, `do not end your turn` prohibition, and `Proceeding` anti-pattern call-out from v6.5.2 are already correct on the conductor side — the gap was on the phase-exit side, not the pre-dispatch side.
+- Pipeline order, phase count, loopback rules, end-of-run commit step, no-commit-on-debug symmetry, the sanctioned Write-path restriction, audit harness (6 checks), hooks (no `Stop`/`SubagentStop` reintroduced — fix stays prompt-only, consistent with v6.0 philosophy), `SANCTIONED_AGENTS`, `EXPECTED_PHASE_SKILLS`, `EXPECTED_SPECIALIST_SKILLS`, specialist skill bodies, any `## Return format` shape or the existing trailing sentences inside each Return format.
+
+Patch-level because no public entry surface or runtime dependency surface changes — six inline reminders appended to phase bodies and one regression test.
+
+## 6.5.3 — close `/xlfg-debug` contract leaks (prompt-only)
+
+v6.5.3 is a prompt-only patch that closes eight contract-leak issues in `/xlfg-debug` documented in the pre-run audit at `.agent-testing/specs/xlfg-debug-issues.md`. The shared pattern across the findings: safety-relevant rules expressed as prose discipline with no execution-level verification. v6.0's philosophy cut removed enforcement hooks and bet on Opus-4.7 self-discipline; the bet pays off for pipeline flow (patched in v6.5.2) but leaks on contract boundaries that need a single command check (git state, Write-path, template integrity). Fix direction stays prompt-only (consistent with v6.0), but prompts now name the verifying command explicitly and tests pin the strings.
+
+### Changed
+
+- `commands/xlfg-debug.md`: added new `## No-source-edits check (mandatory before completion summary)` section mirroring `/xlfg`'s end-of-run-commit discipline — runs `git status --porcelain` via `Bash`, branches on empty-vs-non-empty output, reports the violation branch when a tracked non-gitignored path appears. Rewrote the completion summary: item 5 now cites `verified via git status --porcelain`; items 6–7 ("Run archive", "Suggested next step") demoted to a trailing footer line outside the 4–6 sentence budget. Rewrote the loopback rule to match `/xlfg`'s explicit-counter style ("at most one additional time (total: 2 context-debug cycles)") and flipped the `(1, see below)` parenthetical in `## Between phases` to `(2, see below)`. Added a "One sanctioned Write path" bullet to the Operating contract naming `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Added a paragraph after "Briefing agents" specifying that Skill dispatches (`xlfg-intent-phase`, `xlfg-debug-phase`) must pass `args: "<RUN_ID>"`, with the same RUN_ID re-passed on loopback.
+- `skills/xlfg-debug-phase/SKILL.md`: added a pre-numbered-list paragraph in `## How to work it` naming the sanctioned Write path (symmetric with the conductor). Inserted a `## Reproduction` section into the `diagnosis.md` template between `## Ask` and `## Mechanism` — slot for commands, inputs, and determinism class (deterministic / rate-dependent / timing-dependent / seed-dependent / environment-dependent).
+- `agents/xlfg-context.md`: extended the `## Return format` with a conditional Debug findings block (smallest reproducer, suspect path, determinism class) — populated only on `/xlfg-debug` runs.
+- `docs/xlfg-debug-design-notes.md`: rewrote `## Single source of truth` and `## New artifacts introduced by the command` to cite only `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Removed residual mentions of `spec.md`, `debug-report.md`, `repro-notes.md`, `probe-log.md`, and `history-findings.md` from the prose body. Added a `v6.5.3 update` banner at the top.
+- `tests/test_xlfg_v6.py`: narrowed `test_xlfg_debug_conductor_does_not_prescribe_commit` — `git status --porcelain` is now required (covered by the new verification test), so the ban collapses to `end-of-run commit` and `conventional commits`.
+- `CHANGELOG.md`, `README.md` (plugin + repo), `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `NEXT_AGENT_CONTEXT.md`, `AGENTS.md`: version bump to 6.5.3 and test-count refresh (49 → 54).
+
+### Added
+
+- `test_xlfg_debug_completion_summary_item_count_matches_budget` — counts numbered items in the `## Completion summary` section of `xlfg-debug.md` and asserts the count fits the 4–6 sentence budget (≤ 6).
+- `test_xlfg_debug_conductor_verifies_no_source_edits` — asserts `xlfg-debug.md` reads `git status --porcelain` and cites it in the summary (`verified via`) instead of asserting the contract by prose alone.
+- `test_xlfg_debug_names_sanctioned_write_path` — asserts both `xlfg-debug.md` and `xlfg-debug-phase/SKILL.md` name the single sanctioned Write path (`docs/xlfg/runs/<RUN_ID>/diagnosis.md`) and frame it as `sanctioned write path` so the restriction is visible where the model re-reads it under pressure.
+- `test_xlfg_debug_design_notes_no_stale_artifacts` — asserts `spec.md`, `debug-report.md`, `repro-notes.md`, `probe-log.md`, and `history-findings.md` do not appear outside the `v6.5.3 update` banner (lines starting with `>`) in `docs/xlfg-debug-design-notes.md`.
+
+### Not changed
+
+- Pipeline order (recall → intent → context → debug), phase count, loopback *shape*, no-commit-on-debug symmetry, `/xlfg`'s end-of-run commit step, audit harness (6 checks), hooks (no `Stop`/`SubagentStop` reintroduced — fix is prompt-only, consistent with v6.0 philosophy), `SANCTIONED_AGENTS`, `EXPECTED_PHASE_SKILLS`, `EXPECTED_SPECIALIST_SKILLS`, specialist skill bodies, `xlfg-verify-runner`, `xlfg-root-cause-analyst`, or any non-debug skill.
+
+Patch-level because no public entry surface or runtime dependency surface changes — only prompt additions to two files, a template slot, an agent return-format extension, one doc rewrite, and four new regression tests.
+
 ## 6.5.2 — conductors forbid mid-run turn endings between phases
 
 v6.5.2 is a prompt-only regression fix. When a phase (skill or agent) returned, the conductor frequently ended its turn on a natural transition sentence ("Plan is READY. Proceeding to implement.") instead of dispatching the next phase in the same turn. v4 had a `Stop` hook (`phase-gate.mjs`) that refused turn-ending until all phases were marked complete; v6.0 removed that hook under the premise Opus 4.7 would self-pace across phase boundaries. It doesn't always — phase `## Done signal` and `## Return format` sections read as natural completion milestones. This patch plugs the gap with prompt discipline instead of bringing the hook back.

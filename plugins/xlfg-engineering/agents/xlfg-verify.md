@@ -63,3 +63,5 @@ If FAILED: harness repair = <imperative, one sentence — what needs fixing befo
 ```
 
 Exactly one of the last two lines applies per result. Omit the other.
+
+This is a handoff cue to the conductor, not an end-of-run marker. After you emit VERIFY RESULT, the conductor's very next action is a dispatch — the review phase on GREEN, the implement phase on RED, a harness repair on FAILED — not pausing or summarizing for the user.

@@ -1001,11 +1001,16 @@ class TestConductorDiscipline(unittest.TestCase):
         )
 
     def test_xlfg_debug_conductor_does_not_prescribe_commit(self) -> None:
-        """`/xlfg-debug` is product-frozen and must not prescribe a commit."""
+        """`/xlfg-debug` is product-frozen and must not prescribe a commit.
+
+        v6.5.3 narrows this guard: reading `git status --porcelain` is now
+        required (see `test_xlfg_debug_conductor_verifies_no_source_edits`),
+        so the ban collapses to the two substrings that still name a commit
+        action — `end-of-run commit` and `conventional commits`.
+        """
         text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
         lower = text.lower()
         self.assertNotIn("end-of-run commit", lower)
-        self.assertNotIn("git status --porcelain", text)
         self.assertNotIn("conventional commits", lower)
 
     def test_conductors_forbid_mid_run_turn_endings(self) -> None:
@@ -1044,6 +1049,52 @@ class TestConductorDiscipline(unittest.TestCase):
                 "by name",
             )
 
+    def test_phase_bodies_carry_handoff_cue(self) -> None:
+        """v6.5.4 regression guard. Every phase body — the 5 phase skills and
+        the 4 phase agents — must carry the `handoff cue, not an end-of-run
+        marker` reminder inline at its return point.
+
+        v6.5.2 planted this reminder on 3 of 5 phase skills (intent, plan,
+        implement) and deliberately skipped the 4 phase agents and the 2
+        terminal skills (compound, debug-phase) on the rationale that the
+        conductor's `## Between phases` section was sufficient. v6.5.4
+        falsifies that rationale: the conductor's between-phases section is
+        read *before* a phase dispatches, but the decision whether to end
+        the turn happens *after* the phase returns, inside the phase body
+        whose terminal block (fenced Return format for agents, bullet-list
+        Stop-traps or Optional-specialists for terminal skills) reads as a
+        natural end-of-turn milestone. Extending the reminder symmetrically
+        to all 9 phase bodies lands the cue at the exact decision point;
+        this test pins that symmetry so the next drift is loud.
+        """
+        phase_bodies = [
+            PLUGIN / "skills" / "xlfg-intent-phase" / "SKILL.md",
+            PLUGIN / "skills" / "xlfg-plan-phase" / "SKILL.md",
+            PLUGIN / "skills" / "xlfg-implement-phase" / "SKILL.md",
+            PLUGIN / "skills" / "xlfg-compound-phase" / "SKILL.md",
+            PLUGIN / "skills" / "xlfg-debug-phase" / "SKILL.md",
+            PLUGIN / "agents" / "xlfg-recall.md",
+            PLUGIN / "agents" / "xlfg-context.md",
+            PLUGIN / "agents" / "xlfg-verify.md",
+            PLUGIN / "agents" / "xlfg-review.md",
+        ]
+        for path in phase_bodies:
+            lower = path.read_text(encoding="utf-8").lower()
+            rel = path.relative_to(PLUGIN)
+            self.assertIn(
+                "handoff cue",
+                lower,
+                f"{rel}: must carry the `handoff cue` reminder inline at its "
+                "return point so the reinforcement is visible at the exact "
+                "moment the conductor decides whether to end the turn.",
+            )
+            self.assertIn(
+                "not an end-of-run marker",
+                lower,
+                f"{rel}: must spell out `not an end-of-run marker` so the "
+                "phase-return block is not read as a turn-close milestone.",
+            )
+
     def test_conductors_prescribe_real_clock_for_run_id(self) -> None:
         """RUN_ID must come from the system clock via `date`, not model guesswork."""
         for cmd in ("xlfg.md", "xlfg-debug.md"):
@@ -1058,6 +1109,131 @@ class TestConductorDiscipline(unittest.TestCase):
                 "do not invent",
                 lower,
                 f"{cmd}: startup body must forbid inventing the timestamp",
+            )
+
+    def test_xlfg_debug_completion_summary_item_count_matches_budget(self) -> None:
+        """Completion summary's sentence budget (4–6) must match its item count.
+
+        v6.5.2 shipped a summary that budgeted 4–6 sentences but enumerated 7
+        labeled items — an LLM conductor honoring the count would overshoot
+        the budget; one honoring the budget would silently drop load-bearing
+        items (notably `No writes beyond diagnosis`). v6.5.3 demotes the two
+        least load-bearing items to a footer; the numbered list must fit the
+        budget.
+        """
+        text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
+        lines = text.split("\n")
+        in_summary = False
+        numbered: list[str] = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("## Completion summary"):
+                in_summary = True
+                continue
+            if in_summary and stripped.startswith("## ") and not stripped.startswith("## Completion summary"):
+                break
+            if in_summary and re.match(r"^\s*\d+\. \*\*", line):
+                numbered.append(line)
+        self.assertGreater(
+            len(numbered),
+            0,
+            "xlfg-debug.md: Completion summary must contain numbered items",
+        )
+        self.assertLessEqual(
+            len(numbered),
+            6,
+            f"xlfg-debug.md: Completion summary has {len(numbered)} numbered "
+            "items but the budget is 4–6 sentences. Demote lower-priority "
+            "items to a footer or raise the budget — the two must agree.",
+        )
+
+    def test_xlfg_debug_conductor_verifies_no_source_edits(self) -> None:
+        """`/xlfg-debug` must verify the no-source-edits contract via command.
+
+        v6.5.2 trusted prose discipline ("if tracked product changes appear
+        in git status at end of a debug run, report the mismatch") with no
+        actual command step. v6.5.3 adds a mandatory `git status --porcelain`
+        step mirroring `/xlfg`'s end-of-run-commit discipline (minus the
+        commit) and wires the verifying command into the summary.
+        """
+        text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
+        self.assertIn(
+            "git status --porcelain",
+            text,
+            "xlfg-debug.md: conductor must read `git status --porcelain` to "
+            "verify the no-source-edits contract before writing the summary.",
+        )
+        lower = text.lower()
+        self.assertIn(
+            "verified via",
+            lower,
+            "xlfg-debug.md: the summary's no-writes-beyond-diagnosis line "
+            "must cite the verifying command (`verified via git status "
+            "--porcelain`) instead of asserting the contract by prose alone.",
+        )
+
+    def test_xlfg_debug_names_sanctioned_write_path(self) -> None:
+        """The single sanctioned `Write` path must be explicit in both bodies.
+
+        `allowed-tools` grants `Write` at the tool layer; v6.5.2 declared
+        "only sanctioned use" in prose but the restriction appeared only in
+        the skill body and the conductor's opener. v6.5.3 promotes the
+        restriction into the conductor's Operating contract and the debug
+        skill's How-to-work-it opener, so both surfaces the model re-reads
+        under pressure carry the path explicitly.
+        """
+        conductor = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
+        skill = (PLUGIN / "skills" / "xlfg-debug-phase" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        path_literal = "docs/xlfg/runs/<RUN_ID>/diagnosis.md"
+        for label, body in (("xlfg-debug.md", conductor), ("xlfg-debug-phase/SKILL.md", skill)):
+            self.assertIn(
+                path_literal,
+                body,
+                f"{label}: must name the single sanctioned Write path "
+                f"`{path_literal}` so the model can re-read the restriction.",
+            )
+            lower = body.lower()
+            self.assertIn(
+                "sanctioned write path",
+                lower,
+                f"{label}: must frame the path as the sanctioned Write "
+                "target (not just an archive location) so the restriction is "
+                "visible in the operating-contract section.",
+            )
+
+    def test_xlfg_debug_design_notes_no_stale_artifacts(self) -> None:
+        """Design notes must not promote artifacts that don't exist in v6.
+
+        v6.5.3 retires the stale artifact names (`spec.md`, `debug-report.md`,
+        `repro-notes.md`, `probe-log.md`, `history-findings.md`) from the
+        design notes. They may appear once in the `v6.5.x update` banner at
+        the top (as "earlier drafts referenced X") but nowhere else — a real
+        bullet or prose mention would imply they exist.
+        """
+        notes = (REPO / "docs" / "xlfg-debug-design-notes.md").read_text(
+            encoding="utf-8"
+        )
+        stale = (
+            "spec.md",
+            "debug-report.md",
+            "repro-notes.md",
+            "probe-log.md",
+            "history-findings.md",
+        )
+        for name in stale:
+            bad_lines = [
+                line
+                for line in notes.split("\n")
+                if name in line and not line.lstrip().startswith(">")
+            ]
+            self.assertEqual(
+                bad_lines,
+                [],
+                f"docs/xlfg-debug-design-notes.md: `{name}` must not appear "
+                "outside the `v6.5.x update` banner (lines starting with `>`); "
+                f"found: {bad_lines!r}",
             )
 
 

@@ -20,6 +20,8 @@ You are a root-cause analyst. Your deliverable is a causal chain with evidence a
 
 ## How to work it
 
+The sanctioned Write path is `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Before any `Write` call, verify the path exactly matches it. Any other path — especially a product file, a test file, or `docs/xlfg/current-state.md` — is a contract violation; stop and report instead of writing.
+
 1. **Reproduce.** Actually run the minimal repro and capture the output. Not a paraphrase — the real output. "I think it would fail with X" is not a reproduction.
 
 2. **Separate symptom from mechanism.** The first wrong state is rarely the one the user reports. Trace backward from the visible symptom to the earliest point where state deviates from expectation.
@@ -56,6 +58,12 @@ You are a root-cause analyst. Your deliverable is a causal chain with evidence a
 
    ## Ask
    <1–2 sentences restating the reported failure.>
+
+   ## Reproduction
+   <Commands (exact), inputs (exact), and determinism class — one of:
+   deterministic / rate-dependent / timing-dependent / seed-dependent /
+   environment-dependent. A teammate reading this section must be able to
+   re-trigger the failure without guessing.>
 
    ## Mechanism
    <1–2 sentences on what is actually breaking. Not the symptom; the mechanism.>
@@ -95,6 +103,8 @@ You are a root-cause analyst. Your deliverable is a causal chain with evidence a
 - see why the mechanism you name causes the observed symptom,
 - tell which file to open to fix it,
 - and know what you didn't check.
+
+This is a handoff cue to the conductor, not an end-of-run marker. The debug phase is the last *phase* but not the last *step* — the conductor's very next actions are verifying the no-source-edits contract (`git status --porcelain`) and writing the completion-summary pointer. Do not end the turn on the diagnosis write.
 
 ## Stop-traps
 

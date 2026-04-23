@@ -50,3 +50,5 @@ Assumptions for later phases: <bullet, bullet, bullet>
 ```
 
 If nothing relevant exists, say so explicitly in each section rather than leaving blanks. An empty RECALL RESULT still informs the conductor.
+
+This is a handoff cue to the conductor, not an end-of-run marker. After you emit RECALL RESULT, the conductor's very next action is dispatching the intent phase — not pausing or summarizing for the user.
