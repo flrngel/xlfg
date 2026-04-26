@@ -96,7 +96,7 @@ A phase's `## Done signal` (skills) or `## Return format` (agents) means *that p
 
 The only valid mid-run turn boundaries are:
 
-- The intent skill returns with `needs-user-answer` → ask at most three blocking questions and stop.
+- The intent skill returns with `needs-user-answer` → ask at most three blocking questions using the §Question template below and stop.
 - Loopback cap hit → escalate to the user with a summary of what failed.
 - Phase 8 (compound) returned → run the end-of-run commit step, then write the completion summary. This is the sole end-of-run exit.
 
@@ -107,12 +107,35 @@ Do not wait for the user to say "continue", "ok", or anything else to resume bet
 ## Operating contract
 
 - **One run, one conductor turn.** All 8 dispatches + the end-of-run commit + the completion summary happen in a single continuous conductor turn. Do not end your turn between phases. Do not ask the user to invoke any internal skill, agent, or re-run a phase. You own the whole run.
-- **Human-only blockers only.** Ask the user only for things you cannot ground from the repo or current research: missing secrets, destructive external approvals, true product ambiguity that changes correctness. If the intent skill returns with `needs-user-answer`, stop the pipeline and ask at most three numbered blocking questions.
+- **Human-only blockers only.** Ask the user only for things you cannot ground from the repo or current research: missing secrets, destructive external approvals, true product ambiguity that changes correctness. If the intent skill returns with `needs-user-answer`, stop the pipeline and ask at most three blocking questions using the §Question template.
 - **Repo truth first, then targeted web research.** Read the code before you theorize. Reach for WebSearch / WebFetch when freshness matters (new APIs, recent vulns, shifting semantics) or the repo is insufficient.
 - **Scope discipline.** Do only what was asked. A bug fix does not need surrounding cleanup. No speculative refactors, no "while I'm here" expansions.
 - **No broken-window fixes.** Do not suppress errors, widen retries to green, mute tests, hand-wave "env issue", or special-case a failing example. Find the root cause.
 - **Proof before claim.** You have not shipped anything until verify came back GREEN. The verify agent's GREEN classification is the only thing that qualifies.
 - **Trust Opus-class reasoning, but trust proof more.** The test suite, the live run, and the real repo are the final arbiters.
+
+## Question template (intent halt only)
+
+When the intent skill returns `needs-user-answer`, stop the pipeline and emit the questions in exactly this shape — no opening framing, no closing prose:
+
+```
+Need <n> answers before proceeding:
+
+1. <single-sentence question>  [A) <option>  B) <option>]
+2. <single-sentence question>
+
+Blocking because: <one line — what breaks if I guess wrong>
+```
+
+Rules:
+
+- **One sentence per question.** Do not restate the user's ask, do not add context they already have.
+- **Offer A/B/C options whenever the answer space is finite** (binary, enum, or short list). The user types `1A 2B` instead of prose. Skip the bracketed options only if the answer is genuinely free-form.
+- **One `Blocking because:` footer** covers all questions. Do not write a separate justification per question.
+- **No opening line.** No "To make sure I build the right thing…", no "I have a few clarifying questions…". Skip it.
+- **n ≤ 3.** The intent skill caps blockers at three; the conductor never expands that cap.
+
+Target: ≤8 lines for 2 questions, ≤12 for 3.
 
 ## Loopback rules
 
@@ -149,14 +172,28 @@ This step is the v6.3.2 repair for a regression where v6 runs finished with edit
 
 ## Completion summary (end-of-run template)
 
-Once the commit is done (or correctly skipped), finish the run with a concise summary. Prose the user can skim in under 30 seconds:
+Once the commit is done (or correctly skipped), finish the run with a tight terminal summary. The full record is in `run-summary.md`; chat output is the pointer, not the document. Use exactly this shape — one labeled row per line, no headers, no closing prose:
 
-1. **What changed.** 1–2 sentences naming the files touched and the behavior delivered.
-2. **Proof.** The exact command(s) the verify agent ran and the result.
-3. **Commit.** The short SHA and subject line, or "no product changes to commit — investigation-only run".
-4. **Residual risk.** What you did not test, what might still be wrong, and what you'd check next if you had another hour.
-5. **Follow-ups (optional).** Broken windows you spotted but did not fix, or objective groups deferred.
-6. **The one durable lesson** from the compound skill, if there is one.
-7. **Run archive.** The path `docs/xlfg/runs/<RUN_ID>/run-summary.md`, and whether `docs/xlfg/current-state.md` was updated.
+```
+**Shipped:** <one-line behavior delivered>
+**Files:** <≤3 relative paths; if more, "<n> files in <dir>/">
+**Proof:** <verify agent's command> → GREEN
+**Commit:** <short SHA> <subject>
+**Risk:** <one line — omit row if no real, named risk>
+**Next:** <one line — omit row if no real follow-up>
+**Archive:** docs/xlfg/runs/<RUN_ID>/run-summary.md
+```
 
-Do not append post-hoc rationalizations, meta-commentary about the xlfg process itself, or reassurances about your own work. The summary is for the user; keep it for them.
+Rules:
+
+- **Omit empty rows.** Do not write `**Risk:** none` or `**Next:** n/a` — drop the row instead. Only `Shipped`, `Proof`, `Commit`, and `Archive` are mandatory.
+- **One sentence per row.** No multi-sentence rationale. The fuller explanation is in `run-summary.md`.
+- **No durable-lesson row.** The compound skill writes the lesson into `run-summary.md`; the terminal does not repeat it.
+- **No closing line.** No "let me know if…", no recap of the xlfg process, no reassurance about your own work.
+
+Variants (use these exact shapes when applicable, replacing the table above):
+
+- **Investigation-only** (commit was correctly skipped): `No product changes (investigation-only). <one-line finding>. **Archive:** docs/xlfg/runs/<RUN_ID>/run-summary.md`
+- **Loopback escalation** (cap hit before GREEN): `Stopped after 2 loopbacks. **Failed:** <command> → <one-line reason>. **Archive:** docs/xlfg/runs/<RUN_ID>/run-summary.md`
+
+Target: ≤8 lines for typical runs. The user reads the terminal in 5 seconds and opens `run-summary.md` only if they want detail.

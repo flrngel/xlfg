@@ -94,7 +94,7 @@ A phase's `## Done signal` (skills) or `## Return format` (agents) means *that p
 
 The only valid mid-run turn boundaries are:
 
-- The intent skill returns with `needs-user-answer` → ask at most three blocking questions and stop.
+- The intent skill returns with `needs-user-answer` → ask at most three blocking questions using the §Question template below and stop.
 - Loopback cap hit (2 context-debug cycles, see below) → escalate.
 - Phase 4 (debug) returned → write the completion-summary pointer. This is the sole end-of-run exit.
 
@@ -112,6 +112,29 @@ Do not wait for the user to say "continue", "ok", or anything else to resume bet
 - **Falsifiable hypothesis log.** Each hypothesis either survives evidence or dies cleanly. Do not hold contradictory hypotheses silently.
 - **Repo truth first.** Read before you theorize. Web research when the repo is silent and freshness matters.
 - **Prompt/agent debugging is still debugging.** If the bug is in a prompt or tool contract, the prompt, tool spec, context inputs, evaluation bar, and false-success trap are all part of the system under test.
+
+## Question template (intent halt only)
+
+When the intent skill returns `needs-user-answer`, stop the pipeline and emit the questions in exactly this shape — no opening framing, no closing prose:
+
+```
+Need <n> answers before proceeding:
+
+1. <single-sentence question>  [A) <option>  B) <option>]
+2. <single-sentence question>
+
+Blocking because: <one line — what breaks if I guess wrong>
+```
+
+Rules:
+
+- **One sentence per question.** Do not restate the user's ask, do not add context they already have.
+- **Offer A/B/C options whenever the answer space is finite** (binary, enum, or short list). The user types `1A 2B` instead of prose. Skip the bracketed options only if the answer is genuinely free-form.
+- **One `Blocking because:` footer** covers all questions. Do not write a separate justification per question.
+- **No opening line.** No "To make sure I diagnose the right bug…", no "I have a few clarifying questions…". Skip it.
+- **n ≤ 3.** The intent skill caps blockers at three; the conductor never expands that cap.
+
+Target: ≤8 lines for 2 questions, ≤12 for 3.
 
 ## Loopback rule
 
@@ -137,14 +160,22 @@ This step mirrors `/xlfg`'s end-of-run-commit discipline, minus the commit — `
 
 ## Completion summary (end-of-run template)
 
-The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written by the debug skill). Your chat response is a short pointer — 4–6 sentences, not a paste of the whole file. Prose the user can skim in under 30 seconds:
+The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written by the debug skill). Your chat response is a tight terminal pointer, not a paste of the whole file. Use exactly this shape — one labeled row per line, no headers, no closing prose:
 
-1. **Mechanism.** What is actually breaking, in one sentence. Not the symptom.
-2. **Strongest evidence.** The concrete artifact (log line, test output, captured stdout) that makes the mechanism load-bearing, in one sentence.
-3. **Likely repair surface.** File / function / boundary the fix will touch, in one sentence. Do not open it in this run.
-4. **Residual unknowns.** What you did not resolve and what you'd check next if you had another hour — or "none worth naming".
-5. **No writes beyond diagnosis.** State explicitly: "investigation-only run — verified via `git status --porcelain`; output was empty (or listed only gitignored runs paths)." If tracked non-gitignored paths appeared, say so instead and name them — a phase violated the no-source-edits contract.
+```
+**Mechanism:** <one sentence — what is actually breaking, not the symptom>
+**Evidence:** <concrete artifact — log line, test output, captured stdout — that makes the mechanism load-bearing>
+**Repair surface:** <file/function/boundary the fix will touch; do not open it in this run>
+**Unknowns:** <what you did not resolve and what you'd check next, or "none worth naming">
+**Verified:** no source edits — verified via `git status --porcelain` (output was empty, or listed only gitignored runs paths)
+**Archive:** docs/xlfg/runs/<RUN_ID>/diagnosis.md
+```
 
-> Footer (does not count against the sentence budget): archive at `docs/xlfg/runs/<RUN_ID>/diagnosis.md`; suggested next step usually "open `/xlfg` to ship the fix" or "run `<experiment>` to confirm before fixing".
+Rules:
 
-Do not append post-hoc rationalization, meta-commentary about the xlfg process, or reassurance about your own work. Hand the pointer to the user; they decide whether to open `/xlfg` to ship the fix.
+- **One sentence per row.** No multi-sentence rationale. Detail belongs in `diagnosis.md`.
+- **All rows mandatory** in the success path (unlike `/xlfg`, no row is optional — each carries load-bearing information).
+- **Verified row is contract-bearing.** It must cite `verified via git status --porcelain`. If tracked non-gitignored paths appeared, replace the row with `**Violated:** no-source-edits contract broken — tracked path(s): <list>` and stop without offering a next step.
+- **No closing line.** No "let me know if…", no suggested next step, no recap of the xlfg process. The user opens `/xlfg` themselves if they want to ship the fix.
+
+Target: ≤7 lines. The user reads the terminal in 5 seconds and opens `diagnosis.md` only if they want detail.

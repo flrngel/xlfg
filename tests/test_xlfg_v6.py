@@ -995,7 +995,7 @@ class TestConductorDiscipline(unittest.TestCase):
             "xlfg.md: commit step must prescribe Conventional Commits style",
         )
         self.assertIn(
-            "**Commit.**",
+            "**Commit:**",
             text,
             "xlfg.md: Completion summary template must surface the commit",
         )
@@ -1112,19 +1112,19 @@ class TestConductorDiscipline(unittest.TestCase):
             )
 
     def test_xlfg_debug_completion_summary_item_count_matches_budget(self) -> None:
-        """Completion summary's sentence budget (4–6) must match its item count.
+        """Completion summary must fit the terminal budget (≤7 labeled rows).
 
-        v6.5.2 shipped a summary that budgeted 4–6 sentences but enumerated 7
-        labeled items — an LLM conductor honoring the count would overshoot
-        the budget; one honoring the budget would silently drop load-bearing
-        items (notably `No writes beyond diagnosis`). v6.5.3 demotes the two
-        least load-bearing items to a footer; the numbered list must fit the
-        budget.
+        v6.5.2 shipped a numbered 7-item summary that budgeted 4–6 sentences
+        — count and budget disagreed. v6.5.3 demoted two items to a footer
+        (numbered list dropped to 5). v6.5.5 switches to a labeled-row
+        template (`**Mechanism:** …`, `**Evidence:** …`) that renders cleaner
+        in the terminal and lets the model omit empty optional rows without
+        breaking numbering. The budget guard remains: ≤7 mandatory rows.
         """
         text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
         lines = text.split("\n")
         in_summary = False
-        numbered: list[str] = []
+        labeled: list[str] = []
         for line in lines:
             stripped = line.strip()
             if stripped.startswith("## Completion summary"):
@@ -1132,20 +1132,114 @@ class TestConductorDiscipline(unittest.TestCase):
                 continue
             if in_summary and stripped.startswith("## ") and not stripped.startswith("## Completion summary"):
                 break
-            if in_summary and re.match(r"^\s*\d+\. \*\*", line):
-                numbered.append(line)
+            if in_summary and re.match(r"^\*\*[A-Z][^:*]+:\*\*", stripped):
+                labeled.append(stripped)
         self.assertGreater(
-            len(numbered),
+            len(labeled),
             0,
-            "xlfg-debug.md: Completion summary must contain numbered items",
+            "xlfg-debug.md: Completion summary must contain labeled rows "
+            "(`**Label:** ...`).",
         )
         self.assertLessEqual(
-            len(numbered),
-            6,
-            f"xlfg-debug.md: Completion summary has {len(numbered)} numbered "
-            "items but the budget is 4–6 sentences. Demote lower-priority "
-            "items to a footer or raise the budget — the two must agree.",
+            len(labeled),
+            7,
+            f"xlfg-debug.md: Completion summary template has {len(labeled)} "
+            "labeled rows but the terminal budget is ≤7. Trim the template "
+            "or split into a footer.",
         )
+
+    def test_xlfg_completion_summary_item_count_matches_budget(self) -> None:
+        """`/xlfg`'s completion summary must fit the terminal budget too.
+
+        Sibling to the `/xlfg-debug` budget guard. v6.5.5 introduced a
+        labeled-row template for the `/xlfg` summary (`**Shipped:** …`,
+        `**Files:** …`, …) capped at 7 mandatory rows so the run ends with
+        a tight terminal pointer instead of a multi-paragraph recap.
+        """
+        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        lines = text.split("\n")
+        in_summary = False
+        labeled: list[str] = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("## Completion summary"):
+                in_summary = True
+                continue
+            if in_summary and stripped.startswith("## ") and not stripped.startswith("## Completion summary"):
+                break
+            if in_summary and re.match(r"^\*\*[A-Z][^:*]+:\*\*", stripped):
+                labeled.append(stripped)
+        self.assertGreater(
+            len(labeled),
+            0,
+            "xlfg.md: Completion summary must contain labeled rows "
+            "(`**Label:** ...`).",
+        )
+        self.assertLessEqual(
+            len(labeled),
+            7,
+            f"xlfg.md: Completion summary template has {len(labeled)} "
+            "labeled rows but the terminal budget is ≤7. Trim the template.",
+        )
+
+    def test_xlfg_completion_summary_drops_durable_lesson(self) -> None:
+        """The `/xlfg` terminal summary must NOT carry a durable-lesson row.
+
+        Pre-v6.5.5 the terminal summary repeated the compound skill's
+        durable lesson. The lesson is already archived in `run-summary.md`;
+        repeating it in the terminal duplicated content the user can read on
+        demand. v6.5.5 drops the row from the terminal template (the lesson
+        still gets written to `run-summary.md` by the compound skill, which
+        is unchanged). Guard against re-adding it.
+        """
+        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        # Extract the Completion summary section only.
+        m = re.search(
+            r"## Completion summary.*?(?=\n## |\Z)",
+            text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(m, "xlfg.md: ## Completion summary section missing")
+        section = m.group(0).lower()
+        self.assertNotIn(
+            "durable lesson",
+            section,
+            "xlfg.md: Completion summary must not carry a `durable lesson` "
+            "row — the lesson is in run-summary.md, repeating it bloats the "
+            "terminal output.",
+        )
+
+    def test_conductors_carry_question_template(self) -> None:
+        """Both conductors must carry a strict §Question template.
+
+        Prior to v6.5.5 the intent-halt instruction was a one-liner ("ask at
+        most three numbered blocking questions and stop") with no shape, so
+        Claude tended to wrap questions in framing prose. v6.5.5 adds a
+        `## Question template (intent halt only)` section to both conductors
+        with a fenced template and explicit no-opening-line / one-sentence
+        rules. Guard the trigger words so future edits do not silently drop
+        the template.
+        """
+        for cmd in ("xlfg.md", "xlfg-debug.md"):
+            text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
+            self.assertIn(
+                "## Question template",
+                text,
+                f"{cmd}: must carry a `## Question template` section so "
+                "intent-halt questions follow a strict shape.",
+            )
+            self.assertIn(
+                "Need ",
+                text,
+                f"{cmd}: question template must use the `Need <n> answers "
+                "before proceeding:` lead.",
+            )
+            self.assertIn(
+                "Blocking because:",
+                text,
+                f"{cmd}: question template must use the `Blocking because:` "
+                "footer covering all questions in one line.",
+            )
 
     def test_xlfg_debug_conductor_verifies_no_source_edits(self) -> None:
         """`/xlfg-debug` must verify the no-source-edits contract via command.
