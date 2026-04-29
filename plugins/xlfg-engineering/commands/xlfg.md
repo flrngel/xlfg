@@ -172,30 +172,42 @@ This step is the v6.3.2 repair for a regression where v6 runs finished with edit
 
 ## Completion summary (end-of-run template)
 
-Once the commit is done (or correctly skipped), finish the run with a markdown table. The full record is in `run-summary.md`; chat output is a pointer, not the document. Use exactly this shape:
+Once the commit is done (or correctly skipped), finish the run with bullet-point output. The full record is in `run-summary.md`; chat output is a pointer, not the document. Use exactly this shape:
 
 ```
-|         |                                          |
-|---------|------------------------------------------|
-| Shipped | <one short clause, ≤80 chars>            |
-| Proof   | <command> → GREEN                        |
-| Commit  | <short SHA> <subject>                    |
-| Archive | docs/xlfg/runs/<RUN_ID>/run-summary.md   |
+Shipped:
+- <≤80-char bullet, one clause>
+- <≤80-char bullet, one clause>
+
+Proof:   <command> → GREEN
+Commit:  <short SHA> <subject>
+Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md
 ```
 
-Optional rows `Risk` and `Next` are inserted **only when there is something concrete to say**; otherwise the row is omitted entirely. Do not write `Risk: none` or `Next: n/a`.
+When `Shipped` is a single thing, collapse the section to one line: `Shipped: <one clause>`. When it's multiple, use the bulleted form above.
+
+Optional sections `Risk` and `Next` are included **only when there is something concrete to say**; otherwise they are omitted entirely. Do not write `Risk: none` or `Next: n/a`. Same single-line / bulleted shape:
+
+```
+Risk:
+- <≤80-char bullet>
+- <≤80-char bullet>
+
+Next: <≤80-char one-liner>
+```
 
 Hard rules — these are not suggestions:
 
-- **≤80 chars per cell.** One short clause. If detail does not fit in 80 chars, the cell says `see archive` and the user opens `run-summary.md` for the full version.
-- **One clause per cell. No compound sentences.** No semicolons. No em-dash splitting one cell into two ideas. No nested parentheticals. If you have two things to say, you have two rows or one of them goes to the archive.
-- **No `Files` row.** `git show <sha>` and `run-summary.md` both list files. Repeating them in the terminal is noise.
-- **No durable-lesson row.** The compound skill writes the lesson into `run-summary.md`. The terminal does not repeat it.
-- **No closing prose.** No "let me know if…", no recap of the xlfg process, no reassurance about your own work. The table is the message.
+- **≤80 chars per bullet.** One clause. If detail does not fit, the bullet says `see archive` and the user opens `run-summary.md`.
+- **One clause per bullet. No compound sentences.** No semicolons. No em-dash splitting one bullet into two ideas. No nested parentheticals. If you have two things to say, you have two bullets or one of them goes to the archive.
+- **Bullets, not tables.** Markdown tables render as ASCII pipes in many terminals. A flat bulleted list is universal.
+- **No `Files` section.** `git show <sha>` and `run-summary.md` both list files. Repeating them in the terminal is noise.
+- **No durable-lesson section.** The compound skill writes the lesson into `run-summary.md`. The terminal does not repeat it.
+- **No closing prose.** No "let me know if…", no recap of the xlfg process, no reassurance about your own work. The bullets are the message.
 
-Variants (each is a single line that replaces the whole table):
+Variants (each is a single line that replaces the whole block):
 
 - **Investigation-only** (commit was correctly skipped): `No product changes. <one short clause>. Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md`
 - **Loopback escalation** (cap hit before GREEN): `Stopped after 2 loopbacks. <command> failed: <one short clause>. Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md`
 
-Target: ≤8 lines on screen for the success case. User reads it in 3 seconds and opens the archive only if they want detail.
+Target: ≤10 lines on screen for the typical success case. User reads it in 3 seconds and opens the archive only if they want detail.

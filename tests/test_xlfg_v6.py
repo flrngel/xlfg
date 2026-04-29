@@ -995,10 +995,10 @@ class TestConductorDiscipline(unittest.TestCase):
             "xlfg.md: commit step must prescribe Conventional Commits style",
         )
         self.assertIn(
-            "| Commit ",
+            "Commit:",
             text,
-            "xlfg.md: Completion summary table must carry a `| Commit |` "
-            "row that surfaces the commit SHA + subject.",
+            "xlfg.md: Completion summary must carry a `Commit:` "
+            "section that surfaces the commit SHA + subject.",
         )
 
     def test_xlfg_debug_conductor_does_not_prescribe_commit(self) -> None:
@@ -1112,11 +1112,8 @@ class TestConductorDiscipline(unittest.TestCase):
                 f"{cmd}: startup body must forbid inventing the timestamp",
             )
 
-    def _count_summary_table_rows(self, cmd: str) -> int:
-        """Count `| Label | placeholder |` rows inside a command's
-        `## Completion summary` section. Header / separator rows
-        (the ones that are all dashes or all empty cells) are skipped.
-        """
+    def _summary_section(self, cmd: str) -> str:
+        """Return the body of the `## Completion summary` section for cmd."""
         text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
         m = re.search(
             r"## Completion summary.*?(?=\n## |\Z)",
@@ -1126,70 +1123,72 @@ class TestConductorDiscipline(unittest.TestCase):
         self.assertIsNotNone(
             m, f"{cmd}: ## Completion summary section missing"
         )
-        section = m.group(0)
-        rows = 0
+        return m.group(0)
+
+    def _count_summary_labels(self, cmd: str) -> list[str]:
+        """Return the list of `Label:` headers used inside the fenced
+        template block of a command's `## Completion summary` section.
+
+        v6.5.7 templates are bullet-driven: each section starts with a
+        line of the form `Label:` (optionally followed by a value on the
+        same line, or by bullet lines below).
+        """
+        section = self._summary_section(cmd)
+        labels: list[str] = []
+        in_fence = False
         for line in section.split("\n"):
             stripped = line.strip()
-            if not stripped.startswith("|") or not stripped.endswith("|"):
+            if stripped.startswith("```"):
+                in_fence = not in_fence
                 continue
-            cells = [c.strip() for c in stripped.strip("|").split("|")]
-            if len(cells) < 2:
+            if not in_fence:
                 continue
-            # Skip header separator (all dashes) and empty header rows.
-            if all(set(c) <= set("-:") for c in cells):
-                continue
-            if all(c == "" for c in cells):
-                continue
-            label = cells[0]
-            # Real data rows have a non-empty, non-dash label cell.
-            if label and not set(label) <= set("-:"):
-                rows += 1
-        return rows
+            # Match "Label:" headers (capitalized identifier ending with colon).
+            m = re.match(r"^([A-Z][A-Za-z]+):", line)
+            if m and m.group(1) not in labels:
+                labels.append(m.group(1))
+        return labels
 
     def test_xlfg_debug_completion_summary_item_count_matches_budget(self) -> None:
-        """`/xlfg-debug` summary must be a markdown table within budget.
+        """`/xlfg-debug` summary must enumerate exactly its 6 mandatory labels.
 
-        v6.5.6 switched the template from `**Label:** value` lines to an
-        actual markdown table (`| Label | value |`) and added a hard
-        ≤80-char-per-cell rule. The budget for `/xlfg-debug` stays at 6
-        mandatory rows — Mechanism, Evidence, Repair, Unknowns, Verified,
-        Archive — each load-bearing.
+        v6.5.7 switched the template from a markdown table back to a
+        bullet-driven format (table renderings as ASCII pipes were ugly
+        in many terminals). The 6 mandatory labels — Mechanism, Evidence,
+        Repair, Unknowns, Verified, Archive — each carry load-bearing
+        information and must all appear in the template.
         """
-        rows = self._count_summary_table_rows("xlfg-debug.md")
-        self.assertGreater(
-            rows,
-            0,
-            "xlfg-debug.md: Completion summary must contain a markdown "
-            "table (`| Label | value |` rows).",
-        )
-        self.assertLessEqual(
-            rows,
-            6,
-            f"xlfg-debug.md: Completion summary table has {rows} data "
-            "rows but the budget is 6.",
+        labels = self._count_summary_labels("xlfg-debug.md")
+        expected = {"Mechanism", "Evidence", "Repair", "Unknowns", "Verified", "Archive"}
+        self.assertEqual(
+            set(labels),
+            expected,
+            f"xlfg-debug.md: Completion summary template must declare "
+            f"exactly {sorted(expected)}; got {sorted(set(labels))}.",
         )
 
     def test_xlfg_completion_summary_item_count_matches_budget(self) -> None:
-        """`/xlfg`'s summary must be a markdown table within budget.
+        """`/xlfg`'s summary must declare its 4 mandatory + 2 optional labels.
 
-        Sibling guard. v6.5.6 caps the `/xlfg` summary at 6 rows max
-        (4 mandatory: Shipped, Proof, Commit, Archive; 2 optional: Risk,
-        Next — included in the template definition but omitted at runtime
-        when there is nothing concrete to say). The `Files` row was
-        dropped entirely as redundant with `git show <sha>`.
+        v6.5.7 caps the `/xlfg` summary at 6 labels max (4 mandatory:
+        Shipped, Proof, Commit, Archive; 2 optional: Risk, Next — part
+        of the template definition but omitted at runtime when there is
+        nothing concrete to say). The `Files` row was dropped in v6.5.6
+        as redundant with `git show <sha>`.
         """
-        rows = self._count_summary_table_rows("xlfg.md")
-        self.assertGreater(
-            rows,
-            0,
-            "xlfg.md: Completion summary must contain a markdown table "
-            "(`| Label | value |` rows).",
+        labels = self._count_summary_labels("xlfg.md")
+        mandatory = {"Shipped", "Proof", "Commit", "Archive"}
+        allowed = mandatory | {"Risk", "Next"}
+        self.assertTrue(
+            mandatory.issubset(set(labels)),
+            f"xlfg.md: Completion summary template must declare all "
+            f"mandatory labels {sorted(mandatory)}; got {sorted(set(labels))}.",
         )
-        self.assertLessEqual(
-            rows,
-            6,
-            f"xlfg.md: Completion summary table has {rows} data rows "
-            "but the budget is 6 (4 mandatory + 2 optional).",
+        extra = set(labels) - allowed
+        self.assertFalse(
+            extra,
+            f"xlfg.md: Completion summary template carries unexpected "
+            f"labels {sorted(extra)}; budget is {sorted(allowed)}.",
         )
 
     def test_xlfg_completion_summary_drops_durable_lesson(self) -> None:
@@ -1254,21 +1253,39 @@ class TestConductorDiscipline(unittest.TestCase):
                 f"{cmd}: question template must declare the 80-char cap.",
             )
 
-    def test_completion_summary_uses_table_format(self) -> None:
-        """Both conductor summaries must be markdown tables, not bullet lines.
+    def test_completion_summary_uses_bullet_format(self) -> None:
+        """Both conductor summaries must be bullet-driven, not markdown tables.
 
-        v6.5.5 used `**Label:** value` lines. v6.5.6 switches to actual
-        markdown tables (`| Label | value |`) so terminal output renders
-        in a tight grid.
+        v6.5.5 used `**Label:** value` lines; v6.5.6 switched to markdown
+        tables. v6.5.7 reverts to bullet format because tables render as
+        ASCII pipes in plain terminals — the user explicitly asked for
+        bullet-point communication. Each label appears as `Label:` in a
+        fenced template block (one-line or expanded to bullets).
         """
         for cmd in ("xlfg.md", "xlfg-debug.md"):
-            rows = self._count_summary_table_rows(cmd)
+            labels = self._count_summary_labels(cmd)
             self.assertGreater(
-                rows,
+                len(labels),
                 0,
-                f"{cmd}: Completion summary must use a markdown table "
-                "(`| Label | value |` rows).",
+                f"{cmd}: Completion summary must declare bullet-driven "
+                "`Label:` headers inside a fenced template block.",
             )
+            section = self._summary_section(cmd)
+            # The template block itself must not contain markdown table
+            # rows. (Reference paragraphs outside the fence are fine.)
+            in_fence = False
+            for line in section.split("\n"):
+                stripped = line.strip()
+                if stripped.startswith("```"):
+                    in_fence = not in_fence
+                    continue
+                if not in_fence:
+                    continue
+                self.assertFalse(
+                    stripped.startswith("|") and stripped.endswith("|") and "|" in stripped[1:-1],
+                    f"{cmd}: Completion summary template must not use "
+                    f"markdown table rows (saw: {stripped!r}).",
+                )
 
     def test_completion_summary_declares_cell_length_cap(self) -> None:
         """Both conductor summaries must declare the per-cell length cap.
@@ -1294,32 +1311,34 @@ class TestConductorDiscipline(unittest.TestCase):
             )
 
     def test_xlfg_completion_summary_drops_files_row(self) -> None:
-        """`/xlfg` summary template must NOT carry a `Files` row.
+        """`/xlfg` summary template must NOT carry a `Files` section.
 
-        v6.5.5 included `**Files:**` listing changed paths. v6.5.6 drops
-        it entirely — `git show <sha>` and `run-summary.md` already list
-        files, and a real-world example showed the row routinely
-        producing 3-line directory dumps that bloated the terminal.
+        v6.5.5 included `**Files:**` listing changed paths. v6.5.6 dropped
+        it (then table format `| Files |`); v6.5.7 keeps it dropped in the
+        new bullet-driven format. `git show <sha>` and `run-summary.md`
+        already list files; a real-world example showed the section
+        routinely producing 3-line directory dumps that bloated the
+        terminal. This guard sweeps any of the three historical shapes.
         """
-        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
-        m = re.search(
-            r"## Completion summary.*?(?=\n## |\Z)",
-            text,
-            re.DOTALL,
+        labels = self._count_summary_labels("xlfg.md")
+        self.assertNotIn(
+            "Files",
+            labels,
+            "xlfg.md: Completion summary must not carry a `Files:` "
+            "section — git show + run-summary.md already list files.",
         )
-        self.assertIsNotNone(m)
-        section = m.group(0)
+        section = self._summary_section("xlfg.md")
         self.assertNotRegex(
             section,
             r"\|\s*Files\s*\|",
             "xlfg.md: Completion summary must not carry a `| Files |` "
-            "row — git show + run-summary.md already list files.",
+            "row from the v6.5.6 table era either.",
         )
         self.assertNotIn(
             "**Files:**",
             section,
             "xlfg.md: Completion summary must not carry a `**Files:**` "
-            "row either.",
+            "row from the v6.5.5 era either.",
         )
 
     def test_xlfg_debug_conductor_verifies_no_source_edits(self) -> None:

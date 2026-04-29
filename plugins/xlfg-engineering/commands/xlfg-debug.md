@@ -160,25 +160,32 @@ This step mirrors `/xlfg`'s end-of-run-commit discipline, minus the commit — `
 
 ## Completion summary (end-of-run template)
 
-The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written by the debug skill). Your chat response is a markdown table, not a paste of the whole file. Use exactly this shape:
+The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written by the debug skill). Your chat response is bullet-point output, not a paste of the whole file. Use exactly this shape:
 
 ```
-|           |                                                          |
-|-----------|----------------------------------------------------------|
-| Mechanism | <one short clause, ≤80 chars>                            |
-| Evidence  | <one short clause, ≤80 chars>                            |
-| Repair    | <one short clause, ≤80 chars>                            |
-| Unknowns  | <one short clause, ≤80 chars; or "none">                 |
-| Verified  | git status --porcelain clean                             |
-| Archive   | docs/xlfg/runs/<RUN_ID>/diagnosis.md                     |
+Mechanism: <≤80-char clause>
+Evidence:  <≤80-char clause>
+Repair:    <≤80-char clause>
+Unknowns:  <≤80-char clause; or "none">
+Verified:  git status --porcelain clean
+Archive:   docs/xlfg/runs/<RUN_ID>/diagnosis.md
+```
+
+When a section has multiple distinct items (e.g. two competing pieces of evidence, or two open questions), expand it to bullets:
+
+```
+Evidence:
+- <≤80-char bullet>
+- <≤80-char bullet>
 ```
 
 Hard rules — these are not suggestions:
 
-- **≤80 chars per cell.** One short clause. If detail does not fit, the cell says `see archive` and the user opens `diagnosis.md`.
-- **One clause per cell. No compound sentences.** No semicolons. No em-dash splitting one cell into two ideas. No nested parentheticals.
-- **All six rows are mandatory.** Unlike `/xlfg`, no row is optional — each carries load-bearing information.
-- **Verified row is contract-bearing.** It must cite `git status --porcelain`. If tracked non-gitignored paths appeared, replace the cell value with `VIOLATION: <path>` (and only the path) — a phase broke the no-source-edits contract; stop without suggesting a next step.
-- **No closing prose.** No "let me know if…", no suggested next step, no recap. The table is the message. The user opens `/xlfg` themselves if they want to ship the fix.
+- **≤80 chars per bullet / line.** One clause. If detail does not fit, the bullet says `see archive` and the user opens `diagnosis.md`.
+- **One clause per bullet. No compound sentences.** No semicolons. No em-dash splitting one bullet into two ideas. No nested parentheticals.
+- **All six labels are mandatory.** Unlike `/xlfg`, no section is optional — each carries load-bearing information.
+- **Bullets, not tables.** Markdown tables render as ASCII pipes in many terminals.
+- **Verified is contract-bearing.** It must cite `git status --porcelain`. If tracked non-gitignored paths appeared, replace the value with `VIOLATION: <path>` (and only the path) — a phase broke the no-source-edits contract; stop without suggesting a next step.
+- **No closing prose.** No "let me know if…", no suggested next step, no recap. The bullets are the message. The user opens `/xlfg` themselves if they want to ship the fix.
 
 Target: ≤9 lines on screen. User reads it in 3 seconds and opens the archive only if they want detail.

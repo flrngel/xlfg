@@ -1,6 +1,10 @@
 # Next agent context
 
-## Current state (6.5.6)
+## Current state (6.5.7)
+
+v6.5.7 flips both completion-summary templates from markdown tables (introduced in v6.5.6) to bullet-driven output. The driver: the user pointed out that markdown tables render as ASCII pipes in plain terminals where xlfg output most often lands, and explicitly asked for bullet-point communication style throughout (saved as a `feedback_communication_style.md` memory note: bullets > tables > paragraphs, applies to both chat responses and xlfg output). Same labels (Shipped/Proof/Commit/Risk/Next/Archive for `/xlfg`; Mechanism/Evidence/Repair/Unknowns/Verified/Archive for `/xlfg-debug`), same ≤80-char one-clause cap, same `Files` row absence — only the layout changes. Single-item sections collapse to `Label: <one clause>` on one line; multi-item sections expand to `Label:\n- <bullet>\n- <bullet>`. Tests updated to match: the `_count_summary_table_rows` helper became `_count_summary_labels` (walks fenced template blocks, collects `Label:` headers); `test_completion_summary_uses_table_format` renamed to `test_completion_summary_uses_bullet_format` and inverted to assert the template block contains no markdown table rows; `test_xlfg_completion_summary_drops_files_row` extended to sweep all three historical shapes (`Files:` label, `| Files |` row, `**Files:**` line); `test_xlfg_conductor_prescribes_end_of_run_commit` swaps its `| Commit ` probe for `Commit:`. Test surface stays at 61. Version bumped 6.5.6 → 6.5.7. Patch-level — layout-only on top of v6.5.6's content-density shape.
+
+## Previous state (6.5.6)
 
 v6.5.6 is a follow-up to v6.5.5 driven by a concrete real-world `/xlfg` run whose completion summary still bloated even after v6.5.5's labeled-row template. The 6.5.5 row labels were tight, but the cell *values* were narrative — multi-clause sentences, semicolons, parentheticals splitting one idea into three, and a `**Files:**` row that dumped 7 directory paths into the terminal. The user surface stayed long because v6.5.5 governed *row count* but not *cell content density*. v6.5.6 closes the gap.
 

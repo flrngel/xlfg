@@ -1,3 +1,21 @@
+## 6.5.7 — bullet-driven completion summaries (revert v6.5.6 tables)
+
+v6.5.7 flips both completion-summary templates from markdown tables (v6.5.6) to bullet-driven output. The user pointed out that markdown tables render as ASCII pipes in plain terminals (where xlfg output most often lands) and explicitly asked for bullet-point communication. Same labels, same ≤80-char one-clause cap, same `Files` row absence — only the layout changes.
+
+### Changed
+
+- `commands/xlfg.md`: `## Completion summary` template flipped from markdown table to bullet-driven shape. Single-item sections collapse to `Label: <one clause>` on one line; multi-item sections expand to `Label:\n- <bullet>\n- <bullet>`. Optional sections `Risk` and `Next` are still omitted when empty. New "Bullets, not tables" rule added to the Hard rules block. Variants (Investigation-only, Loopback escalation) unchanged.
+- `commands/xlfg-debug.md`: same flip. Six mandatory labels (Mechanism, Evidence, Repair, Unknowns, Verified, Archive) now appear as `Label: value` lines or expanded to bullets when there are multiple items.
+- `tests/test_xlfg_v6.py`: replaced `_count_summary_table_rows` helper with `_count_summary_labels` that walks fenced template blocks and collects `Label:` headers. Both `*_completion_summary_item_count_matches_budget` tests now assert the expected label set explicitly (Shipped/Proof/Commit/Archive mandatory + Risk/Next allowed for `/xlfg`; six mandatory for `/xlfg-debug`). `test_completion_summary_uses_table_format` renamed to `test_completion_summary_uses_bullet_format` and inverted: it now asserts the template block declares `Label:` headers AND contains no markdown table rows. `test_xlfg_completion_summary_drops_files_row` extended to sweep all three historical shapes (`Files:` label, `| Files |` table row, `**Files:**` line). `test_xlfg_conductor_prescribes_end_of_run_commit` swaps its `| Commit ` probe for `Commit:`.
+- `CHANGELOG.md`, `README.md` (plugin + repo), `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `NEXT_AGENT_CONTEXT.md`: version bump to 6.5.7.
+
+### Not changed
+
+- The labels themselves, the ≤80-char one-clause cap, the no-compound-sentences / no-semicolons / no-em-dash-splits / no-nested-parentheticals prohibitions, the `see archive` escape hatch, the `Files` row absence (v6.5.6), the no-durable-lesson rule (v6.5.5), the question template (`Need <n> answers:` / `Blocking:` from v6.5.6), the `git status --porcelain` contract (v6.5.3), and the v6.5.4 handoff-cue reminders are all preserved. v6.5.7 is layout-only.
+- Conductor pipeline order, phase count, loopback rules, end-of-run commit step, no-commit-on-debug symmetry, the sanctioned Write-path restriction, audit harness (6 checks), hooks, `SANCTIONED_AGENTS`, `EXPECTED_PHASE_SKILLS`, `EXPECTED_SPECIALIST_SKILLS`, specialist skill bodies, agent `## Return format` shapes, or any phase skill's `## Done signal` text.
+
+Patch-level because no public entry surface or runtime dependency surface changes — two terminal-output templates re-laid-out (still ≤80-char-per-bullet, still no `Files`), four existing tests updated to match the new shape, one renamed and inverted.
+
 ## 6.5.6 — markdown-table summaries, ≤80-char cell cap, drop the Files row
 
 v6.5.6 is a follow-up to v6.5.5. The 6.5.5 templates governed *row count* but not *cell content density*: a real-world `/xlfg` run produced a summary where each labeled row honored "one sentence" but the sentences were 2–4 clauses long with semicolons, parentheticals, and a `**Files:**` row that dumped 7 directory paths. The terminal output stayed long. v6.5.6 closes the gap with three changes: (1) the templates switch from `**Label:** value` lines to actual markdown tables (`| Label | value |`) so terminal output renders in a tight grid; (2) every cell carries a hard ≤80-char one-clause cap with explicit prohibitions on compound sentences, semicolons, em-dash splits, and nested parentheticals — `see archive` is the prescribed escape hatch when detail does not fit; (3) the `Files` row is dropped entirely from `/xlfg` because `git show <sha>` and `run-summary.md` already list files. The question template gets matching tightening (`Need <n> answers:` lead, `Blocking:` footer, ≤80-char cap per question).
