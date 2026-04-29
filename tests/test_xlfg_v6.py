@@ -995,9 +995,10 @@ class TestConductorDiscipline(unittest.TestCase):
             "xlfg.md: commit step must prescribe Conventional Commits style",
         )
         self.assertIn(
-            "**Commit:**",
+            "| Commit ",
             text,
-            "xlfg.md: Completion summary template must surface the commit",
+            "xlfg.md: Completion summary table must carry a `| Commit |` "
+            "row that surfaces the commit SHA + subject.",
         )
 
     def test_xlfg_debug_conductor_does_not_prescribe_commit(self) -> None:
@@ -1111,75 +1112,84 @@ class TestConductorDiscipline(unittest.TestCase):
                 f"{cmd}: startup body must forbid inventing the timestamp",
             )
 
-    def test_xlfg_debug_completion_summary_item_count_matches_budget(self) -> None:
-        """Completion summary must fit the terminal budget (≤7 labeled rows).
-
-        v6.5.2 shipped a numbered 7-item summary that budgeted 4–6 sentences
-        — count and budget disagreed. v6.5.3 demoted two items to a footer
-        (numbered list dropped to 5). v6.5.5 switches to a labeled-row
-        template (`**Mechanism:** …`, `**Evidence:** …`) that renders cleaner
-        in the terminal and lets the model omit empty optional rows without
-        breaking numbering. The budget guard remains: ≤7 mandatory rows.
+    def _count_summary_table_rows(self, cmd: str) -> int:
+        """Count `| Label | placeholder |` rows inside a command's
+        `## Completion summary` section. Header / separator rows
+        (the ones that are all dashes or all empty cells) are skipped.
         """
-        text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
-        lines = text.split("\n")
-        in_summary = False
-        labeled: list[str] = []
-        for line in lines:
+        text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
+        m = re.search(
+            r"## Completion summary.*?(?=\n## |\Z)",
+            text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(
+            m, f"{cmd}: ## Completion summary section missing"
+        )
+        section = m.group(0)
+        rows = 0
+        for line in section.split("\n"):
             stripped = line.strip()
-            if stripped.startswith("## Completion summary"):
-                in_summary = True
+            if not stripped.startswith("|") or not stripped.endswith("|"):
                 continue
-            if in_summary and stripped.startswith("## ") and not stripped.startswith("## Completion summary"):
-                break
-            if in_summary and re.match(r"^\*\*[A-Z][^:*]+:\*\*", stripped):
-                labeled.append(stripped)
+            cells = [c.strip() for c in stripped.strip("|").split("|")]
+            if len(cells) < 2:
+                continue
+            # Skip header separator (all dashes) and empty header rows.
+            if all(set(c) <= set("-:") for c in cells):
+                continue
+            if all(c == "" for c in cells):
+                continue
+            label = cells[0]
+            # Real data rows have a non-empty, non-dash label cell.
+            if label and not set(label) <= set("-:"):
+                rows += 1
+        return rows
+
+    def test_xlfg_debug_completion_summary_item_count_matches_budget(self) -> None:
+        """`/xlfg-debug` summary must be a markdown table within budget.
+
+        v6.5.6 switched the template from `**Label:** value` lines to an
+        actual markdown table (`| Label | value |`) and added a hard
+        ≤80-char-per-cell rule. The budget for `/xlfg-debug` stays at 6
+        mandatory rows — Mechanism, Evidence, Repair, Unknowns, Verified,
+        Archive — each load-bearing.
+        """
+        rows = self._count_summary_table_rows("xlfg-debug.md")
         self.assertGreater(
-            len(labeled),
+            rows,
             0,
-            "xlfg-debug.md: Completion summary must contain labeled rows "
-            "(`**Label:** ...`).",
+            "xlfg-debug.md: Completion summary must contain a markdown "
+            "table (`| Label | value |` rows).",
         )
         self.assertLessEqual(
-            len(labeled),
-            7,
-            f"xlfg-debug.md: Completion summary template has {len(labeled)} "
-            "labeled rows but the terminal budget is ≤7. Trim the template "
-            "or split into a footer.",
+            rows,
+            6,
+            f"xlfg-debug.md: Completion summary table has {rows} data "
+            "rows but the budget is 6.",
         )
 
     def test_xlfg_completion_summary_item_count_matches_budget(self) -> None:
-        """`/xlfg`'s completion summary must fit the terminal budget too.
+        """`/xlfg`'s summary must be a markdown table within budget.
 
-        Sibling to the `/xlfg-debug` budget guard. v6.5.5 introduced a
-        labeled-row template for the `/xlfg` summary (`**Shipped:** …`,
-        `**Files:** …`, …) capped at 7 mandatory rows so the run ends with
-        a tight terminal pointer instead of a multi-paragraph recap.
+        Sibling guard. v6.5.6 caps the `/xlfg` summary at 6 rows max
+        (4 mandatory: Shipped, Proof, Commit, Archive; 2 optional: Risk,
+        Next — included in the template definition but omitted at runtime
+        when there is nothing concrete to say). The `Files` row was
+        dropped entirely as redundant with `git show <sha>`.
         """
-        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
-        lines = text.split("\n")
-        in_summary = False
-        labeled: list[str] = []
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith("## Completion summary"):
-                in_summary = True
-                continue
-            if in_summary and stripped.startswith("## ") and not stripped.startswith("## Completion summary"):
-                break
-            if in_summary and re.match(r"^\*\*[A-Z][^:*]+:\*\*", stripped):
-                labeled.append(stripped)
+        rows = self._count_summary_table_rows("xlfg.md")
         self.assertGreater(
-            len(labeled),
+            rows,
             0,
-            "xlfg.md: Completion summary must contain labeled rows "
-            "(`**Label:** ...`).",
+            "xlfg.md: Completion summary must contain a markdown table "
+            "(`| Label | value |` rows).",
         )
         self.assertLessEqual(
-            len(labeled),
-            7,
-            f"xlfg.md: Completion summary template has {len(labeled)} "
-            "labeled rows but the terminal budget is ≤7. Trim the template.",
+            rows,
+            6,
+            f"xlfg.md: Completion summary table has {rows} data rows "
+            "but the budget is 6 (4 mandatory + 2 optional).",
         )
 
     def test_xlfg_completion_summary_drops_durable_lesson(self) -> None:
@@ -1212,13 +1222,11 @@ class TestConductorDiscipline(unittest.TestCase):
     def test_conductors_carry_question_template(self) -> None:
         """Both conductors must carry a strict §Question template.
 
-        Prior to v6.5.5 the intent-halt instruction was a one-liner ("ask at
-        most three numbered blocking questions and stop") with no shape, so
-        Claude tended to wrap questions in framing prose. v6.5.5 adds a
-        `## Question template (intent halt only)` section to both conductors
-        with a fenced template and explicit no-opening-line / one-sentence
-        rules. Guard the trigger words so future edits do not silently drop
-        the template.
+        Prior to v6.5.5 the intent-halt instruction was a one-liner with
+        no shape. v6.5.5 added the §Question template; v6.5.6 trimmed its
+        lead from `Need <n> answers before proceeding:` to `Need <n>
+        answers:` and renamed the footer from `Blocking because:` to
+        `Blocking:` to drop filler.
         """
         for cmd in ("xlfg.md", "xlfg-debug.md"):
             text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
@@ -1229,41 +1237,124 @@ class TestConductorDiscipline(unittest.TestCase):
                 "intent-halt questions follow a strict shape.",
             )
             self.assertIn(
-                "Need ",
+                "Need <n> answers:",
                 text,
-                f"{cmd}: question template must use the `Need <n> answers "
-                "before proceeding:` lead.",
+                f"{cmd}: question template must use the `Need <n> "
+                "answers:` lead (no `before proceeding` filler).",
             )
             self.assertIn(
-                "Blocking because:",
+                "Blocking:",
                 text,
-                f"{cmd}: question template must use the `Blocking because:` "
-                "footer covering all questions in one line.",
+                f"{cmd}: question template must use the `Blocking:` "
+                "footer (one line, covering all questions).",
             )
+            self.assertIn(
+                "≤80",
+                text,
+                f"{cmd}: question template must declare the 80-char cap.",
+            )
+
+    def test_completion_summary_uses_table_format(self) -> None:
+        """Both conductor summaries must be markdown tables, not bullet lines.
+
+        v6.5.5 used `**Label:** value` lines. v6.5.6 switches to actual
+        markdown tables (`| Label | value |`) so terminal output renders
+        in a tight grid.
+        """
+        for cmd in ("xlfg.md", "xlfg-debug.md"):
+            rows = self._count_summary_table_rows(cmd)
+            self.assertGreater(
+                rows,
+                0,
+                f"{cmd}: Completion summary must use a markdown table "
+                "(`| Label | value |` rows).",
+            )
+
+    def test_completion_summary_declares_cell_length_cap(self) -> None:
+        """Both conductor summaries must declare the per-cell length cap.
+
+        The 80-char rule is the load-bearing concision constraint. If the
+        template does not name it, the model falls back to 2–3-sentence
+        cells and the table bloats again.
+        """
+        for cmd in ("xlfg.md", "xlfg-debug.md"):
+            text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
+            m = re.search(
+                r"## Completion summary.*?(?=\n## |\Z)",
+                text,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(m)
+            section = m.group(0)
+            self.assertIn(
+                "≤80",
+                section,
+                f"{cmd}: Completion summary must declare the ≤80-char "
+                "per-cell cap.",
+            )
+
+    def test_xlfg_completion_summary_drops_files_row(self) -> None:
+        """`/xlfg` summary template must NOT carry a `Files` row.
+
+        v6.5.5 included `**Files:**` listing changed paths. v6.5.6 drops
+        it entirely — `git show <sha>` and `run-summary.md` already list
+        files, and a real-world example showed the row routinely
+        producing 3-line directory dumps that bloated the terminal.
+        """
+        text = (PLUGIN / "commands" / "xlfg.md").read_text(encoding="utf-8")
+        m = re.search(
+            r"## Completion summary.*?(?=\n## |\Z)",
+            text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(m)
+        section = m.group(0)
+        self.assertNotRegex(
+            section,
+            r"\|\s*Files\s*\|",
+            "xlfg.md: Completion summary must not carry a `| Files |` "
+            "row — git show + run-summary.md already list files.",
+        )
+        self.assertNotIn(
+            "**Files:**",
+            section,
+            "xlfg.md: Completion summary must not carry a `**Files:**` "
+            "row either.",
+        )
 
     def test_xlfg_debug_conductor_verifies_no_source_edits(self) -> None:
         """`/xlfg-debug` must verify the no-source-edits contract via command.
 
-        v6.5.2 trusted prose discipline ("if tracked product changes appear
-        in git status at end of a debug run, report the mismatch") with no
-        actual command step. v6.5.3 adds a mandatory `git status --porcelain`
-        step mirroring `/xlfg`'s end-of-run-commit discipline (minus the
-        commit) and wires the verifying command into the summary.
+        v6.5.3 added the mandatory `git status --porcelain` step plus a
+        `verified via` citation in the summary. v6.5.6 tightened the
+        summary to a markdown table and the citation collapsed to a cell
+        value (`git status --porcelain clean`). The contract assertion
+        remains: the conductor reads the command and the summary table
+        carries the command literally in its Verified row.
         """
         text = (PLUGIN / "commands" / "xlfg-debug.md").read_text(encoding="utf-8")
+        # The conductor body must read git status --porcelain.
         self.assertIn(
             "git status --porcelain",
             text,
             "xlfg-debug.md: conductor must read `git status --porcelain` to "
             "verify the no-source-edits contract before writing the summary.",
         )
-        lower = text.lower()
+        # The completion-summary table must carry the verifying command in
+        # its Verified row so the contract is visible at the user surface.
+        m = re.search(
+            r"## Completion summary.*?(?=\n## |\Z)",
+            text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(m)
+        section = m.group(0)
         self.assertIn(
-            "verified via",
-            lower,
-            "xlfg-debug.md: the summary's no-writes-beyond-diagnosis line "
-            "must cite the verifying command (`verified via git status "
-            "--porcelain`) instead of asserting the contract by prose alone.",
+            "git status --porcelain",
+            section,
+            "xlfg-debug.md: Completion summary must literally cite "
+            "`git status --porcelain` (in the Verified row) so the "
+            "contract is visible at the user surface, not just in prose.",
         )
 
     def test_xlfg_debug_names_sanctioned_write_path(self) -> None:

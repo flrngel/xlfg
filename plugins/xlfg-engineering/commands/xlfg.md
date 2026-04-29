@@ -119,23 +119,23 @@ Do not wait for the user to say "continue", "ok", or anything else to resume bet
 When the intent skill returns `needs-user-answer`, stop the pipeline and emit the questions in exactly this shape — no opening framing, no closing prose:
 
 ```
-Need <n> answers before proceeding:
+Need <n> answers:
 
-1. <single-sentence question>  [A) <option>  B) <option>]
-2. <single-sentence question>
+1. <≤80-char question>  [A) <option>  B) <option>]
+2. <≤80-char question>
 
-Blocking because: <one line — what breaks if I guess wrong>
+Blocking: <≤80-char reason — what breaks if I guess wrong>
 ```
 
-Rules:
+Hard rules:
 
-- **One sentence per question.** Do not restate the user's ask, do not add context they already have.
-- **Offer A/B/C options whenever the answer space is finite** (binary, enum, or short list). The user types `1A 2B` instead of prose. Skip the bracketed options only if the answer is genuinely free-form.
-- **One `Blocking because:` footer** covers all questions. Do not write a separate justification per question.
-- **No opening line.** No "To make sure I build the right thing…", no "I have a few clarifying questions…". Skip it.
-- **n ≤ 3.** The intent skill caps blockers at three; the conductor never expands that cap.
+- **≤80 chars per question.** One clause. No compound sentences.
+- **Always offer A/B/C options when the answer space is finite** (binary, enum, short list). The user types `1A 2B`. Skip brackets only when the answer is genuinely free-form.
+- **One `Blocking:` footer** covers all questions. Not one per question.
+- **No opening line.** No "To make sure I build the right thing…", no "I have a few clarifying questions…". The `Need <n> answers:` lead is the entire preamble.
+- **n ≤ 3.**
 
-Target: ≤8 lines for 2 questions, ≤12 for 3.
+Target: ≤6 lines for 2 questions, ≤9 for 3.
 
 ## Loopback rules
 
@@ -172,28 +172,30 @@ This step is the v6.3.2 repair for a regression where v6 runs finished with edit
 
 ## Completion summary (end-of-run template)
 
-Once the commit is done (or correctly skipped), finish the run with a tight terminal summary. The full record is in `run-summary.md`; chat output is the pointer, not the document. Use exactly this shape — one labeled row per line, no headers, no closing prose:
+Once the commit is done (or correctly skipped), finish the run with a markdown table. The full record is in `run-summary.md`; chat output is a pointer, not the document. Use exactly this shape:
 
 ```
-**Shipped:** <one-line behavior delivered>
-**Files:** <≤3 relative paths; if more, "<n> files in <dir>/">
-**Proof:** <verify agent's command> → GREEN
-**Commit:** <short SHA> <subject>
-**Risk:** <one line — omit row if no real, named risk>
-**Next:** <one line — omit row if no real follow-up>
-**Archive:** docs/xlfg/runs/<RUN_ID>/run-summary.md
+|         |                                          |
+|---------|------------------------------------------|
+| Shipped | <one short clause, ≤80 chars>            |
+| Proof   | <command> → GREEN                        |
+| Commit  | <short SHA> <subject>                    |
+| Archive | docs/xlfg/runs/<RUN_ID>/run-summary.md   |
 ```
 
-Rules:
+Optional rows `Risk` and `Next` are inserted **only when there is something concrete to say**; otherwise the row is omitted entirely. Do not write `Risk: none` or `Next: n/a`.
 
-- **Omit empty rows.** Do not write `**Risk:** none` or `**Next:** n/a` — drop the row instead. Only `Shipped`, `Proof`, `Commit`, and `Archive` are mandatory.
-- **One sentence per row.** No multi-sentence rationale. The fuller explanation is in `run-summary.md`.
-- **No durable-lesson row.** The compound skill writes the lesson into `run-summary.md`; the terminal does not repeat it.
-- **No closing line.** No "let me know if…", no recap of the xlfg process, no reassurance about your own work.
+Hard rules — these are not suggestions:
 
-Variants (use these exact shapes when applicable, replacing the table above):
+- **≤80 chars per cell.** One short clause. If detail does not fit in 80 chars, the cell says `see archive` and the user opens `run-summary.md` for the full version.
+- **One clause per cell. No compound sentences.** No semicolons. No em-dash splitting one cell into two ideas. No nested parentheticals. If you have two things to say, you have two rows or one of them goes to the archive.
+- **No `Files` row.** `git show <sha>` and `run-summary.md` both list files. Repeating them in the terminal is noise.
+- **No durable-lesson row.** The compound skill writes the lesson into `run-summary.md`. The terminal does not repeat it.
+- **No closing prose.** No "let me know if…", no recap of the xlfg process, no reassurance about your own work. The table is the message.
 
-- **Investigation-only** (commit was correctly skipped): `No product changes (investigation-only). <one-line finding>. **Archive:** docs/xlfg/runs/<RUN_ID>/run-summary.md`
-- **Loopback escalation** (cap hit before GREEN): `Stopped after 2 loopbacks. **Failed:** <command> → <one-line reason>. **Archive:** docs/xlfg/runs/<RUN_ID>/run-summary.md`
+Variants (each is a single line that replaces the whole table):
 
-Target: ≤8 lines for typical runs. The user reads the terminal in 5 seconds and opens `run-summary.md` only if they want detail.
+- **Investigation-only** (commit was correctly skipped): `No product changes. <one short clause>. Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md`
+- **Loopback escalation** (cap hit before GREEN): `Stopped after 2 loopbacks. <command> failed: <one short clause>. Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md`
+
+Target: ≤8 lines on screen for the success case. User reads it in 3 seconds and opens the archive only if they want detail.

@@ -118,23 +118,23 @@ Do not wait for the user to say "continue", "ok", or anything else to resume bet
 When the intent skill returns `needs-user-answer`, stop the pipeline and emit the questions in exactly this shape — no opening framing, no closing prose:
 
 ```
-Need <n> answers before proceeding:
+Need <n> answers:
 
-1. <single-sentence question>  [A) <option>  B) <option>]
-2. <single-sentence question>
+1. <≤80-char question>  [A) <option>  B) <option>]
+2. <≤80-char question>
 
-Blocking because: <one line — what breaks if I guess wrong>
+Blocking: <≤80-char reason — what breaks if I guess wrong>
 ```
 
-Rules:
+Hard rules:
 
-- **One sentence per question.** Do not restate the user's ask, do not add context they already have.
-- **Offer A/B/C options whenever the answer space is finite** (binary, enum, or short list). The user types `1A 2B` instead of prose. Skip the bracketed options only if the answer is genuinely free-form.
-- **One `Blocking because:` footer** covers all questions. Do not write a separate justification per question.
-- **No opening line.** No "To make sure I diagnose the right bug…", no "I have a few clarifying questions…". Skip it.
-- **n ≤ 3.** The intent skill caps blockers at three; the conductor never expands that cap.
+- **≤80 chars per question.** One clause. No compound sentences.
+- **Always offer A/B/C options when the answer space is finite** (binary, enum, short list). The user types `1A 2B`. Skip brackets only when the answer is genuinely free-form.
+- **One `Blocking:` footer** covers all questions. Not one per question.
+- **No opening line.** No "To make sure I diagnose the right bug…", no "I have a few clarifying questions…". The `Need <n> answers:` lead is the entire preamble.
+- **n ≤ 3.**
 
-Target: ≤8 lines for 2 questions, ≤12 for 3.
+Target: ≤6 lines for 2 questions, ≤9 for 3.
 
 ## Loopback rule
 
@@ -160,22 +160,25 @@ This step mirrors `/xlfg`'s end-of-run-commit discipline, minus the commit — `
 
 ## Completion summary (end-of-run template)
 
-The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written by the debug skill). Your chat response is a tight terminal pointer, not a paste of the whole file. Use exactly this shape — one labeled row per line, no headers, no closing prose:
+The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written by the debug skill). Your chat response is a markdown table, not a paste of the whole file. Use exactly this shape:
 
 ```
-**Mechanism:** <one sentence — what is actually breaking, not the symptom>
-**Evidence:** <concrete artifact — log line, test output, captured stdout — that makes the mechanism load-bearing>
-**Repair surface:** <file/function/boundary the fix will touch; do not open it in this run>
-**Unknowns:** <what you did not resolve and what you'd check next, or "none worth naming">
-**Verified:** no source edits — verified via `git status --porcelain` (output was empty, or listed only gitignored runs paths)
-**Archive:** docs/xlfg/runs/<RUN_ID>/diagnosis.md
+|           |                                                          |
+|-----------|----------------------------------------------------------|
+| Mechanism | <one short clause, ≤80 chars>                            |
+| Evidence  | <one short clause, ≤80 chars>                            |
+| Repair    | <one short clause, ≤80 chars>                            |
+| Unknowns  | <one short clause, ≤80 chars; or "none">                 |
+| Verified  | git status --porcelain clean                             |
+| Archive   | docs/xlfg/runs/<RUN_ID>/diagnosis.md                     |
 ```
 
-Rules:
+Hard rules — these are not suggestions:
 
-- **One sentence per row.** No multi-sentence rationale. Detail belongs in `diagnosis.md`.
-- **All rows mandatory** in the success path (unlike `/xlfg`, no row is optional — each carries load-bearing information).
-- **Verified row is contract-bearing.** It must cite `verified via git status --porcelain`. If tracked non-gitignored paths appeared, replace the row with `**Violated:** no-source-edits contract broken — tracked path(s): <list>` and stop without offering a next step.
-- **No closing line.** No "let me know if…", no suggested next step, no recap of the xlfg process. The user opens `/xlfg` themselves if they want to ship the fix.
+- **≤80 chars per cell.** One short clause. If detail does not fit, the cell says `see archive` and the user opens `diagnosis.md`.
+- **One clause per cell. No compound sentences.** No semicolons. No em-dash splitting one cell into two ideas. No nested parentheticals.
+- **All six rows are mandatory.** Unlike `/xlfg`, no row is optional — each carries load-bearing information.
+- **Verified row is contract-bearing.** It must cite `git status --porcelain`. If tracked non-gitignored paths appeared, replace the cell value with `VIOLATION: <path>` (and only the path) — a phase broke the no-source-edits contract; stop without suggesting a next step.
+- **No closing prose.** No "let me know if…", no suggested next step, no recap. The table is the message. The user opens `/xlfg` themselves if they want to ship the fix.
 
-Target: ≤7 lines. The user reads the terminal in 5 seconds and opens `diagnosis.md` only if they want detail.
+Target: ≤9 lines on screen. User reads it in 3 seconds and opens the archive only if they want detail.
