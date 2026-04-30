@@ -90,35 +90,15 @@ You read the agent's final message, which must match its declared Return format.
 
 ## Between phases
 
-After any phase (skill or agent) returns, your very next tool call is the dispatch for the next phase in the pipeline. Not a progress note, not a user-facing confirmation, not a pause for review — the next `Skill` or `Agent` call, in the same turn.
+After ANY phase returns, your VERY NEXT tool call MUST be the dispatch for the next phase. NOT a progress note. NOT a confirmation. NOT a pause. The next `Skill` or `Agent` call, in the SAME turn.
 
-A phase's `## Done signal` (skills) or `## Return format` (agents) means *that phase* finished its work and handed you its conclusion. It does not mean the run ended. The run ends only after phase 8 (compound) returns and you've executed the end-of-run commit step and written the completion summary.
+The ONLY valid mid-run turn boundaries are exactly three:
 
-The only valid mid-run turn boundaries are:
+1. **Intent skill returned `needs-user-answer`** → emit the question template below, stop. NEVER halt for any other reason — uncertainty mid-pipeline, ambiguous evidence, "feeling stuck" are NOT triggers.
+2. **Loopback cap (2) hit** → escalate with one-line failure summary, stop.
+3. **Phase 8 (compound) returned** → run the end-of-run commit step, then emit the completion summary. SOLE end-of-run exit.
 
-- The intent skill returns with `needs-user-answer` → ask at most three blocking questions using the §Question template below and stop.
-- Loopback cap hit → escalate to the user with a summary of what failed.
-- Phase 8 (compound) returned → run the end-of-run commit step, then write the completion summary. This is the sole end-of-run exit.
-
-**Anti-pattern to avoid:** outputting a natural-sounding transition like *"Plan is READY. Proceeding to implement."*, *"Context gathered, moving to plan."*, *"Verify GREEN, moving to review."*, or *"Review APPROVE, moving to compound."* and then ending the turn. "Proceeding", "moving", "next up" all describe your *next action* — that action must be the tool call you just described, not an end-of-turn. If you wrote a transition sentence, the very next thing you emit must be the dispatch. Better still: dispatch without the transition sentence.
-
-Do not wait for the user to say "continue", "ok", or anything else to resume between phases. The user invoked `/xlfg` once; that is your authorization for the whole run.
-
-## Operating contract
-
-- **One run, one conductor turn.** All 8 dispatches + the end-of-run commit + the completion summary happen in a single continuous conductor turn. Do not end your turn between phases. Do not ask the user to invoke any internal skill, agent, or re-run a phase. You own the whole run.
-- **Human-only blockers only.** Ask the user only for things you cannot ground from the repo or current research: missing secrets, destructive external approvals, true product ambiguity that changes correctness. If the intent skill returns with `needs-user-answer`, stop the pipeline and ask at most three blocking questions using the §Question template.
-- **Repo truth first, then targeted web research.** Read the code before you theorize. Reach for WebSearch / WebFetch when freshness matters (new APIs, recent vulns, shifting semantics) or the repo is insufficient.
-- **Scope discipline.** Do only what was asked. A bug fix does not need surrounding cleanup. No speculative refactors, no "while I'm here" expansions.
-- **No broken-window fixes.** Do not suppress errors, widen retries to green, mute tests, hand-wave "env issue", or special-case a failing example. Find the root cause.
-- **Proof before claim.** You have not shipped anything until verify came back GREEN. The verify agent's GREEN classification is the only thing that qualifies.
-- **Trust Opus-class reasoning, but trust proof more.** The test suite, the live run, and the real repo are the final arbiters.
-
-## Question template (used ONLY when intent returns `needs-user-answer`)
-
-This template fires **only** on the explicit `needs-user-answer` return from the intent skill. Do NOT emit questions for any other reason — uncertainty mid-pipeline, ambiguous test results, or feeling stuck are NOT triggers. Default behavior is to ground the answer from the repo or pick the smallest-blast-radius assumption and proceed.
-
-When intent does halt, the format is:
+**Question template — fires ONLY on (1) above.**
 
 ```
 Need <n> answers:
@@ -129,7 +109,21 @@ Need <n> answers:
 Blocking: <≤80-char reason>
 ```
 
-n ≤ 3. Each question one clause ≤80 chars. Offer A/B/C options when the answer space is finite (binary/enum/short list) — the user replies `1A 2B`. Single `Blocking:` footer. No opening line, no closing prose.
+n ≤ 3. One clause per question. Options when answer space is finite. No preamble, no closing prose.
+
+**NEVER** end the turn between phases. **NEVER** write a transition sentence ("Plan is READY. Proceeding to implement.", "Context gathered, moving to plan.", "Verify GREEN, moving to review.") and then stop. If you wrote a transition, the very next thing you emit MUST be the tool call.
+
+**NEVER** wait for the user to say "continue" / "ok" / anything else. The user invoked `/xlfg` ONCE; that authorizes the WHOLE run.
+
+## Operating contract
+
+- **One run, one conductor turn.** All 8 dispatches + end-of-run commit + completion summary happen in ONE continuous turn. NEVER end the turn between phases. NEVER ask the user to invoke any internal skill or re-run a phase.
+- **Human-only blockers only.** Ask ONLY for things you cannot ground from repo or current research: missing secrets, destructive external approvals, correctness-changing ambiguity. The ONLY trigger is intent returning `needs-user-answer`.
+- **Repo truth first, then targeted web research.** Read code before theorizing. Reach for WebSearch / WebFetch only when freshness matters or the repo is insufficient.
+- **Scope discipline.** Do ONLY what was asked. NO speculative refactors. NO "while I'm here" expansions.
+- **No broken-window fixes.** NEVER suppress errors, widen retries to green, mute tests, or special-case a failure. Find the root cause.
+- **Proof before claim.** Nothing is shipped until verify returned GREEN. The verify agent's GREEN classification is the ONLY thing that qualifies.
+- **Trust Opus-class reasoning, but trust proof more.** Test suite, live run, real repo are the final arbiters.
 
 ## Loopback rules
 
@@ -166,15 +160,10 @@ This step is the v6.3.2 repair for a regression where v6 runs finished with edit
 
 ## Completion summary (end-of-run template)
 
-Once the commit is done (or correctly skipped), finish the run with bullet output. The full record is in `run-summary.md`; chat output is a pointer.
-
-Shape — every section uses the same form: `Label:` on its own line, then one or more `- <bullet>` lines, then a blank line before the next section. Never put the value on the same line as the label, even when there is only one bullet. Always use bullets.
-
-Mandatory sections (always emit, in this order):
+Emitted ONLY after the end-of-run commit step. Full record lives in `run-summary.md`; chat output is a pointer.
 
 ```
 Shipped:
-- <≤80-char clause>
 - <≤80-char clause>
 
 Proof:
@@ -187,22 +176,16 @@ Archive:
 - docs/xlfg/runs/<RUN_ID>/run-summary.md
 ```
 
-Optional sections (`Risk`, `Next`) — emit ONLY when there is something concrete to say. Same shape (`Label:` on its own line, `- bullet` below, blank line before the next section). Do NOT write `Risk:\n- none` — omit the whole section instead.
+Add `Risk:` and/or `Next:` sections (same shape) ONLY when concrete content exists. Omit otherwise — NEVER write `Risk:\n- none`.
 
-Hard rules — not suggestions:
+Rules:
 
-- **≤80 chars per bullet.** One clause. If detail does not fit, the bullet says `- see archive` and the user opens `run-summary.md`.
-- **One clause per bullet.** No compound sentences. No semicolons. No em-dash splitting one bullet into two ideas. No nested parentheticals. Two ideas = two bullets, or one goes to the archive.
-- **`Label:` on its own line.** Never `Label: value` on the same line. Always `Label:\n- value`.
-- **Blank line between sections.** One empty line before each new `Label:`.
-- **Bullets only.** No markdown tables. No prose paragraphs.
-- **No `Files` section.** `git show <sha>` and `run-summary.md` already list files.
-- **No durable-lesson section.** The lesson lives in `run-summary.md`.
-- **No closing prose.** No "let me know if…", no recap, no reassurance. The bullets are the message.
+- ≤80 chars per bullet, one clause. NEVER compound sentences, semicolons, em-dash splits, or nested parentheticals. `- see archive` if longer.
+- `Label:` ALWAYS on its own line. NEVER `Label: value` inline. Always `Label:\n- value`.
+- Blank line between sections.
+- Bullets only. NO tables, NO prose paragraphs, NO `Files` section, NO durable-lesson section, NO closing prose.
 
-Variants (each is a single line that replaces the whole block):
+Variants (single line, replaces the whole block):
 
-- **Investigation-only** (commit was correctly skipped): `No product changes. <one short clause>. Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md`
-- **Loopback escalation** (cap hit before GREEN): `Stopped after 2 loopbacks. <command> failed: <one short clause>. Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md`
-
-Target: ≤14 lines on screen for the typical success case (4 mandatory sections × ~3 lines each + blank lines).
+- Investigation-only: `No product changes. <one clause>. Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md`
+- Loopback escalation: `Stopped after 2 loopbacks. <command> failed: <one clause>. Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md`

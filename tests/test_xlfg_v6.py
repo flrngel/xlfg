@@ -1037,11 +1037,12 @@ class TestConductorDiscipline(unittest.TestCase):
                 lower,
                 f"{cmd}: missing `One run, one conductor turn` rule",
             )
-            self.assertIn(
-                "do not end your turn",
-                lower,
+            self.assertTrue(
+                "do not end your turn" in lower
+                or "never end the turn" in lower,
                 f"{cmd}: must explicitly forbid ending the conductor turn "
-                "between phases",
+                "between phases (`do not end your turn` or `NEVER end the "
+                "turn`)",
             )
             self.assertIn(
                 "proceeding",
@@ -1219,27 +1220,22 @@ class TestConductorDiscipline(unittest.TestCase):
         )
 
     def test_conductors_carry_question_template(self) -> None:
-        """Both conductors must carry a strict §Question template.
+        """Both conductors must carry the strict question template fence.
 
-        Prior to v6.5.5 the intent-halt instruction was a one-liner with
-        no shape. v6.5.5 added the §Question template; v6.5.6 trimmed its
-        lead from `Need <n> answers before proceeding:` to `Need <n>
-        answers:` and renamed the footer from `Blocking because:` to
-        `Blocking:` to drop filler.
+        v6.5.5 introduced a dedicated `## Question template` section.
+        v6.5.9 folded the template into `## Between phases` (next to the
+        gate that triggers it) to remove a competing fenced "what to
+        emit" surface that biased the conductor toward halting outside
+        the gate. The template fence and load-bearing strings still
+        apply; only the section heading went away.
         """
         for cmd in ("xlfg.md", "xlfg-debug.md"):
             text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
             self.assertIn(
-                "## Question template",
-                text,
-                f"{cmd}: must carry a `## Question template` section so "
-                "intent-halt questions follow a strict shape.",
-            )
-            self.assertIn(
                 "Need <n> answers:",
                 text,
                 f"{cmd}: question template must use the `Need <n> "
-                "answers:` lead (no `before proceeding` filler).",
+                "answers:` lead.",
             )
             self.assertIn(
                 "Blocking:",
@@ -1251,6 +1247,13 @@ class TestConductorDiscipline(unittest.TestCase):
                 "≤80",
                 text,
                 f"{cmd}: question template must declare the 80-char cap.",
+            )
+            # The template must live next to its trigger gate.
+            self.assertIn(
+                "needs-user-answer",
+                text,
+                f"{cmd}: the question template's trigger "
+                "(`needs-user-answer`) must appear in the conductor body.",
             )
 
     def test_completion_summary_uses_bullet_format(self) -> None:

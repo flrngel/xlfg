@@ -1,3 +1,22 @@
+## 6.5.9 — fold question template into Between phases, trim conductor bulk, strict imperative voice
+
+v6.5.9 fixes a phase-stopping regression that v6.5.8 only partially addressed. The user reported that runs were halting after recall, intent, and plan — phases were ending the turn instead of dispatching the next phase. The root cause: the v6.5.5 conductor body grew 28% (162 → 208 lines) and added a dedicated `## Question template` section that — even with v6.5.8's gate hardening — read as a competing fenced "what to emit" surface alongside the §Completion summary template. After a phase returned, the model was choosing between "dispatch next phase" and "emit a template-shaped block", and the conductor bulk tilted the choice toward halting. The handoff-cue reminders v6.5.4 added to all 9 phase bodies were calibrated against a leaner conductor and got drowned out.
+
+### Changed
+
+- `commands/xlfg.md`: folded `## Question template` into `## Between phases` (next to the gate that triggers it). The standalone section heading is gone; the template fence and gate now live in one place. Anti-pattern callout (`Proceeding to implement` etc.) merged into the same section. `## Operating contract` rewritten in strict imperative voice (MUST / NEVER / ONLY). `## Completion summary` rules-block trimmed ~50%. Conductor body shrinks from 208 → 191 lines.
+- `commands/xlfg-debug.md`: same surgery. Conductor body shrinks to 180 lines (was ~205 in v6.5.8). Anti-pattern transition examples updated to include "proceeding" so the existing `test_conductors_forbid_mid_run_turn_endings` "Proceeding" call-out check still passes.
+- `tests/test_xlfg_v6.py`: `test_conductors_forbid_mid_run_turn_endings` accepts either `do not end your turn` (legacy phrasing) or `never end the turn` (new strict phrasing). `test_conductors_carry_question_template` no longer requires a `## Question template` section heading — the template's load-bearing strings (`Need <n> answers:`, `Blocking:`, `≤80`, `needs-user-answer`) all still required; only the standalone heading went away.
+- `CHANGELOG.md`, `README.md` (plugin + repo), `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `NEXT_AGENT_CONTEXT.md`: version bump to 6.5.9.
+
+### Not changed
+
+- The labels in the completion summary (Shipped/Proof/Commit/Risk/Next/Archive for `/xlfg`; Mechanism/Evidence/Repair/Unknowns/Verified/Archive for `/xlfg-debug`), the ≤80-char one-clause cap, the no-compound-sentences / no-semicolons / no-em-dash-splits / no-nested-parentheticals prohibitions, the `see archive` escape hatch, the `Files` section absence (v6.5.6), the no-durable-lesson rule (v6.5.5), the `Label:\n- bullet` shape with blank lines between sections (v6.5.8), the `git status --porcelain` contract (v6.5.3), and the v6.5.4 handoff-cue reminders are all preserved.
+- Conductor pipeline order, phase count, loopback rules, end-of-run commit step, no-commit-on-debug symmetry, the sanctioned Write-path restriction, audit harness (6 checks), hooks, `SANCTIONED_AGENTS`, `EXPECTED_PHASE_SKILLS`, `EXPECTED_SPECIALIST_SKILLS`, specialist skill bodies, agent `## Return format` shapes, and any phase skill's `## Done signal` text.
+- The intent-phase skill's "Ask the user ONLY if" bullet from v6.5.8 (default-don't-halt lead) is preserved unchanged.
+
+Patch-level — no public entry surface or runtime dependency surface changes. Two conductor bodies trimmed and rewritten in strict imperative voice; two existing tests loosened to accept both legacy and new phrasing.
+
 ## 6.5.8 — fix question-halt regression, enforce label-on-own-line summary shape
 
 v6.5.8 fixes a pipeline-halting regression introduced in v6.5.5 and tightens the completion-summary shape per a follow-up style request. The regression: v6.5.5 bloated the intent skill's "Ask the user ONLY if a blocker would change correctness" bullet from one short rule into a multi-sentence directive that also explained the question-template format; v6.5.5 added a prominent dedicated `## Question template` section to both conductors. Together these surfaces primed the conductor to halt with questions even on runs where intent did not return `needs-user-answer` — the user reported that runs which previously flowed through all phases now broke. The style miss: v6.5.7's "single-item sections collapse to one line" rule (`Shipped: <one clause>`) produced inconsistent visual rhythm in the terminal — some sections were one line, others were three; the user explicitly asked for `Label:\n- bullet` everywhere with a blank line between sections.
