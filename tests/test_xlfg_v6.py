@@ -1310,6 +1310,68 @@ class TestConductorDiscipline(unittest.TestCase):
                 "per-cell cap.",
             )
 
+    def test_completion_summary_label_on_own_line(self) -> None:
+        """Each `Label:` in the template block must be alone on its line.
+
+        v6.5.7 allowed `Label: <value>` same-line collapse for single-item
+        sections. v6.5.8 forbids it: every section is `Label:\\n- value`,
+        even when there is only one bullet. Prevents drift back to the
+        inline shape.
+        """
+        for cmd in ("xlfg.md", "xlfg-debug.md"):
+            section = self._summary_section(cmd)
+            in_fence = False
+            for line in section.split("\n"):
+                stripped = line.strip()
+                if stripped.startswith("```"):
+                    in_fence = not in_fence
+                    continue
+                if not in_fence:
+                    continue
+                # A line like "Label: anything-non-empty" is the forbidden
+                # inline shape. Allow "Label:" exactly (with optional
+                # trailing whitespace).
+                m = re.match(r"^([A-Z][A-Za-z]+):\s+(\S.*)$", line)
+                if m:
+                    self.fail(
+                        f"{cmd}: template block uses inline `Label: value` "
+                        f"shape ({line!r}); use `Label:\\n- value` instead."
+                    )
+
+    def test_completion_summary_has_blank_line_between_sections(self) -> None:
+        """Sections in the template must be separated by a blank line.
+
+        v6.5.8 requires `\\n\\n` between the last bullet of one section
+        and the next `Label:`. Pin the spacing so future edits don't
+        collapse sections together.
+        """
+        for cmd in ("xlfg.md", "xlfg-debug.md"):
+            section = self._summary_section(cmd)
+            in_fence = False
+            prev_was_bullet = False
+            for line in section.split("\n"):
+                stripped_outer = line.strip()
+                if stripped_outer.startswith("```"):
+                    in_fence = not in_fence
+                    prev_was_bullet = False
+                    continue
+                if not in_fence:
+                    continue
+                stripped = line.strip()
+                is_label = bool(re.match(r"^[A-Z][A-Za-z]+:\s*$", stripped))
+                is_bullet = stripped.startswith("- ")
+                is_blank = stripped == ""
+                if is_label and prev_was_bullet:
+                    self.fail(
+                        f"{cmd}: `{stripped}` immediately follows a bullet "
+                        "with no blank line; insert a blank line between "
+                        "sections."
+                    )
+                if is_bullet:
+                    prev_was_bullet = True
+                elif is_blank:
+                    prev_was_bullet = False
+
     def test_xlfg_completion_summary_drops_files_row(self) -> None:
         """`/xlfg` summary template must NOT carry a `Files` section.
 

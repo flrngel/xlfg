@@ -113,9 +113,11 @@ Do not wait for the user to say "continue", "ok", or anything else to resume bet
 - **Repo truth first.** Read before you theorize. Web research when the repo is silent and freshness matters.
 - **Prompt/agent debugging is still debugging.** If the bug is in a prompt or tool contract, the prompt, tool spec, context inputs, evaluation bar, and false-success trap are all part of the system under test.
 
-## Question template (intent halt only)
+## Question template (used ONLY when intent returns `needs-user-answer`)
 
-When the intent skill returns `needs-user-answer`, stop the pipeline and emit the questions in exactly this shape — no opening framing, no closing prose:
+This template fires **only** on the explicit `needs-user-answer` return from the intent skill. Do NOT emit questions for any other reason — uncertainty mid-pipeline, ambiguous evidence, or feeling stuck are NOT triggers. Default behavior is to ground the answer from the repo or proceed under a stated assumption.
+
+When intent does halt, the format is:
 
 ```
 Need <n> answers:
@@ -123,18 +125,10 @@ Need <n> answers:
 1. <≤80-char question>  [A) <option>  B) <option>]
 2. <≤80-char question>
 
-Blocking: <≤80-char reason — what breaks if I guess wrong>
+Blocking: <≤80-char reason>
 ```
 
-Hard rules:
-
-- **≤80 chars per question.** One clause. No compound sentences.
-- **Always offer A/B/C options when the answer space is finite** (binary, enum, short list). The user types `1A 2B`. Skip brackets only when the answer is genuinely free-form.
-- **One `Blocking:` footer** covers all questions. Not one per question.
-- **No opening line.** No "To make sure I diagnose the right bug…", no "I have a few clarifying questions…". The `Need <n> answers:` lead is the entire preamble.
-- **n ≤ 3.**
-
-Target: ≤6 lines for 2 questions, ≤9 for 3.
+n ≤ 3. Each question one clause ≤80 chars. Offer A/B/C options when the answer space is finite. Single `Blocking:` footer. No opening line, no closing prose.
 
 ## Loopback rule
 
@@ -160,32 +154,41 @@ This step mirrors `/xlfg`'s end-of-run-commit discipline, minus the commit — `
 
 ## Completion summary (end-of-run template)
 
-The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md` (written by the debug skill). Your chat response is bullet-point output, not a paste of the whole file. Use exactly this shape:
+The real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Your chat output is bullet-driven, not a paste of the file.
+
+Shape — every section uses the same form: `Label:` on its own line, then one or more `- <bullet>` lines, then a blank line before the next section. Never put the value on the same line as the label, even when there is only one bullet.
+
+Mandatory sections (always emit, in this order):
 
 ```
-Mechanism: <≤80-char clause>
-Evidence:  <≤80-char clause>
-Repair:    <≤80-char clause>
-Unknowns:  <≤80-char clause; or "none">
-Verified:  git status --porcelain clean
-Archive:   docs/xlfg/runs/<RUN_ID>/diagnosis.md
-```
+Mechanism:
+- <≤80-char clause>
 
-When a section has multiple distinct items (e.g. two competing pieces of evidence, or two open questions), expand it to bullets:
-
-```
 Evidence:
-- <≤80-char bullet>
-- <≤80-char bullet>
+- <≤80-char clause>
+
+Repair:
+- <≤80-char clause>
+
+Unknowns:
+- <≤80-char clause; or "none">
+
+Verified:
+- git status --porcelain clean
+
+Archive:
+- docs/xlfg/runs/<RUN_ID>/diagnosis.md
 ```
 
-Hard rules — these are not suggestions:
+Hard rules — not suggestions:
 
-- **≤80 chars per bullet / line.** One clause. If detail does not fit, the bullet says `see archive` and the user opens `diagnosis.md`.
-- **One clause per bullet. No compound sentences.** No semicolons. No em-dash splitting one bullet into two ideas. No nested parentheticals.
-- **All six labels are mandatory.** Unlike `/xlfg`, no section is optional — each carries load-bearing information.
-- **Bullets, not tables.** Markdown tables render as ASCII pipes in many terminals.
-- **Verified is contract-bearing.** It must cite `git status --porcelain`. If tracked non-gitignored paths appeared, replace the value with `VIOLATION: <path>` (and only the path) — a phase broke the no-source-edits contract; stop without suggesting a next step.
-- **No closing prose.** No "let me know if…", no suggested next step, no recap. The bullets are the message. The user opens `/xlfg` themselves if they want to ship the fix.
+- **≤80 chars per bullet.** One clause. `- see archive` if it doesn't fit.
+- **One clause per bullet.** No compound sentences, no semicolons, no em-dash splits, no nested parentheticals.
+- **`Label:` on its own line.** Never `Label: value` on the same line.
+- **Blank line between sections.**
+- **All six labels are mandatory.** Each carries load-bearing information.
+- **Bullets only.** No markdown tables. No prose paragraphs.
+- **Verified is contract-bearing.** Must cite `git status --porcelain`. On violation, replace the bullet with `- VIOLATION: <path>` (path only) and stop without suggesting next steps.
+- **No closing prose.** The bullets are the message.
 
-Target: ≤9 lines on screen. User reads it in 3 seconds and opens the archive only if they want detail.
+Target: ≤19 lines on screen (6 sections × ~3 lines + blank lines).

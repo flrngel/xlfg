@@ -114,9 +114,11 @@ Do not wait for the user to say "continue", "ok", or anything else to resume bet
 - **Proof before claim.** You have not shipped anything until verify came back GREEN. The verify agent's GREEN classification is the only thing that qualifies.
 - **Trust Opus-class reasoning, but trust proof more.** The test suite, the live run, and the real repo are the final arbiters.
 
-## Question template (intent halt only)
+## Question template (used ONLY when intent returns `needs-user-answer`)
 
-When the intent skill returns `needs-user-answer`, stop the pipeline and emit the questions in exactly this shape — no opening framing, no closing prose:
+This template fires **only** on the explicit `needs-user-answer` return from the intent skill. Do NOT emit questions for any other reason — uncertainty mid-pipeline, ambiguous test results, or feeling stuck are NOT triggers. Default behavior is to ground the answer from the repo or pick the smallest-blast-radius assumption and proceed.
+
+When intent does halt, the format is:
 
 ```
 Need <n> answers:
@@ -124,18 +126,10 @@ Need <n> answers:
 1. <≤80-char question>  [A) <option>  B) <option>]
 2. <≤80-char question>
 
-Blocking: <≤80-char reason — what breaks if I guess wrong>
+Blocking: <≤80-char reason>
 ```
 
-Hard rules:
-
-- **≤80 chars per question.** One clause. No compound sentences.
-- **Always offer A/B/C options when the answer space is finite** (binary, enum, short list). The user types `1A 2B`. Skip brackets only when the answer is genuinely free-form.
-- **One `Blocking:` footer** covers all questions. Not one per question.
-- **No opening line.** No "To make sure I build the right thing…", no "I have a few clarifying questions…". The `Need <n> answers:` lead is the entire preamble.
-- **n ≤ 3.**
-
-Target: ≤6 lines for 2 questions, ≤9 for 3.
+n ≤ 3. Each question one clause ≤80 chars. Offer A/B/C options when the answer space is finite (binary/enum/short list) — the user replies `1A 2B`. Single `Blocking:` footer. No opening line, no closing prose.
 
 ## Loopback rules
 
@@ -172,42 +166,43 @@ This step is the v6.3.2 repair for a regression where v6 runs finished with edit
 
 ## Completion summary (end-of-run template)
 
-Once the commit is done (or correctly skipped), finish the run with bullet-point output. The full record is in `run-summary.md`; chat output is a pointer, not the document. Use exactly this shape:
+Once the commit is done (or correctly skipped), finish the run with bullet output. The full record is in `run-summary.md`; chat output is a pointer.
+
+Shape — every section uses the same form: `Label:` on its own line, then one or more `- <bullet>` lines, then a blank line before the next section. Never put the value on the same line as the label, even when there is only one bullet. Always use bullets.
+
+Mandatory sections (always emit, in this order):
 
 ```
 Shipped:
-- <≤80-char bullet, one clause>
-- <≤80-char bullet, one clause>
+- <≤80-char clause>
+- <≤80-char clause>
 
-Proof:   <command> → GREEN
-Commit:  <short SHA> <subject>
-Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md
+Proof:
+- <command> → GREEN
+
+Commit:
+- <short SHA> <subject>
+
+Archive:
+- docs/xlfg/runs/<RUN_ID>/run-summary.md
 ```
 
-When `Shipped` is a single thing, collapse the section to one line: `Shipped: <one clause>`. When it's multiple, use the bulleted form above.
+Optional sections (`Risk`, `Next`) — emit ONLY when there is something concrete to say. Same shape (`Label:` on its own line, `- bullet` below, blank line before the next section). Do NOT write `Risk:\n- none` — omit the whole section instead.
 
-Optional sections `Risk` and `Next` are included **only when there is something concrete to say**; otherwise they are omitted entirely. Do not write `Risk: none` or `Next: n/a`. Same single-line / bulleted shape:
+Hard rules — not suggestions:
 
-```
-Risk:
-- <≤80-char bullet>
-- <≤80-char bullet>
-
-Next: <≤80-char one-liner>
-```
-
-Hard rules — these are not suggestions:
-
-- **≤80 chars per bullet.** One clause. If detail does not fit, the bullet says `see archive` and the user opens `run-summary.md`.
-- **One clause per bullet. No compound sentences.** No semicolons. No em-dash splitting one bullet into two ideas. No nested parentheticals. If you have two things to say, you have two bullets or one of them goes to the archive.
-- **Bullets, not tables.** Markdown tables render as ASCII pipes in many terminals. A flat bulleted list is universal.
-- **No `Files` section.** `git show <sha>` and `run-summary.md` both list files. Repeating them in the terminal is noise.
-- **No durable-lesson section.** The compound skill writes the lesson into `run-summary.md`. The terminal does not repeat it.
-- **No closing prose.** No "let me know if…", no recap of the xlfg process, no reassurance about your own work. The bullets are the message.
+- **≤80 chars per bullet.** One clause. If detail does not fit, the bullet says `- see archive` and the user opens `run-summary.md`.
+- **One clause per bullet.** No compound sentences. No semicolons. No em-dash splitting one bullet into two ideas. No nested parentheticals. Two ideas = two bullets, or one goes to the archive.
+- **`Label:` on its own line.** Never `Label: value` on the same line. Always `Label:\n- value`.
+- **Blank line between sections.** One empty line before each new `Label:`.
+- **Bullets only.** No markdown tables. No prose paragraphs.
+- **No `Files` section.** `git show <sha>` and `run-summary.md` already list files.
+- **No durable-lesson section.** The lesson lives in `run-summary.md`.
+- **No closing prose.** No "let me know if…", no recap, no reassurance. The bullets are the message.
 
 Variants (each is a single line that replaces the whole block):
 
 - **Investigation-only** (commit was correctly skipped): `No product changes. <one short clause>. Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md`
 - **Loopback escalation** (cap hit before GREEN): `Stopped after 2 loopbacks. <command> failed: <one short clause>. Archive: docs/xlfg/runs/<RUN_ID>/run-summary.md`
 
-Target: ≤10 lines on screen for the typical success case. User reads it in 3 seconds and opens the archive only if they want detail.
+Target: ≤14 lines on screen for the typical success case (4 mandatory sections × ~3 lines each + blank lines).

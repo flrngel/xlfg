@@ -1,3 +1,29 @@
+## 6.5.8 — fix question-halt regression, enforce label-on-own-line summary shape
+
+v6.5.8 fixes a pipeline-halting regression introduced in v6.5.5 and tightens the completion-summary shape per a follow-up style request. The regression: v6.5.5 bloated the intent skill's "Ask the user ONLY if a blocker would change correctness" bullet from one short rule into a multi-sentence directive that also explained the question-template format; v6.5.5 added a prominent dedicated `## Question template` section to both conductors. Together these surfaces primed the conductor to halt with questions even on runs where intent did not return `needs-user-answer` — the user reported that runs which previously flowed through all phases now broke. The style miss: v6.5.7's "single-item sections collapse to one line" rule (`Shipped: <one clause>`) produced inconsistent visual rhythm in the terminal — some sections were one line, others were three; the user explicitly asked for `Label:\n- bullet` everywhere with a blank line between sections.
+
+### Changed
+
+- `skills/xlfg-intent-phase/SKILL.md`: the "Ask the user ONLY if" bullet is rewritten to lead with the default ("the default is to NOT halt — pick the smallest-blast-radius assumption, declare it in the contract, and let the conductor proceed; halting is the exception, not the rule"). The question-format guidance shrinks to one trailing sentence ("If you do halt, the conductor formats the questions; you just supply each blocker as a one-clause question (≤80 chars) plus options if the answer space is finite").
+- `commands/xlfg.md`: `## Question template` section retitled `## Question template (used ONLY when intent returns needs-user-answer)`. Opening paragraph reinforced — "This template fires **only** on the explicit `needs-user-answer` return from the intent skill. Do NOT emit questions for any other reason — uncertainty mid-pipeline, ambiguous test results, or feeling stuck are NOT triggers." Section body trimmed from ~22 lines to ~12 (the fenced template plus one paragraph of rules in line). The Hard rules bullet list is collapsed into one inline-rules paragraph.
+- `commands/xlfg-debug.md`: same shape-shift on its `## Question template` section.
+- `commands/xlfg.md`: `## Completion summary` template rewritten — every section is now `Label:\n- bullet` with a blank line before the next section. The v6.5.7 single-item collapse (`Shipped: <one clause>`) is removed. Optional sections (`Risk`, `Next`) keep the same shape; if there is nothing to say, the section is omitted entirely (do NOT write `Risk:\n- none`). Hard rules block updated: new `**Label: on its own line.** Never Label: value on the same line` and `**Blank line between sections.**` rules. Variants (Investigation-only, Loopback escalation) unchanged.
+- `commands/xlfg-debug.md`: same shape-shift on its `## Completion summary`. Six mandatory labels each emit as `Label:\n- bullet`. The Verified row's value is `- git status --porcelain clean`; the violation branch is `- VIOLATION: <path>`.
+- `tests/test_xlfg_v6.py`: two existing tests untouched (label-set assertions still hold).
+- `CHANGELOG.md`, `README.md` (plugin + repo), `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `NEXT_AGENT_CONTEXT.md`: version bump to 6.5.8 and test-count refresh (61 → 63).
+
+### Added
+
+- `test_completion_summary_label_on_own_line` in `tests/test_xlfg_v6.py`: walks the fenced template block of both conductor `## Completion summary` sections and asserts no `Label: <value>` same-line shape exists. The forbidden form is `^[A-Z][A-Za-z]+:\\s+\\S.*$` inside a fenced block; the allowed forms are `Label:` (alone on its line) followed by `- value` on the next line.
+- `test_completion_summary_has_blank_line_between_sections`: walks the same fenced blocks and asserts that no `Label:` line immediately follows a `- bullet` line (must be separated by at least one blank line).
+
+### Not changed
+
+- The labels themselves, the ≤80-char one-clause cap, the no-compound-sentences / no-semicolons / no-em-dash-splits / no-nested-parentheticals prohibitions, the `see archive` escape hatch, the `Files` section absence (v6.5.6), the no-durable-lesson rule (v6.5.5), the `git status --porcelain` contract (v6.5.3), and the v6.5.4 handoff-cue reminders are all preserved.
+- Conductor pipeline order, phase count, loopback rules, end-of-run commit step, no-commit-on-debug symmetry, the sanctioned Write-path restriction, audit harness (6 checks), hooks, `SANCTIONED_AGENTS`, `EXPECTED_PHASE_SKILLS`, `EXPECTED_SPECIALIST_SKILLS`, specialist skill bodies, agent `## Return format` shapes, or any phase skill's `## Done signal` text.
+
+Patch-level because no public entry surface or runtime dependency surface changes — one intent-skill bullet rewritten (default-first), two `## Question template` sections trimmed and re-gated, two `## Completion summary` templates rewritten to `Label:\n- bullet` with blank-line separators, two new regression tests.
+
 ## 6.5.7 — bullet-driven completion summaries (revert v6.5.6 tables)
 
 v6.5.7 flips both completion-summary templates from markdown tables (v6.5.6) to bullet-driven output. The user pointed out that markdown tables render as ASCII pipes in plain terminals (where xlfg output most often lands) and explicitly asked for bullet-point communication. Same labels, same ≤80-char one-clause cap, same `Files` row absence — only the layout changes.
