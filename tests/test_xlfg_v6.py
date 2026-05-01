@@ -1126,70 +1126,62 @@ class TestConductorDiscipline(unittest.TestCase):
         )
         return m.group(0)
 
-    def _count_summary_labels(self, cmd: str) -> list[str]:
-        """Return the list of `Label:` headers used inside the fenced
-        template block of a command's `## Completion summary` section.
+    def _summary_labels_referenced(self, cmd: str) -> set[str]:
+        """Return the set of `Label:` strings referenced anywhere in the
+        `## Completion summary` section.
 
-        v6.5.7 templates are bullet-driven: each section starts with a
-        line of the form `Label:` (optionally followed by a value on the
-        same line, or by bullet lines below).
+        v6.5.10 reverts the fenced-template format and describes the
+        labels in prose (e.g. "Mandatory sections: `Shipped:`, `Proof:`,
+        `Commit:`, `Archive:`."). The check is whether the load-bearing
+        labels appear in the section, not whether they're inside a fence.
         """
         section = self._summary_section(cmd)
-        labels: list[str] = []
-        in_fence = False
-        for line in section.split("\n"):
-            stripped = line.strip()
-            if stripped.startswith("```"):
-                in_fence = not in_fence
-                continue
-            if not in_fence:
-                continue
-            # Match "Label:" headers (capitalized identifier ending with colon).
-            m = re.match(r"^([A-Z][A-Za-z]+):", line)
-            if m and m.group(1) not in labels:
-                labels.append(m.group(1))
+        labels: set[str] = set()
+        for m in re.finditer(r"\b([A-Z][A-Za-z]+):", section):
+            labels.add(m.group(1))
+        # Filter out heading-side labels that are not summary section
+        # labels (e.g. "Variants" if it appears as "Variants:").
         return labels
 
     def test_xlfg_debug_completion_summary_item_count_matches_budget(self) -> None:
-        """`/xlfg-debug` summary must enumerate exactly its 6 mandatory labels.
+        """`/xlfg-debug` summary must reference all 6 mandatory labels.
 
-        v6.5.7 switched the template from a markdown table back to a
-        bullet-driven format (table renderings as ASCII pipes were ugly
-        in many terminals). The 6 mandatory labels — Mechanism, Evidence,
-        Repair, Unknowns, Verified, Archive — each carry load-bearing
-        information and must all appear in the template.
+        v6.5.10 reverts the fenced-template format and describes labels
+        in prose. The 6 mandatory labels — Mechanism, Evidence, Repair,
+        Unknowns, Verified, Archive — must all be referenced in the
+        section so the model knows which sections to emit.
         """
-        labels = self._count_summary_labels("xlfg-debug.md")
-        expected = {"Mechanism", "Evidence", "Repair", "Unknowns", "Verified", "Archive"}
-        self.assertEqual(
-            set(labels),
-            expected,
-            f"xlfg-debug.md: Completion summary template must declare "
-            f"exactly {sorted(expected)}; got {sorted(set(labels))}.",
+        labels = self._summary_labels_referenced("xlfg-debug.md")
+        mandatory = {"Mechanism", "Evidence", "Repair", "Unknowns", "Verified", "Archive"}
+        self.assertTrue(
+            mandatory.issubset(labels),
+            f"xlfg-debug.md: Completion summary must reference all "
+            f"mandatory labels {sorted(mandatory)}; missing "
+            f"{sorted(mandatory - labels)}.",
         )
 
     def test_xlfg_completion_summary_item_count_matches_budget(self) -> None:
-        """`/xlfg`'s summary must declare its 4 mandatory + 2 optional labels.
+        """`/xlfg`'s summary must reference its 4 mandatory + 2 optional labels.
 
-        v6.5.7 caps the `/xlfg` summary at 6 labels max (4 mandatory:
-        Shipped, Proof, Commit, Archive; 2 optional: Risk, Next — part
-        of the template definition but omitted at runtime when there is
-        nothing concrete to say). The `Files` row was dropped in v6.5.6
-        as redundant with `git show <sha>`.
+        v6.5.10 reverts to prose-described format. The 4 mandatory labels
+        (Shipped, Proof, Commit, Archive) and 2 optional (Risk, Next) are
+        all referenced; runtime emission is what filters Risk/Next when
+        there's nothing concrete to say.
         """
-        labels = self._count_summary_labels("xlfg.md")
+        labels = self._summary_labels_referenced("xlfg.md")
         mandatory = {"Shipped", "Proof", "Commit", "Archive"}
-        allowed = mandatory | {"Risk", "Next"}
+        optional = {"Risk", "Next"}
         self.assertTrue(
-            mandatory.issubset(set(labels)),
-            f"xlfg.md: Completion summary template must declare all "
-            f"mandatory labels {sorted(mandatory)}; got {sorted(set(labels))}.",
+            mandatory.issubset(labels),
+            f"xlfg.md: Completion summary must reference all mandatory "
+            f"labels {sorted(mandatory)}; missing "
+            f"{sorted(mandatory - labels)}.",
         )
-        extra = set(labels) - allowed
-        self.assertFalse(
-            extra,
-            f"xlfg.md: Completion summary template carries unexpected "
-            f"labels {sorted(extra)}; budget is {sorted(allowed)}.",
+        self.assertTrue(
+            optional.issubset(labels),
+            f"xlfg.md: Completion summary must reference both optional "
+            f"labels {sorted(optional)}; missing "
+            f"{sorted(optional - labels)}.",
         )
 
     def test_xlfg_completion_summary_drops_durable_lesson(self) -> None:
@@ -1219,75 +1211,50 @@ class TestConductorDiscipline(unittest.TestCase):
             "terminal output.",
         )
 
-    def test_conductors_carry_question_template(self) -> None:
-        """Both conductors must carry the strict question template fence.
+    def test_conductors_name_question_gate(self) -> None:
+        """Both conductors must name the `needs-user-answer` gate.
 
-        v6.5.5 introduced a dedicated `## Question template` section.
-        v6.5.9 folded the template into `## Between phases` (next to the
-        gate that triggers it) to remove a competing fenced "what to
-        emit" surface that biased the conductor toward halting outside
-        the gate. The template fence and load-bearing strings still
-        apply; only the section heading went away.
+        v6.5.5 introduced a dedicated `## Question template` section
+        with a fenced `Need <n> answers:` template; v6.5.6/7/8/9
+        iterated on the format. v6.5.10 reverts to v6.5.2's brevity:
+        the conductor names the gate (`needs-user-answer → ask at most
+        three numbered blocking questions and stop`) and trusts the
+        intent skill / model to format reasonable questions. The fenced
+        template was a competing "what to emit" surface that biased the
+        conductor toward halting outside the gate; dropping it restored
+        v6.5.2's reliable phase-flow behavior.
         """
         for cmd in ("xlfg.md", "xlfg-debug.md"):
             text = (PLUGIN / "commands" / cmd).read_text(encoding="utf-8")
             self.assertIn(
-                "Need <n> answers:",
-                text,
-                f"{cmd}: question template must use the `Need <n> "
-                "answers:` lead.",
-            )
-            self.assertIn(
-                "Blocking:",
-                text,
-                f"{cmd}: question template must use the `Blocking:` "
-                "footer (one line, covering all questions).",
-            )
-            self.assertIn(
-                "≤80",
-                text,
-                f"{cmd}: question template must declare the 80-char cap.",
-            )
-            # The template must live next to its trigger gate.
-            self.assertIn(
                 "needs-user-answer",
                 text,
-                f"{cmd}: the question template's trigger "
+                f"{cmd}: the question gate's trigger "
                 "(`needs-user-answer`) must appear in the conductor body.",
             )
+            lower = text.lower()
+            self.assertIn(
+                "blocking questions",
+                lower,
+                f"{cmd}: the question gate must name what to emit "
+                "(`blocking questions`).",
+            )
 
-    def test_completion_summary_uses_bullet_format(self) -> None:
-        """Both conductor summaries must be bullet-driven, not markdown tables.
+    def test_completion_summary_forbids_table_rendering(self) -> None:
+        """Both conductor summaries must not contain markdown table rows.
 
-        v6.5.5 used `**Label:** value` lines; v6.5.6 switched to markdown
-        tables. v6.5.7 reverts to bullet format because tables render as
-        ASCII pipes in plain terminals — the user explicitly asked for
-        bullet-point communication. Each label appears as `Label:` in a
-        fenced template block (one-line or expanded to bullets).
+        v6.5.6 used markdown tables; v6.5.7+ reverted to bullets because
+        tables render as ASCII pipes in plain terminals. Sweep the whole
+        Completion summary section (no fence required) for `| ... |` rows.
         """
         for cmd in ("xlfg.md", "xlfg-debug.md"):
-            labels = self._count_summary_labels(cmd)
-            self.assertGreater(
-                len(labels),
-                0,
-                f"{cmd}: Completion summary must declare bullet-driven "
-                "`Label:` headers inside a fenced template block.",
-            )
             section = self._summary_section(cmd)
-            # The template block itself must not contain markdown table
-            # rows. (Reference paragraphs outside the fence are fine.)
-            in_fence = False
             for line in section.split("\n"):
                 stripped = line.strip()
-                if stripped.startswith("```"):
-                    in_fence = not in_fence
-                    continue
-                if not in_fence:
-                    continue
                 self.assertFalse(
                     stripped.startswith("|") and stripped.endswith("|") and "|" in stripped[1:-1],
-                    f"{cmd}: Completion summary template must not use "
-                    f"markdown table rows (saw: {stripped!r}).",
+                    f"{cmd}: Completion summary must not use markdown "
+                    f"table rows (saw: {stripped!r}).",
                 )
 
     def test_completion_summary_declares_cell_length_cap(self) -> None:
@@ -1313,68 +1280,6 @@ class TestConductorDiscipline(unittest.TestCase):
                 "per-cell cap.",
             )
 
-    def test_completion_summary_label_on_own_line(self) -> None:
-        """Each `Label:` in the template block must be alone on its line.
-
-        v6.5.7 allowed `Label: <value>` same-line collapse for single-item
-        sections. v6.5.8 forbids it: every section is `Label:\\n- value`,
-        even when there is only one bullet. Prevents drift back to the
-        inline shape.
-        """
-        for cmd in ("xlfg.md", "xlfg-debug.md"):
-            section = self._summary_section(cmd)
-            in_fence = False
-            for line in section.split("\n"):
-                stripped = line.strip()
-                if stripped.startswith("```"):
-                    in_fence = not in_fence
-                    continue
-                if not in_fence:
-                    continue
-                # A line like "Label: anything-non-empty" is the forbidden
-                # inline shape. Allow "Label:" exactly (with optional
-                # trailing whitespace).
-                m = re.match(r"^([A-Z][A-Za-z]+):\s+(\S.*)$", line)
-                if m:
-                    self.fail(
-                        f"{cmd}: template block uses inline `Label: value` "
-                        f"shape ({line!r}); use `Label:\\n- value` instead."
-                    )
-
-    def test_completion_summary_has_blank_line_between_sections(self) -> None:
-        """Sections in the template must be separated by a blank line.
-
-        v6.5.8 requires `\\n\\n` between the last bullet of one section
-        and the next `Label:`. Pin the spacing so future edits don't
-        collapse sections together.
-        """
-        for cmd in ("xlfg.md", "xlfg-debug.md"):
-            section = self._summary_section(cmd)
-            in_fence = False
-            prev_was_bullet = False
-            for line in section.split("\n"):
-                stripped_outer = line.strip()
-                if stripped_outer.startswith("```"):
-                    in_fence = not in_fence
-                    prev_was_bullet = False
-                    continue
-                if not in_fence:
-                    continue
-                stripped = line.strip()
-                is_label = bool(re.match(r"^[A-Z][A-Za-z]+:\s*$", stripped))
-                is_bullet = stripped.startswith("- ")
-                is_blank = stripped == ""
-                if is_label and prev_was_bullet:
-                    self.fail(
-                        f"{cmd}: `{stripped}` immediately follows a bullet "
-                        "with no blank line; insert a blank line between "
-                        "sections."
-                    )
-                if is_bullet:
-                    prev_was_bullet = True
-                elif is_blank:
-                    prev_was_bullet = False
-
     def test_xlfg_completion_summary_drops_files_row(self) -> None:
         """`/xlfg` summary template must NOT carry a `Files` section.
 
@@ -1385,7 +1290,7 @@ class TestConductorDiscipline(unittest.TestCase):
         routinely producing 3-line directory dumps that bloated the
         terminal. This guard sweeps any of the three historical shapes.
         """
-        labels = self._count_summary_labels("xlfg.md")
+        labels = self._summary_labels_referenced("xlfg.md")
         self.assertNotIn(
             "Files",
             labels,

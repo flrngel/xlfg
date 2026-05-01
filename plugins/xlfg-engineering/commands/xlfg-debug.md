@@ -88,40 +88,29 @@ You read each agent's final message, which must match its declared Return format
 
 ## Between phases
 
-After ANY phase returns, your VERY NEXT tool call MUST be the dispatch for the next phase. NOT a progress note. NOT a confirmation. NOT a pause. The next `Skill` or `Agent` call, in the SAME turn.
+After any phase (skill or agent) returns, your very next tool call is the dispatch for the next phase in the pipeline. Not a progress note, not a user-facing confirmation, not a pause for review — the next `Skill` or `Agent` call, in the same turn.
 
-The ONLY valid mid-run turn boundaries are exactly three:
+A phase's `## Done signal` (skills) or `## Return format` (agents) means *that phase* finished its work and handed you its conclusion. It does not mean the run ended. The run ends only after phase 4 (debug skill) has written `diagnosis.md` and you've written the completion-summary pointer.
 
-1. **Intent skill returned `needs-user-answer`** → emit the question template below, stop. NEVER halt for any other reason — uncertainty mid-pipeline, ambiguous evidence, "feeling stuck" are NOT triggers.
-2. **Loopback cap (2 context-debug cycles) hit** → escalate with one-line failure summary, stop.
-3. **Phase 4 (debug) returned** → write the completion-summary pointer. SOLE end-of-run exit.
+The only valid mid-run turn boundaries are:
 
-**Question template — fires ONLY on (1) above.**
+- The intent skill returns with `needs-user-answer` → ask at most three numbered blocking questions and stop.
+- Loopback cap hit (2 context-debug cycles, see below) → escalate with a one-line failure summary.
+- Phase 4 (debug) returned → write the completion-summary pointer. This is the sole end-of-run exit.
 
-```
-Need <n> answers:
+**Anti-pattern to avoid:** outputting a natural-sounding transition like *"Recall done, proceeding to intent."*, *"Intent resolved, moving to context."*, or *"Context map in hand, entering debug."* and then ending the turn. "Proceeding", "moving", "next up", "handing off" describe your *next action* — that action must be the tool call you just described, not an end-of-turn. If you wrote a transition sentence, the very next thing you emit must be the dispatch.
 
-1. <≤80-char question>  [A) <option>  B) <option>]
-2. <≤80-char question>
-
-Blocking: <≤80-char reason>
-```
-
-n ≤ 3. One clause per question. Options when answer space is finite. No preamble, no closing prose.
-
-**NEVER** end the turn between phases. **NEVER** write a transition sentence ("Recall done, proceeding to intent.", "Intent resolved, moving to context.", "Context map in hand, proceeding to debug.") and then stop. If you wrote a transition, the very next thing you emit MUST be the tool call.
-
-**NEVER** wait for the user to say "continue" / "ok" / anything else. The user invoked `/xlfg-debug` ONCE; that authorizes the WHOLE run.
+Do not wait for the user to say "continue", "ok", or anything else to resume between phases. The user invoked `/xlfg-debug` once; that is your authorization for the whole run.
 
 ## Operating contract
 
-- **One run, one conductor turn.** All 4 dispatches + completion-summary pointer happen in ONE continuous turn. NEVER end the turn between phases.
-- **No source edits.** NEVER change product code, tests, fixtures, migrations, or configs. Tool-level guard is in `allowed-tools`; this is the prompt-level contract. If you catch yourself wanting to `Edit`, you're in `/xlfg`, not `/xlfg-debug`.
-- **One sanctioned Write path.** The ONLY path you may pass to `Write` is `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Any other path — product file, doc file, or `docs/xlfg/current-state.md` — is a contract violation. Stop and report.
-- **Reject gimmicks.** Muting errors, widening retries, changing tests to pass, special-casing one example, "env issue" hand-waves, "works on the happy path" claims — NEVER. These are NOT diagnoses.
-- **Smallest honest reproduction first.** Follow the context agent and debug skill toward simpler repros.
-- **Falsifiable hypothesis log.** Each hypothesis either survives evidence or dies cleanly. NEVER hold contradictory hypotheses silently.
-- **Repo truth first.** Read before theorizing. Web research only when the repo is silent and freshness matters.
+- **One run, one conductor turn.** All 4 dispatches + the completion-summary pointer happen in a single continuous conductor turn. Do not end your turn between phases. You own the whole investigation.
+- **No source edits.** Do not change product code, tests, fixtures, migrations, or configs. The tool-level guard is in `allowed-tools`; the discipline is also a prompt-level contract. If you catch yourself wanting to `Edit`, you're in `/xlfg`, not `/xlfg-debug`.
+- **One sanctioned Write path.** The only path you may pass to `Write` is `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Any other path — especially a product file, a documentation file, or `docs/xlfg/current-state.md` — is a contract violation. Stop and report to the user instead of writing.
+- **Reject gimmicks.** Muting errors, widening retries, changing a test to pass, special-casing one example, hand-waving "env issue", declaring "works on the happy path" while the causal chain is unknown — these are not diagnoses.
+- **Smallest honest reproduction first.** The context agent and debug skill will push you to simplify. Follow them.
+- **Falsifiable hypothesis log.** Each hypothesis either survives evidence or dies cleanly. Do not hold contradictory hypotheses silently.
+- **Repo truth first.** Read before you theorize. Web research when the repo is silent and freshness matters.
 - **Prompt/agent debugging is still debugging.** If the bug is in a prompt or tool contract, the prompt, tool spec, context inputs, evaluation bar, and false-success trap are all part of the system under test.
 
 ## Loopback rule
@@ -148,33 +137,10 @@ This step mirrors `/xlfg`'s end-of-run-commit discipline, minus the commit — `
 
 ## Completion summary (end-of-run template)
 
-Real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Chat output is a pointer.
+Real diagnosis lives at `docs/xlfg/runs/<RUN_ID>/diagnosis.md`. Chat output is the pointer — labeled bullet sections.
 
-```
-Mechanism:
-- <≤80-char clause>
+Six mandatory sections, in order: `Mechanism:`, `Evidence:`, `Repair:`, `Unknowns:`, `Verified:`, `Archive:`. Each: label on its own line, then `- <bullet>` lines (≤80 chars, one clause each), with a blank line before the next section. One clause per bullet — no compound sentences, semicolons, em-dash splits, or nested parentheticals. If detail does not fit, the bullet says `- see archive`.
 
-Evidence:
-- <≤80-char clause>
+The `Verified:` bullet is contract-bearing: it must cite `git status --porcelain`. On the success path, write `- git status --porcelain clean`. On a no-source-edits violation, replace the bullet with `- VIOLATION: <path>` (path only) and stop without suggesting next steps.
 
-Repair:
-- <≤80-char clause>
-
-Unknowns:
-- <≤80-char clause; or "none">
-
-Verified:
-- git status --porcelain clean
-
-Archive:
-- docs/xlfg/runs/<RUN_ID>/diagnosis.md
-```
-
-Rules:
-
-- All six labels are mandatory.
-- ≤80 chars per bullet, one clause. NEVER compound sentences, semicolons, em-dash splits, or nested parentheticals. `- see archive` if longer.
-- `Label:` ALWAYS on its own line. NEVER `Label: value` inline.
-- Blank line between sections.
-- Bullets only. NO tables, NO prose paragraphs, NO closing prose.
-- **Verified is contract-bearing.** MUST cite `git status --porcelain`. On violation, replace the bullet with `- VIOLATION: <path>` (path only) and stop. NEVER suggest next steps on violation.
+No closing prose.

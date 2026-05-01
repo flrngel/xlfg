@@ -1,3 +1,36 @@
+## 6.5.10 — revert v6.5.5+ fenced templates, restore v6.5.2 conductor brevity
+
+v6.5.10 closes a regression that v6.5.8 and v6.5.9 only partially fixed. The user reported `/xlfg` halting mid-pipeline after recall / intent / plan with text like "Handing off to context phase." but no follow-up tool call. Research into Anthropic's agent-loop docs and Claude Code hook docs confirmed the mechanism: when the model emits text without a tool call, `stop_reason` becomes `end_turn` and the harness exits the loop. The canonical fix is a Stop hook with `decision: "block"`, but xlfg v6.0 banned that hook on the premise that prose discipline could replace it.
+
+The diff between v6.5.2 (where the pipeline ran reliably) and v6.5.9 surfaced two load-bearing additions: a fenced "what to emit" question template (added v6.5.5, ~17 lines) and a fenced completion-summary template (expanded v6.5.5+, 13 → ~25 lines). Both fenced surfaces compete with the dispatch instruction after a phase returns — the model pattern-matches on the fence as "this is what to output next" and emits something template-shaped instead of dispatching the next phase. v6.5.9 also added shouty ALLCAPS imperative voice (NEVER / MUST / ONLY) which flattened signal-to-noise; every rule looked equally load-bearing.
+
+v6.5.10 reverts both surfaces to v6.5.2 shape and restores calm imperative voice.
+
+### Changed
+
+- `commands/xlfg.md`: `## Between phases` reverted to v6.5.2's brief shape — one-line question gate (`The intent skill returns with needs-user-answer → ask at most three numbered blocking questions and stop`), no fenced template, anti-pattern callout in calm imperative ("Do not end your turn..."). `## Operating contract` reverted to v6.5.2's calm imperative voice. `## Completion summary` reverted to prose-described format — labels named in prose ("Mandatory sections: `Shipped:`, `Proof:`, `Commit:`, `Archive:`. Optional: `Risk:`, `Next:`."), no fenced "emit this" block, format described inline ("label on its own line, then `- <bullet>` lines (≤80 chars, one clause each), with a blank line before the next section"). Conductor body 191 → 163 lines (back to v6.5.2 level).
+- `commands/xlfg-debug.md`: same surgery. 180 → 146 lines.
+- `skills/xlfg-intent-phase/SKILL.md`: "Ask the user ONLY if" bullet reverted to v6.5.2's brief two-sentence form (drops the v6.5.8 default-first lead and v6.5.5 question-format guidance — both were trying to compensate for downstream regressions).
+- `tests/test_xlfg_v6.py`: replaced `_count_summary_labels` (which counted labels inside fenced blocks) with `_summary_labels_referenced` (which scans the `## Completion summary` section as a whole for `Label:` references in prose). Both `*_completion_summary_item_count_matches_budget` tests updated to use the new helper. `test_completion_summary_uses_bullet_format` renamed to `test_completion_summary_forbids_table_rendering` and inverted to sweep the section for table rows without requiring a fenced bullet block. `test_conductors_carry_question_template` renamed to `test_conductors_name_question_gate` — drops `Need <n> answers:`, `Blocking:`, `≤80` assertions (those pinned the v6.5.5+ fenced template that's been removed); keeps `needs-user-answer` (the gate trigger) and `blocking questions` (what the gate emits). `test_completion_summary_label_on_own_line` and `test_completion_summary_has_blank_line_between_sections` removed — they pinned the v6.5.8 fenced-block shape that's been replaced by prose description. Test surface 63 → 61.
+- `CHANGELOG.md`, `README.md` (plugin + repo), `.claude-plugin/plugin.json`, `.cursor-plugin/plugin.json`, `NEXT_AGENT_CONTEXT.md`: version bump to 6.5.10.
+
+### Not changed
+
+- The v6.5.4 handoff-cue reminders on all 9 phase bodies stay (those are well-placed; the regression was conductor-side, not phase-body).
+- The v6.5.6 `Files`-row absence stays (`git show <sha>` already lists files).
+- The v6.5.5 no-durable-lesson rule stays (lesson lives in `run-summary.md`).
+- The `git status --porcelain` contract (v6.5.3) stays.
+- The bullet-driven *output* style stays — `/xlfg` and `/xlfg-debug` still emit `Shipped:\n- bullet\n\nProof:\n- bullet` etc. at runtime; the change is just that the conductor body describes the format in prose rather than emitting it as a fenced template that the model could pattern-match.
+- Conductor pipeline order, phase count, loopback rules, end-of-run commit step, no-commit-on-debug symmetry, the sanctioned Write-path restriction, audit harness, hooks (Stop hook still NOT reintroduced — the v6 prose-only philosophy holds for now), `SANCTIONED_AGENTS`, `EXPECTED_PHASE_SKILLS`, `EXPECTED_SPECIALIST_SKILLS`, specialist skill bodies, agent `## Return format` shapes.
+
+### Why this works (research-grounded)
+
+- Anthropic agent-loop docs: continue while `stop_reason == "tool_use"`, end when `stop_reason == "end_turn"`. Model emitting text without tool_use → end_turn → loop exits. The bug.
+- Multi-agent prompt research (Reddit / dev.to / Anthropic engineering): prose discipline is unreliable when competing surfaces exist. The fenced templates were competing surfaces. Removing them returns the conductor to v6.5.2's reliable shape.
+- The Stop hook is the canonical mechanical fix per Claude Code docs but is banned by xlfg v6 invariants. v6.5.10 stays prompt-only and trades minor style flexibility (no fenced template = model formats questions / summaries on its own) for pipeline reliability.
+
+Patch-level — no public entry surface or runtime dependency surface changes.
+
 ## 6.5.9 — fold question template into Between phases, trim conductor bulk, strict imperative voice
 
 v6.5.9 fixes a phase-stopping regression that v6.5.8 only partially addressed. The user reported that runs were halting after recall, intent, and plan — phases were ending the turn instead of dispatching the next phase. The root cause: the v6.5.5 conductor body grew 28% (162 → 208 lines) and added a dedicated `## Question template` section that — even with v6.5.8's gate hardening — read as a competing fenced "what to emit" surface alongside the §Completion summary template. After a phase returned, the model was choosing between "dispatch next phase" and "emit a template-shaped block", and the conductor bulk tilted the choice toward halting. The handoff-cue reminders v6.5.4 added to all 9 phase bodies were calibrated against a leaner conductor and got drowned out.
